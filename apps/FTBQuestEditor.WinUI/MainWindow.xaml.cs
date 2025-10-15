@@ -1,3 +1,4 @@
+using FTBQuestEditor.WinUI.ViewModels;
 using System;
 using System.IO;
 using System.Collections.Generic;
@@ -32,8 +33,11 @@ public sealed partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+        ViewModel = QuestGraphViewModel.CreateSample();
+        DataContext = ViewModel;
     }
 
+    public QuestGraphViewModel ViewModel { get; }
     private async void OnImportClicked(object sender, RoutedEventArgs e)
     {
         var picker = new FolderPicker();
