@@ -1,0 +1,181 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using FTBQuestExternalApp.Codecs.Model;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
+
+namespace FTBQuestExternalApp.Codecs.Serialization;
+
+public class ChapterConverter : JsonConverter<Chapter>
+{
+    private static readonly string[] DefaultPropertyOrder =
+    {
+        "id",
+        "title",
+        "description",
+        "icon",
+        "quests",
+    };
+
+    public override Chapter? ReadJson(JsonReader reader, Type objectType, Chapter? existingValue, bool hasExistingValue, JsonSerializer serializer)
+    {
+        if (reader.TokenType == JsonToken.Null)
+        {
+            return null;
+        }
+
+        var jobject = JObject.Load(reader);
+        var chapter = existingValue ?? new Chapter();
+        var properties = jobject.Properties().ToList();
+
+        chapter.SetPropertyOrder(properties.Select(p => p.Name));
+        chapter.Quests ??= new List<Quest>();
+        chapter.Quests.Clear();
+        chapter.Extra.Extra.Clear();
+        chapter.Id = Guid.Empty;
+        chapter.Description = null;
+        chapter.IconId = null;
+        chapter.Title = string.Empty;
+
+        foreach (var property in properties)
+        {
+            switch (property.Name)
+            {
+                case "id":
+                    chapter.Id = property.Value.Type == JTokenType.Null
+                        ? Guid.Empty
+                        : property.Value.ToObject<Guid>(serializer);
+                    break;
+                case "title":
+                    chapter.Title = property.Value.Type == JTokenType.Null
+                        ? string.Empty
+                        : property.Value.Value<string>() ?? string.Empty;
+                    break;
+                case "description":
+                    chapter.Description = property.Value.Type == JTokenType.Null
+                        ? null
+                        : property.Value.Value<string>();
+                    break;
+                case "icon":
+                case "iconId":
+                case "icon_id":
+                    if (property.Value.Type == JTokenType.Null)
+                    {
+                        chapter.IconId = null;
+                    }
+                    else
+                    {
+                        var iconValue = property.Value.Value<string>();
+                        chapter.IconId = iconValue is null ? null : new Identifier(iconValue);
+                    }
+
+                    break;
+                case "quests":
+                    if (property.Value.Type == JTokenType.Null)
+                    {
+                        chapter.Quests.Clear();
+                    }
+                    else
+                    {
+                        var quests = property.Value.ToObject<List<Quest>>(serializer) ?? new List<Quest>();
+                        chapter.Quests.Clear();
+                        chapter.Quests.AddRange(quests);
+                    }
+
+                    break;
+                default:
+                    chapter.Extra.Add(property.Name, property.Value.DeepClone());
+                    break;
+            }
+        }
+
+        return chapter;
+    }
+
+    public override void WriteJson(JsonWriter writer, Chapter? value, JsonSerializer serializer)
+    {
+        if (value is null)
+        {
+            writer.WriteNull();
+            return;
+        }
+
+        var knownTokens = new Dictionary<string, JToken>(StringComparer.Ordinal)
+        {
+            ["id"] = JToken.FromObject(value.Id, serializer),
+        };
+
+        if (!string.IsNullOrEmpty(value.Title))
+        {
+            knownTokens["title"] = JToken.FromObject(value.Title, serializer);
+        }
+
+        if (value.Description is not null)
+        {
+            knownTokens["description"] = JToken.FromObject(value.Description, serializer);
+        }
+
+        if (value.IconId is Identifier iconId)
+        {
+            knownTokens["icon"] = JToken.FromObject(iconId, serializer);
+        }
+
+        if (value.Quests is not null)
+        {
+            knownTokens["quests"] = JToken.FromObject(value.Quests, serializer);
+        }
+
+        var orderedKeys = value.PropertyOrder.Count > 0 ? value.PropertyOrder : DefaultPropertyOrder;
+        var written = new HashSet<string>(StringComparer.Ordinal);
+        var jobject = new JObject();
+
+        foreach (var key in orderedKeys)
+        {
+            if (written.Contains(key))
+            {
+                continue;
+            }
+
+            if (knownTokens.TryGetValue(key, out var knownToken))
+            {
+                jobject.Add(key, knownToken);
+                written.Add(key);
+                continue;
+            }
+
+            if (value.Extra.Extra.TryGetValue(key, out var extraToken))
+            {
+                jobject.Add(key, extraToken.DeepClone());
+                written.Add(key);
+            }
+        }
+
+        foreach (var key in DefaultPropertyOrder)
+        {
+            if (written.Contains(key))
+            {
+                continue;
+            }
+
+            if (knownTokens.TryGetValue(key, out var knownToken))
+            {
+                jobject.Add(key, knownToken);
+                written.Add(key);
+            }
+        }
+
+        foreach (var kvp in value.Extra.Extra)
+        {
+            if (written.Contains(kvp.Key))
+            {
+                continue;
+            }
+
+            jobject.Add(kvp.Key, kvp.Value.DeepClone());
+            written.Add(kvp.Key);
+        }
+
+        jobject.WriteTo(writer);
+    }
+}
