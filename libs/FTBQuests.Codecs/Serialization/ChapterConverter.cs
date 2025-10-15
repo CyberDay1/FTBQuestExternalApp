@@ -104,27 +104,27 @@ public class ChapterConverter : JsonConverter<Chapter>
 
         var knownTokens = new Dictionary<string, JToken>(StringComparer.Ordinal)
         {
-            ["id"] = JToken.FromObject(value.Id, serializer),
+            ["id"] = new JValue(value.Id),
         };
 
         if (!string.IsNullOrEmpty(value.Title))
         {
-            knownTokens["title"] = JToken.FromObject(value.Title, serializer);
+            knownTokens["title"] = new JValue(value.Title);
         }
 
         if (value.Description is not null)
         {
-            knownTokens["description"] = JToken.FromObject(value.Description, serializer);
+            knownTokens["description"] = new JValue(value.Description);
         }
 
         if (value.IconId is Identifier iconId)
         {
-            knownTokens["icon"] = JToken.FromObject(iconId, serializer);
+            knownTokens["icon"] = new JValue(iconId.Value);
         }
 
         if (value.Quests is not null)
         {
-            knownTokens["quests"] = JToken.FromObject(value.Quests, serializer);
+            knownTokens["quests"] = JArray.FromObject(value.Quests, serializer);
         }
 
         var orderedKeys = value.PropertyOrder.Count > 0 ? value.PropertyOrder : DefaultPropertyOrder;

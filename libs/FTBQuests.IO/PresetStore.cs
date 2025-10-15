@@ -65,7 +65,7 @@ public sealed class PresetStore
             return null;
         }
 
-        var token = JToken.Parse(json);
+        var token = JObject.Parse(json);
         var payload = token.ToObject<PresetData>(serializer);
         if (payload is null || payload.Data is null)
         {
@@ -96,8 +96,7 @@ public sealed class PresetStore
                     continue;
                 }
 
-                var chapterToken = chapterEntry.Chapter;
-                var chapter = chapterToken.ToObject<Chapter>(serializer);
+                var chapter = chapterEntry.Chapter?.ToObject<Chapter>(serializer);
                 if (chapter is null)
                 {
                     continue;
@@ -150,7 +149,7 @@ public sealed class PresetStore
                 continue;
             }
 
-            var token = JToken.Parse(json);
+            var token = JObject.Parse(json);
             var header = token.ToObject<PresetHeader>(serializer);
             if (header is null)
             {
@@ -188,7 +187,7 @@ public sealed class PresetStore
             Data = CreateSnapshot(pack),
         };
 
-        var token = JToken.FromObject(payload, serializer);
+        var token = JObject.FromObject(payload, serializer);
         var json = token.ToString(Formatting.Indented);
         await File.WriteAllTextAsync(path, json).ConfigureAwait(false);
     }
@@ -215,7 +214,7 @@ public sealed class PresetStore
                 continue;
             }
 
-            var chapterToken = JToken.FromObject(chapter, serializer);
+            var chapterToken = JObject.FromObject(chapter, serializer);
             var path = pack.GetChapterPath(chapter) ?? string.Empty;
 
             snapshot.Chapters.Add(new PresetChapter
@@ -265,7 +264,7 @@ public sealed class PresetStore
     {
         public string? Path { get; set; }
 
-        public JToken? Chapter { get; set; }
+        public JObject? Chapter { get; set; }
     }
 
     private sealed class PresetHeader
