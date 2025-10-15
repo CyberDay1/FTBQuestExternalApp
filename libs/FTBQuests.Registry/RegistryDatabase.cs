@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Linq;
 using FTBQuests.Registry.Model;
 
@@ -17,6 +18,7 @@ public sealed class RegistryDatabase
         static (left, right) => string.CompareOrdinal(left.Id, right.Id));
 
     private readonly Dictionary<string, RegistryItem[]> itemsByTag;
+    private readonly IReadOnlyDictionary<string, IReadOnlyCollection<string>> tagMembership;
     private readonly Dictionary<string, List<RegistryItem>> itemsBySourceMod;
     private readonly List<RegistryItem> orderedItems;
 
@@ -53,8 +55,30 @@ public sealed class RegistryDatabase
             itemsBySourceMod[sourceMod] = sourceItems;
         }
 
-        itemsByTag = new Dictionary<string, RegistryItem[]>(StringComparer.OrdinalIgnoreCase);
+        var normalizedMembership = new Dictionary<string, IReadOnlyCollection<string>>(StringComparer.OrdinalIgnoreCase);
         foreach ((string tag, IReadOnlyCollection<string> identifiers) in tagMembership)
+        {
+            if (string.IsNullOrWhiteSpace(tag))
+            {
+                continue;
+            }
+
+            string normalizedTag = tag.Trim();
+            IEnumerable<string> source = identifiers ?? Array.Empty<string>();
+            string[] normalizedIdentifiers = source
+                .Where(static identifier => !string.IsNullOrWhiteSpace(identifier))
+                .Select(static identifier => identifier.Trim())
+                .ToArray();
+
+            normalizedMembership[normalizedTag] = normalizedIdentifiers.Length == 0
+                ? Array.Empty<string>()
+                : normalizedIdentifiers;
+        }
+
+        tagMembership = new ReadOnlyDictionary<string, IReadOnlyCollection<string>>(normalizedMembership);
+
+        itemsByTag = new Dictionary<string, RegistryItem[]>(StringComparer.OrdinalIgnoreCase);
+        foreach ((string tag, IReadOnlyCollection<string> identifiers) in normalizedMembership)
         {
             RegistryItem[] resolved = identifiers
                 .Select(identifier => TryGetByIdentifier(identifier, out RegistryItem? match) ? match : null)
@@ -124,6 +148,11 @@ public sealed class RegistryDatabase
     public IReadOnlyCollection<string> GetModIdentifiers() => itemsBySourceMod.Keys
         .OrderBy(static id => id, StringComparer.OrdinalIgnoreCase)
         .ToList();
+
+    /// <summary>
+    /// Gets the normalized tag membership captured during construction.
+    /// </summary>
+    public IReadOnlyDictionary<string, IReadOnlyCollection<string>> TagMembership => tagMembership;
 
     /// <summary>
     /// Adds the specified item when it is not already tracked.
