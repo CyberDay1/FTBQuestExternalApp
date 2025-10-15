@@ -9,5 +9,6 @@
   <ItemGroup>
     <ProjectReference Include="../FTBQuests.Codecs/FTBQuests.Codecs.csproj" />
     <ProjectReference Include="../FTBQuests.IO/FTBQuests.IO.csproj" />
+    <ProjectReference Include="../FTBQuests.Registry/FTBQuests.Registry.csproj" />
   </ItemGroup>
 </Project>

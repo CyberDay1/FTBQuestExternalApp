@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 
 namespace FTBQuestExternalApp.Codecs.Model;
@@ -7,7 +6,7 @@ public class Quest : IExtraAware
 {
     private readonly List<string> propertyOrder = new();
 
-    public Guid Id { get; set; }
+    public long Id { get; set; }
 
     public string Title { get; set; } = string.Empty;
 
@@ -19,7 +18,7 @@ public class Quest : IExtraAware
 
     public List<IReward> Rewards { get; } = new();
 
-    public List<Guid> Dependencies { get; } = new();
+    public List<long> Dependencies { get; } = new();
 
     public int PositionX { get; set; }
 

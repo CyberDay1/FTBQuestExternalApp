@@ -1,9 +1,13 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using FTBQuestExternalApp.Codecs.Model;
 using FTBQuests.IO;
+using FTBQuests.Codecs;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Xunit;
 
@@ -75,6 +79,71 @@ public static class QuestPackLoaderTests
         }
     }
 
+    [Fact]
+    public static async Task LoadEditSaveReload_PreservesSemantics()
+    {
+        var fixtureRoot = GetFixturePath("RoundTripPack");
+        var loader = new QuestPackLoader();
+        var serializer = JsonSerializer.Create(JsonSettings.Create());
+
+        var pack = await loader.LoadAsync(fixtureRoot);
+
+        Assert.True(pack.Metadata.TryGetValue("info.json", out var infoToken));
+        var info = Assert.IsType<JObject>(infoToken);
+        info["revision"] = 2;
+        var extra = Assert.IsType<JObject>(info["extra"]);
+        extra["difficulty"] = "master";
+        extra["authors"] = new JArray("BuilderBot", "AutomationAI", "TestRunner");
+
+        Assert.True(pack.Metadata.TryGetValue("teams/teams.json", out var teamsToken));
+        var teams = Assert.IsType<JObject>(teamsToken);
+        var teamArray = Assert.IsType<JArray>(teams["teams"]);
+        var engineers = Assert.IsType<JObject>(teamArray[0]);
+        engineers["display_name"] = "Chief Engineers";
+        engineers["color"] = "#5a9cfe";
+
+        var gatherQuest = FindQuest(pack, 2);
+        gatherQuest.PositionX = -4;
+        gatherQuest.PositionY = 3;
+
+        var craftQuest = FindQuest(pack, 3);
+        craftQuest.PositionX = 12;
+        craftQuest.PositionY = -2;
+        craftQuest.Page = 1;
+        craftQuest.Dependencies.Clear();
+        craftQuest.Dependencies.Add(gatherQuest.Id);
+
+        var furnaceQuest = FindQuest(pack, 5);
+        furnaceQuest.PositionX = 18;
+        furnaceQuest.PositionY = 9;
+        furnaceQuest.Page = 2;
+        furnaceQuest.Dependencies.Clear();
+        furnaceQuest.Dependencies.Add(gatherQuest.Id);
+        furnaceQuest.Dependencies.Add(craftQuest.Id);
+
+        var expectedSnapshot = CreateSnapshot(pack, serializer);
+
+        var tempRoot = Path.Combine(Path.GetTempPath(), "QuestPackRoundTrip", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(tempRoot);
+
+        try
+        {
+            await loader.SaveAsync(pack, tempRoot);
+
+            var reloaded = await loader.LoadAsync(tempRoot);
+            var actualSnapshot = CreateSnapshot(reloaded, serializer);
+
+            AssertSnapshotsEqual(expectedSnapshot, actualSnapshot);
+        }
+        finally
+        {
+            if (Directory.Exists(tempRoot))
+            {
+                Directory.Delete(tempRoot, recursive: true);
+            }
+        }
+    }
+
     private static string GetFixturePath(string name)
     {
         var baseDirectory = AppContext.BaseDirectory;
@@ -101,4 +170,59 @@ public static class QuestPackLoaderTests
         var normalized = relative.Replace(Path.DirectorySeparatorChar, '/');
         return normalized.Replace(Path.AltDirectorySeparatorChar, '/');
     }
+
+    private static Quest FindQuest(QuestPack pack, long questId)
+    {
+        return pack.Chapters
+            .SelectMany(chapter => chapter.Quests)
+            .First(quest => quest.Id == questId);
+    }
+
+    private static QuestPackSnapshot CreateSnapshot(QuestPack pack, JsonSerializer serializer)
+    {
+        var metadata = new Dictionary<string, JToken>(StringComparer.Ordinal);
+
+        foreach (var kvp in pack.Metadata.Extra)
+        {
+            metadata[kvp.Key] = kvp.Value.DeepClone();
+        }
+
+        var chapters = pack.Chapters
+            .Select(chapter => JToken.FromObject(chapter, serializer))
+            .Select(token => token.DeepClone())
+            .ToList();
+
+        return new QuestPackSnapshot(
+            new ReadOnlyDictionary<string, JToken>(metadata),
+            new ReadOnlyCollection<JToken>(chapters));
+    }
+
+    private static void AssertSnapshotsEqual(QuestPackSnapshot expected, QuestPackSnapshot actual)
+    {
+        Assert.Equal(
+            expected.Metadata.Keys.OrderBy(k => k, StringComparer.Ordinal),
+            actual.Metadata.Keys.OrderBy(k => k, StringComparer.Ordinal));
+
+        foreach (var key in expected.Metadata.Keys)
+        {
+            Assert.True(actual.Metadata.TryGetValue(key, out var actualToken));
+            Assert.True(JToken.DeepEquals(expected.Metadata[key], actualToken),
+                $"Metadata mismatch for '{key}'.\nExpected: {expected.Metadata[key]}\nActual: {actualToken}");
+        }
+
+        Assert.Equal(expected.Chapters.Count, actual.Chapters.Count);
+
+        for (var index = 0; index < expected.Chapters.Count; index++)
+        {
+            var expectedChapter = expected.Chapters[index];
+            var actualChapter = actual.Chapters[index];
+
+            Assert.True(JToken.DeepEquals(expectedChapter, actualChapter),
+                $"Chapter at index {index} did not round-trip.\nExpected: {expectedChapter}\nActual: {actualChapter}");
+        }
+    }
+
+    private sealed record QuestPackSnapshot(
+        IReadOnlyDictionary<string, JToken> Metadata,
+        IReadOnlyList<JToken> Chapters);
 }

@@ -1,17 +1,17 @@
 {
-  "id": "00000000-0000-0000-0000-000000000002",
+  "id": 3,
   "title": "Automation",
   "icon": "minecraft:furnace",
   "quests": [
     {
-      "id": "20000000-0000-0000-0000-000000000001",
+      "id": 4,
       "title": "Smelt Iron",
       "icon": "minecraft:iron_ingot",
       "x": 4,
       "y": 2,
       "page": 0,
       "dependencies": [
-        "10000000-0000-0000-0000-000000000001"
+        2
       ],
       "tasks": [],
       "rewards": [],

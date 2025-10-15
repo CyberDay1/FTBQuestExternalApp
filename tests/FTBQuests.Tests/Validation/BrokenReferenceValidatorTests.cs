@@ -1,4 +1,3 @@
-using System;
 using System.Linq;
 using FTBQuestExternalApp.Codecs.Model;
 using FTBQuests.Validation.Validators;
@@ -13,18 +12,18 @@ public class BrokenReferenceValidatorTests
     {
         var targetQuest = new Quest
         {
-            Id = Guid.Parse("11111111-1111-1111-1111-111111111111"),
+            Id = 101,
             Title = "Existing Quest",
         };
 
         var questWithMissingDependency = new Quest
         {
-            Id = Guid.Parse("22222222-2222-2222-2222-222222222222"),
+            Id = 202,
             Title = "Needs Friend",
         };
 
-        questWithMissingDependency.Dependencies.Add(Guid.Parse("33333333-3333-3333-3333-333333333333"));
-        questWithMissingDependency.Dependencies.Add(Guid.Empty);
+        questWithMissingDependency.Dependencies.Add(303);
+        questWithMissingDependency.Dependencies.Add(0);
 
         var chapter = new Chapter
         {
@@ -57,13 +56,13 @@ public class BrokenReferenceValidatorTests
     {
         var questA = new Quest
         {
-            Id = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"),
+            Id = 401,
             Title = "Quest A",
         };
 
         var questB = new Quest
         {
-            Id = Guid.Parse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"),
+            Id = 402,
             Title = "Quest B",
         };
 

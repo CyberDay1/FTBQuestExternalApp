@@ -1,0 +1,12 @@
+{
+  "pack_format": 14,
+  "revision": 1,
+  "title": "Round Trip Validation Pack",
+  "extra": {
+    "difficulty": "expert",
+    "authors": [
+      "BuilderBot",
+      "AutomationAI"
+    ]
+  }
+}

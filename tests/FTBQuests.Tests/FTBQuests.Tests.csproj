@@ -10,14 +10,25 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.2.1" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="../../libs/FTBQuests.Codecs/FTBQuests.Codecs.csproj" />
     <ProjectReference Include="../../libs/FTBQuests.IO/FTBQuests.IO.csproj" />
+    <ProjectReference Include="../../libs/FTBQuests.Registry/FTBQuests.Registry.csproj" />
   </ItemGroup>
   <ItemGroup>
     <None Update="Fixtures/**/*">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="../../apps/FTBQuestEditor.WinUI/ViewModels/GridConstants.cs" Link="WinUI/ViewModels/GridConstants.cs" />
+    <Compile Include="../../apps/FTBQuestEditor.WinUI/ViewModels/GridViewViewModel.cs" Link="WinUI/ViewModels/GridViewViewModel.cs" />
+    <Compile Include="../../apps/FTBQuestEditor.WinUI/ViewModels/LootTableEditorViewModel.cs" Link="WinUI/ViewModels/LootTableEditorViewModel.cs" />
+    <Compile Include="../../apps/FTBQuestEditor.WinUI/ViewModels/Loot/LootTableManagerViewModel.cs" Link="WinUI/ViewModels/Loot/LootTableManagerViewModel.cs" />
+    <Compile Include="../../apps/FTBQuestEditor.WinUI/ViewModels/ChapterNode.cs" Link="WinUI/ViewModels/ChapterNode.cs" />
+    <Compile Include="../../apps/FTBQuestEditor.WinUI/ViewModels/ChapterListViewModel.cs" Link="WinUI/ViewModels/ChapterListViewModel.cs" />
+    <Compile Include="../../apps/FTBQuestEditor.WinUI/ViewModels/ChapterViewModel.cs" Link="WinUI/ViewModels/ChapterViewModel.cs" />
   </ItemGroup>
 </Project>
