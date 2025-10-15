@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ftbquests.app/schemas/v1_21_1/task.schema.json",
+  "title": "Task",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "type"
+  ],
+  "properties": {
+    "type": {
+      "type": "string",
+      "enum": [
+        "advancement",
+        "command",
+        "custom",
+        "item",
+        "kill",
+        "location",
+        "nbt",
+        "xp"
+      ],
+      "description": "Discriminator for the task subtype."
+    }
+  }
+}
