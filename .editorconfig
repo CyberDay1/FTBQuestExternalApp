@@ -5,6 +5,10 @@ dotnet_sort_system_directives_first = true
 dotnet_style_require_accessibility_modifiers = for_non_interface_members:silent
 csharp_style_namespace_declarations = file_scoped:suggestion
 
+# Enable StyleCop analyzer diagnostics
+dotnet_analyzer_diagnostic.category-StyleCopAnalyzers.severity = warning
+dotnet_analyzer_diagnostic.SA0001.severity = none
+
 # Naming rules
 # Public members use PascalCase
 dotnet_naming_rule.public_members_should_be_pascal_case.severity = suggestion

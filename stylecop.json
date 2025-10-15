@@ -1,10 +1,8 @@
 {
   "settings": {
     "documentationRules": {
-      "documentExposedElements": true,
-      "documentInternalElements": false,
-      "documentPrivateElements": false,
-      "documentationCulture": "en-US"
+      "companyName": "CyberDay1",
+      "documentInternalElements": false
     }
   }
 }
