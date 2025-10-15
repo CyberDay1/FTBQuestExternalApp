@@ -14,7 +14,7 @@ public class ChapterCodecTests
 
     private static readonly JsonSerializerSettings Settings = new()
     {
-        Converters = { new ChapterConverter() },
+        Converters = { new ChapterConverter(), new QuestConverter() },
     };
 
     [Fact]

@@ -9,7 +9,31 @@ public class Quest : IExtraAware
 
     public Guid Id { get; set; }
 
+    public string Title { get; set; } = string.Empty;
+
+    public string? Subtitle { get; set; }
+
+    public Identifier? IconId { get; set; }
+
+    public List<ITask> Tasks { get; } = new();
+
+    public List<IReward> Rewards { get; } = new();
+
+    public List<Guid> Dependencies { get; } = new();
+
+    public int PositionX { get; set; }
+
+    public int PositionY { get; set; }
+
+    public int Page { get; set; }
+
     public PropertyBag Extra { get; } = new();
 
     internal IList<string> PropertyOrder => propertyOrder;
+
+    internal void SetPropertyOrder(IEnumerable<string> order)
+    {
+        propertyOrder.Clear();
+        propertyOrder.AddRange(order);
+    }
 }
