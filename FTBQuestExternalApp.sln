@@ -8,6 +8,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "libs", "libs", "{470A93A1-E
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{BD7DB430-665F-4554-B401-B33B4B3826D9}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tools", "tools", "{5F306DF9-2985-4B30-A73E-56A3EF24C857}"
+EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "FTBQuestEditor.WinUI", "apps/FTBQuestEditor.WinUI/FTBQuestEditor.WinUI.csproj", "{0C65E1C6-D994-4638-BCB3-0F037E5CE87E}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "FTBQuests.Codecs", "libs/FTBQuests.Codecs/FTBQuests.Codecs.csproj", "{856A91EE-3D64-4C2A-A6E3-28A9DB949FE5}"
@@ -23,6 +25,8 @@ EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "FTBQuests.Registry", "libs/FTBQuests.Registry/FTBQuests.Registry.csproj", "{6A6BA8B7-2BB1-4A30-A2B6-590DE94B8A26}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "FTBQuests.Tests", "tests/FTBQuests.Tests/FTBQuests.Tests.csproj", "{F5D7B1F5-315D-46B5-AD68-64C78CAC0235}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DevCli", "tools/DevCli/DevCli.csproj", "{D1F35A9D-1D1B-4C67-94A6-8A2EC0E3875F}"
 EndProject
 Global
     GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -62,6 +66,10 @@ Global
         {F5D7B1F5-315D-46B5-AD68-64C78CAC0235}.Debug|Any CPU.Build.0 = Debug|Any CPU
         {F5D7B1F5-315D-46B5-AD68-64C78CAC0235}.Release|Any CPU.ActiveCfg = Release|Any CPU
         {F5D7B1F5-315D-46B5-AD68-64C78CAC0235}.Release|Any CPU.Build.0 = Release|Any CPU
+        {D1F35A9D-1D1B-4C67-94A6-8A2EC0E3875F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+        {D1F35A9D-1D1B-4C67-94A6-8A2EC0E3875F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+        {D1F35A9D-1D1B-4C67-94A6-8A2EC0E3875F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+        {D1F35A9D-1D1B-4C67-94A6-8A2EC0E3875F}.Release|Any CPU.Build.0 = Release|Any CPU
     EndGlobalSection
     GlobalSection(NestedProjects) = preSolution
         {0C65E1C6-D994-4638-BCB3-0F037E5CE87E} = {6174F16A-C812-47DA-8CAC-8080944E3228}
@@ -72,5 +80,6 @@ Global
         {F7391A5B-F2F9-4C90-AB43-69792BB6EF7F} = {470A93A1-E7FD-4A5D-9124-CC6BA9E4D10E}
         {6A6BA8B7-2BB1-4A30-A2B6-590DE94B8A26} = {470A93A1-E7FD-4A5D-9124-CC6BA9E4D10E}
         {F5D7B1F5-315D-46B5-AD68-64C78CAC0235} = {BD7DB430-665F-4554-B401-B33B4B3826D9}
+        {D1F35A9D-1D1B-4C67-94A6-8A2EC0E3875F} = {5F306DF9-2985-4B30-A73E-56A3EF24C857}
     EndGlobalSection
 EndGlobal
