@@ -187,17 +187,17 @@ public class QuestConverter : JsonConverter<Quest>
 
         var knownTokens = new Dictionary<string, JToken>(StringComparer.Ordinal)
         {
-            ["id"] = JToken.FromObject(value.Id, serializer),
+            ["id"] = new JValue(value.Id),
         };
 
         if (!string.IsNullOrEmpty(value.Title) || value.PropertyOrder.Contains("title"))
         {
-            knownTokens["title"] = JToken.FromObject(value.Title, serializer);
+            knownTokens["title"] = new JValue(value.Title);
         }
 
         if (value.Subtitle is not null)
         {
-            knownTokens["subtitle"] = JToken.FromObject(value.Subtitle, serializer);
+            knownTokens["subtitle"] = new JValue(value.Subtitle);
         }
         else if (value.PropertyOrder.Contains("subtitle"))
         {
@@ -207,7 +207,7 @@ public class QuestConverter : JsonConverter<Quest>
         var iconKey = ResolveKey(value.PropertyOrder, IconKeys);
         if (value.IconId is Identifier iconId)
         {
-            knownTokens[iconKey ?? "icon"] = JToken.FromObject(iconId, serializer);
+            knownTokens[iconKey ?? "icon"] = new JValue(iconId.Value);
         }
         else if (iconKey is not null)
         {
@@ -216,22 +216,22 @@ public class QuestConverter : JsonConverter<Quest>
 
         if (value.PropertyOrder.Contains("x") || value.PositionX != 0)
         {
-            knownTokens["x"] = JToken.FromObject(value.PositionX, serializer);
+            knownTokens["x"] = new JValue(value.PositionX);
         }
 
         if (value.PropertyOrder.Contains("y") || value.PositionY != 0)
         {
-            knownTokens["y"] = JToken.FromObject(value.PositionY, serializer);
+            knownTokens["y"] = new JValue(value.PositionY);
         }
 
         if (value.PropertyOrder.Contains("page") || value.Page != 0)
         {
-            knownTokens["page"] = JToken.FromObject(value.Page, serializer);
+            knownTokens["page"] = new JValue(value.Page);
         }
 
         if (value.PropertyOrder.Contains("dependencies") || value.Dependencies.Count > 0)
         {
-            knownTokens["dependencies"] = JToken.FromObject(value.Dependencies, serializer);
+            knownTokens["dependencies"] = JArray.FromObject(value.Dependencies, serializer);
         }
 
         if (value.PropertyOrder.Contains("tasks") || value.Tasks.Count > 0)
@@ -437,7 +437,7 @@ public class QuestConverter : JsonConverter<Quest>
         return reward;
     }
 
-    private static JToken SerializeTasks(JsonSerializer serializer, IEnumerable<ITask> tasks)
+    private static JArray SerializeTasks(JsonSerializer serializer, IEnumerable<ITask> tasks)
     {
         var array = new JArray();
 
@@ -449,7 +449,7 @@ public class QuestConverter : JsonConverter<Quest>
         return array;
     }
 
-    private static JToken SerializeRewards(JsonSerializer serializer, IEnumerable<IReward> rewards)
+    private static JArray SerializeRewards(JsonSerializer serializer, IEnumerable<IReward> rewards)
     {
         var array = new JArray();
 
@@ -461,11 +461,11 @@ public class QuestConverter : JsonConverter<Quest>
         return array;
     }
 
-    private static JToken SerializeTask(JsonSerializer serializer, ITask task)
+    private static JObject SerializeTask(JsonSerializer serializer, ITask task)
     {
         if (task is not TaskBase taskBase)
         {
-            return JToken.FromObject(task, serializer);
+            return JObject.FromObject(task, serializer);
         }
 
         var typeKey = ResolveKeyIgnoreCase(taskBase.PropertyOrder, DefaultTaskPropertyOrder)
@@ -474,7 +474,7 @@ public class QuestConverter : JsonConverter<Quest>
 
         var knownTokens = new Dictionary<string, JToken>(StringComparer.Ordinal)
         {
-            [typeKey] = JToken.FromObject(taskBase.TypeId, serializer),
+            [typeKey] = new JValue(taskBase.TypeId),
         };
 
         PopulateKnownTaskTokens(serializer, taskBase, knownTokens);
@@ -543,16 +543,16 @@ public class QuestConverter : JsonConverter<Quest>
         return jobject;
     }
 
-    private static JToken SerializeReward(JsonSerializer serializer, IReward reward)
+    private static JObject SerializeReward(JsonSerializer serializer, IReward reward)
     {
         if (reward is not RewardBase rewardBase)
         {
-            return JToken.FromObject(reward, serializer);
+            return JObject.FromObject(reward, serializer);
         }
 
         var knownTokens = new Dictionary<string, JToken>(StringComparer.Ordinal)
         {
-            ["type"] = JToken.FromObject(rewardBase.TypeId, serializer),
+            ["type"] = new JValue(rewardBase.TypeId),
         };
 
         AddKnownRewardTokens(serializer, rewardBase, knownTokens);
@@ -947,7 +947,7 @@ public class QuestConverter : JsonConverter<Quest>
         }
         else
         {
-            knownTokens[key] = JToken.FromObject(value, serializer);
+            knownTokens[key] = new JValue(value.Value);
         }
     }
 
@@ -964,7 +964,7 @@ public class QuestConverter : JsonConverter<Quest>
                   ?? ResolveKeyIgnoreCase(task.KnownProperties, candidates)
                   ?? candidates[0];
 
-        knownTokens[key] = JToken.FromObject(value, serializer);
+        knownTokens[key] = new JValue(value);
     }
 
     private static void AddBoolToken(JsonSerializer serializer, TaskBase task, Dictionary<string, JToken> knownTokens, bool value, params string[] candidates)
@@ -980,7 +980,7 @@ public class QuestConverter : JsonConverter<Quest>
                   ?? ResolveKeyIgnoreCase(task.KnownProperties, candidates)
                   ?? candidates[0];
 
-        knownTokens[key] = JToken.FromObject(value, serializer);
+        knownTokens[key] = new JValue(value);
     }
 
     private static void AddStringToken(JsonSerializer serializer, TaskBase task, Dictionary<string, JToken> knownTokens, string? value, params string[] candidates)
@@ -1002,7 +1002,7 @@ public class QuestConverter : JsonConverter<Quest>
         }
         else
         {
-            knownTokens[key] = JToken.FromObject(value, serializer);
+            knownTokens[key] = new JValue(value);
         }
     }
 
@@ -1025,7 +1025,7 @@ public class QuestConverter : JsonConverter<Quest>
         }
         else
         {
-            knownTokens[key] = JToken.FromObject(value, serializer);
+            knownTokens[key] = new JValue(value.Value);
         }
     }
 
@@ -1042,7 +1042,7 @@ public class QuestConverter : JsonConverter<Quest>
                   ?? ResolveKeyIgnoreCase(reward.KnownProperties, candidates)
                   ?? candidates[0];
 
-        knownTokens[key] = JToken.FromObject(value, serializer);
+        knownTokens[key] = new JValue(value);
     }
 
     private static void AddBoolToken(JsonSerializer serializer, RewardBase reward, Dictionary<string, JToken> knownTokens, bool value, params string[] candidates)
@@ -1058,7 +1058,7 @@ public class QuestConverter : JsonConverter<Quest>
                   ?? ResolveKeyIgnoreCase(reward.KnownProperties, candidates)
                   ?? candidates[0];
 
-        knownTokens[key] = JToken.FromObject(value, serializer);
+        knownTokens[key] = new JValue(value);
     }
 
     private static void AddStringToken(JsonSerializer serializer, RewardBase reward, Dictionary<string, JToken> knownTokens, string? value, params string[] candidates)
@@ -1080,7 +1080,7 @@ public class QuestConverter : JsonConverter<Quest>
         }
         else
         {
-            knownTokens[key] = JToken.FromObject(value, serializer);
+            knownTokens[key] = new JValue(value);
         }
     }
 
