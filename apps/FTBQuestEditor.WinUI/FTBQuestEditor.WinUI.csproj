@@ -12,9 +12,13 @@
   <ItemGroup>
     <Page Include="App.xaml" />
     <Page Include="MainWindow.xaml" />
-    <Page Include="Views\Panels\QuestProperties.xaml" />
-    <Page Include="Views\Panels\TaskProperties.xaml" />
-    <Page Include="Views\Panels\RewardProperties.xaml" />
+    <Page Include="Views\GridViewPage.xaml" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Update="Views\GridViewPage.xaml.cs">
+      <DependentUpon>GridViewPage.xaml</DependentUpon>
+    </Compile>
   </ItemGroup>
 
   <ItemGroup>
@@ -27,6 +31,7 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.5.240404000" />
     <PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.22621.756" />
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.2.1" />
   </ItemGroup>
 
   <ItemGroup>
