@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using FTBQuestExternalApp.Codecs.Model;
 using Newtonsoft.Json;
@@ -23,7 +24,7 @@ public class QuestConverter : JsonConverter<Quest>
         "rewards",
     };
 
-    private static readonly string[] DefaultTaskPropertyOrder = { "type" };
+    private static readonly string[] DefaultTaskPropertyOrder = { TaskDiscriminator.FieldName };
 
     private static readonly string[] DefaultRewardPropertyOrder =
     {
@@ -36,19 +37,6 @@ public class QuestConverter : JsonConverter<Quest>
         "levels",
         "command",
     };
-
-    private static readonly IReadOnlyDictionary<string, Func<TaskBase>> TaskFactories =
-        new Dictionary<string, Func<TaskBase>>(StringComparer.OrdinalIgnoreCase)
-        {
-            ["item"] = () => new ItemTask(),
-            ["advancement"] = () => new AdvancementTask(),
-            ["kill"] = () => new KillTask(),
-            ["location"] = () => new LocationTask(),
-            ["xp"] = () => new XpTask(),
-            ["nbt"] = () => new NbtTask(),
-            ["command"] = () => new CommandTask(),
-            ["custom"] = () => new CustomTask(),
-        };
 
     private static readonly IReadOnlyDictionary<string, Func<RewardBase>> RewardFactories =
         new Dictionary<string, Func<RewardBase>>(StringComparer.OrdinalIgnoreCase)
@@ -320,20 +308,7 @@ public class QuestConverter : JsonConverter<Quest>
         return null;
     }
 
-    private static TaskBase CreateTask(string? typeId)
-    {
-        if (!string.IsNullOrEmpty(typeId) && TaskFactories.TryGetValue(typeId, out var factory))
-        {
-            var knownTask = factory();
-            knownTask.SetTypeId(typeId);
-            return knownTask;
-        }
-
-        var fallback = string.IsNullOrEmpty(typeId) ? "custom" : typeId;
-        var unknownTask = new UnknownTask(fallback);
-        unknownTask.SetTypeId(typeId);
-        return unknownTask;
-    }
+    private static TaskBase CreateTask(string? typeId) => TaskDiscriminator.Create(typeId);
 
     private static RewardBase CreateReward(string? typeId)
     {
@@ -368,16 +343,22 @@ public class QuestConverter : JsonConverter<Quest>
         }
 
         var properties = taskObject.Properties().ToList();
-        var typeProperty = properties.FirstOrDefault(p => string.Equals(p.Name, "type", StringComparison.OrdinalIgnoreCase));
+        var typeProperty = properties.FirstOrDefault(p => string.Equals(p.Name, TaskDiscriminator.FieldName, StringComparison.OrdinalIgnoreCase));
         var discriminator = typeProperty?.Value?.Value<string>();
         var task = CreateTask(discriminator);
 
         task.SetPropertyOrder(properties.Select(p => p.Name));
+        task.ClearKnownProperties();
         task.Extra.Extra.Clear();
 
         foreach (var property in properties)
         {
-            if (string.Equals(property.Name, "type", StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(property.Name, TaskDiscriminator.FieldName, StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            if (TryAssignKnownTaskProperty(task, property))
             {
                 continue;
             }
@@ -462,10 +443,16 @@ public class QuestConverter : JsonConverter<Quest>
             return JToken.FromObject(task, serializer);
         }
 
+        var typeKey = ResolveKeyIgnoreCase(taskBase.PropertyOrder, DefaultTaskPropertyOrder)
+                      ?? ResolveKeyIgnoreCase(taskBase.KnownProperties, DefaultTaskPropertyOrder)
+                      ?? TaskDiscriminator.FieldName;
+
         var knownTokens = new Dictionary<string, JToken>(StringComparer.Ordinal)
         {
-            ["type"] = JToken.FromObject(taskBase.TypeId, serializer),
+            [typeKey] = JToken.FromObject(taskBase.TypeId, serializer),
         };
+
+        PopulateKnownTaskTokens(serializer, taskBase, knownTokens);
 
         var orderedKeys = taskBase.PropertyOrder.Count > 0 ? taskBase.PropertyOrder : DefaultTaskPropertyOrder;
         var written = new HashSet<string>(StringComparer.Ordinal);
@@ -514,6 +501,17 @@ public class QuestConverter : JsonConverter<Quest>
             }
 
             jobject.Add(kvp.Key, kvp.Value.DeepClone());
+            written.Add(kvp.Key);
+        }
+
+        foreach (var kvp in knownTokens)
+        {
+            if (written.Contains(kvp.Key))
+            {
+                continue;
+            }
+
+            jobject.Add(kvp.Key, kvp.Value);
             written.Add(kvp.Key);
         }
 
@@ -587,174 +585,420 @@ public class QuestConverter : JsonConverter<Quest>
         return jobject;
     }
 
-    private static bool TryAssignKnownRewardProperty(RewardBase reward, JProperty property)
+    private static bool TryAssignKnownTaskProperty(TaskBase task, JProperty property)
     {
-        switch (reward)
+        return task switch
         {
-            case ItemReward itemReward:
-                if (string.Equals(property.Name, "item", StringComparison.OrdinalIgnoreCase))
-                {
-                    if (property.Value.Type == JTokenType.Null)
-                    {
-                        itemReward.ItemId = default;
-                    }
-                    else
-                    {
-                        var itemValue = property.Value.Value<string>();
-                        if (!string.IsNullOrWhiteSpace(itemValue))
-                        {
-                            itemReward.ItemId = new Identifier(itemValue);
-                        }
-                    }
+            ItemTask itemTask => TryAssignItemTaskProperty(itemTask, property),
+            AdvancementTask advancementTask => TryAssignAdvancementTaskProperty(advancementTask, property),
+            KillTask killTask => TryAssignKillTaskProperty(killTask, property),
+            LocationTask locationTask => TryAssignLocationTaskProperty(locationTask, property),
+            XpTask xpTask => TryAssignXpTaskProperty(xpTask, property),
+            NbtTask nbtTask => TryAssignNbtTaskProperty(nbtTask, property),
+            CommandTask commandTask => TryAssignCommandTaskProperty(commandTask, property),
+            _ => false,
+        };
+    }
 
-                    return true;
-                }
+    private static bool TryAssignItemTaskProperty(ItemTask task, JProperty property)
+    {
+        if (Matches(property.Name, "item") && TryGetIdentifier(property.Value, out var itemId))
+        {
+            task.ItemId = itemId;
+            task.MarkKnownProperty(property.Name);
+            return true;
+        }
 
-                if (string.Equals(property.Name, "count", StringComparison.OrdinalIgnoreCase))
-                {
-                    itemReward.Count = property.Value.Type == JTokenType.Null
-                        ? 0
-                        : property.Value.Value<int>();
-                    return true;
-                }
+        if (Matches(property.Name, "count") && TryGetInt(property.Value, out var count))
+        {
+            task.Count = count;
+            task.MarkKnownProperty(property.Name);
+            return true;
+        }
 
-                if (string.Equals(property.Name, "nbt", StringComparison.OrdinalIgnoreCase))
-                {
-                    itemReward.Nbt = property.Value.Type == JTokenType.Null
-                        ? null
-                        : property.Value.Value<string>();
-                    return true;
-                }
-
-                break;
-            case LootReward lootReward:
-                if (string.Equals(property.Name, "table", StringComparison.OrdinalIgnoreCase))
-                {
-                    if (property.Value.Type == JTokenType.Null)
-                    {
-                        lootReward.LootTable = default;
-                    }
-                    else
-                    {
-                        var tableValue = property.Value.Value<string>();
-                        if (!string.IsNullOrWhiteSpace(tableValue))
-                        {
-                            lootReward.LootTable = new Identifier(tableValue);
-                        }
-                    }
-
-                    return true;
-                }
-
-                break;
-            case XpReward xpReward:
-                if (string.Equals(property.Name, "amount", StringComparison.OrdinalIgnoreCase))
-                {
-                    xpReward.Amount = property.Value.Type == JTokenType.Null
-                        ? 0
-                        : property.Value.Value<int>();
-                    return true;
-                }
-
-                if (string.Equals(property.Name, "levels", StringComparison.OrdinalIgnoreCase))
-                {
-                    if (property.Value.Type == JTokenType.Null)
-                    {
-                        xpReward.Levels = false;
-                    }
-                    else if (property.Value.Type == JTokenType.Integer)
-                    {
-                        xpReward.Levels = property.Value.Value<int>() != 0;
-                    }
-                    else
-                    {
-                        xpReward.Levels = property.Value.Value<bool>();
-                    }
-
-                    return true;
-                }
-
-                break;
-            case CommandReward commandReward:
-                if (string.Equals(property.Name, "command", StringComparison.OrdinalIgnoreCase))
-                {
-                    commandReward.Command = property.Value.Type == JTokenType.Null
-                        ? string.Empty
-                        : property.Value.Value<string>() ?? string.Empty;
-                    return true;
-                }
-
-                break;
+        if (Matches(property.Name, "nbt") && TryGetString(property.Value, out var nbt))
+        {
+            task.Nbt = nbt;
+            task.MarkKnownProperty(property.Name);
+            return true;
         }
 
         return false;
     }
 
-    private static void AddKnownRewardTokens(JsonSerializer serializer, RewardBase rewardBase, IDictionary<string, JToken> knownTokens)
+    private static bool TryAssignAdvancementTaskProperty(AdvancementTask task, JProperty property)
     {
-        switch (rewardBase)
+        if (Matches(property.Name, "advancement") && TryGetIdentifier(property.Value, out var advancementId))
         {
-            case ItemReward itemReward:
-                AddIdentifierToken(serializer, knownTokens, rewardBase.PropertyOrder, "item", itemReward.ItemId);
+            task.AdvancementId = advancementId;
+            task.MarkKnownProperty(property.Name);
+            return true;
+        }
 
-                if (rewardBase.PropertyOrder.Contains("count") || itemReward.Count != 1)
-                {
-                    knownTokens["count"] = JToken.FromObject(itemReward.Count, serializer);
-                }
+        return false;
+    }
 
-                if (rewardBase.PropertyOrder.Contains("nbt") || itemReward.Nbt is not null)
-                {
-                    knownTokens["nbt"] = itemReward.Nbt is null
-                        ? JValue.CreateNull()
-                        : JToken.FromObject(itemReward.Nbt, serializer);
-                }
+    private static bool TryAssignKillTaskProperty(KillTask task, JProperty property)
+    {
+        if (Matches(property.Name, "entity", "entity_id") && TryGetIdentifier(property.Value, out var entityId))
+        {
+            task.EntityId = entityId;
+            task.MarkKnownProperty(property.Name);
+            return true;
+        }
 
+        if (Matches(property.Name, "amount", "value") && TryGetInt(property.Value, out var amount))
+        {
+            task.Amount = amount;
+            task.MarkKnownProperty(property.Name);
+            return true;
+        }
+
+        return false;
+    }
+
+    private static bool TryAssignLocationTaskProperty(LocationTask task, JProperty property)
+    {
+        if (Matches(property.Name, "x") && TryGetInt(property.Value, out var x))
+        {
+            task.X = x;
+            task.MarkKnownProperty(property.Name);
+            return true;
+        }
+
+        if (Matches(property.Name, "y") && TryGetInt(property.Value, out var y))
+        {
+            task.Y = y;
+            task.MarkKnownProperty(property.Name);
+            return true;
+        }
+
+        if (Matches(property.Name, "z") && TryGetInt(property.Value, out var z))
+        {
+            task.Z = z;
+            task.MarkKnownProperty(property.Name);
+            return true;
+        }
+
+        if (Matches(property.Name, "dim", "dimension") && TryGetString(property.Value, out var dimension) && dimension is not null)
+        {
+            task.Dimension = dimension;
+            task.MarkKnownProperty(property.Name);
+            return true;
+        }
+
+        if (Matches(property.Name, "radius") && TryGetInt(property.Value, out var radius))
+        {
+            task.Radius = radius;
+            task.MarkKnownProperty(property.Name);
+            return true;
+        }
+
+        return false;
+    }
+
+    private static bool TryAssignXpTaskProperty(XpTask task, JProperty property)
+    {
+        if (Matches(property.Name, "amount", "value") && TryGetInt(property.Value, out var amount))
+        {
+            task.Amount = amount;
+            task.MarkKnownProperty(property.Name);
+            return true;
+        }
+
+        if (Matches(property.Name, "levels", "is_levels") && TryGetBool(property.Value, out var levels))
+        {
+            task.Levels = levels;
+            task.MarkKnownProperty(property.Name);
+            return true;
+        }
+
+        return false;
+    }
+
+    private static bool TryAssignNbtTaskProperty(NbtTask task, JProperty property)
+    {
+        if (Matches(property.Name, "target", "target_id") && TryGetIdentifier(property.Value, out var targetId))
+        {
+            task.TargetId = targetId;
+            task.MarkKnownProperty(property.Name);
+            return true;
+        }
+
+        if (Matches(property.Name, "nbt", "required_nbt") && TryGetString(property.Value, out var requiredNbt) && requiredNbt is not null)
+        {
+            task.RequiredNbt = requiredNbt;
+            task.MarkKnownProperty(property.Name);
+            return true;
+        }
+
+        return false;
+    }
+
+    private static bool TryAssignCommandTaskProperty(CommandTask task, JProperty property)
+    {
+        if (Matches(property.Name, "command") && TryGetString(property.Value, out var command) && command is not null)
+        {
+            task.Command = command;
+            task.MarkKnownProperty(property.Name);
+            return true;
+        }
+
+        return false;
+    }
+
+    private static void PopulateKnownTaskTokens(JsonSerializer serializer, TaskBase task, Dictionary<string, JToken> knownTokens)
+    {
+        switch (task)
+        {
+            case ItemTask itemTask:
+                AddIdentifierToken(serializer, task, knownTokens, itemTask.ItemId, "item");
+                AddIntToken(serializer, task, knownTokens, itemTask.Count, "count");
+                AddStringToken(serializer, task, knownTokens, itemTask.Nbt, "nbt");
                 break;
-            case LootReward lootReward:
-                AddIdentifierToken(serializer, knownTokens, rewardBase.PropertyOrder, "table", lootReward.LootTable);
+            case AdvancementTask advancementTask:
+                AddIdentifierToken(serializer, task, knownTokens, advancementTask.AdvancementId, "advancement");
                 break;
-            case XpReward xpReward:
-                if (rewardBase.PropertyOrder.Contains("amount") || xpReward.Amount != 0)
-                {
-                    knownTokens["amount"] = JToken.FromObject(xpReward.Amount, serializer);
-                }
-
-                if (rewardBase.PropertyOrder.Contains("levels") || xpReward.Levels)
-                {
-                    knownTokens["levels"] = JToken.FromObject(xpReward.Levels, serializer);
-                }
-
+            case KillTask killTask:
+                AddIdentifierToken(serializer, task, knownTokens, killTask.EntityId, "entity", "entity_id");
+                AddIntToken(serializer, task, knownTokens, killTask.Amount, "amount", "value");
                 break;
-            case CommandReward commandReward:
-                if (!string.IsNullOrEmpty(commandReward.Command))
-                {
-                    knownTokens["command"] = JToken.FromObject(commandReward.Command, serializer);
-                }
-                else if (rewardBase.PropertyOrder.Contains("command"))
-                {
-                    knownTokens["command"] = JValue.CreateNull();
-                }
-
+            case LocationTask locationTask:
+                AddIntToken(serializer, task, knownTokens, locationTask.X, "x");
+                AddIntToken(serializer, task, knownTokens, locationTask.Y, "y");
+                AddIntToken(serializer, task, knownTokens, locationTask.Z, "z");
+                AddStringToken(serializer, task, knownTokens, locationTask.Dimension, "dim", "dimension");
+                AddIntToken(serializer, task, knownTokens, locationTask.Radius, "radius");
+                break;
+            case XpTask xpTask:
+                AddIntToken(serializer, task, knownTokens, xpTask.Amount, "amount", "value");
+                AddBoolToken(serializer, task, knownTokens, xpTask.Levels, "levels", "is_levels");
+                break;
+            case NbtTask nbtTask:
+                AddIdentifierToken(serializer, task, knownTokens, nbtTask.TargetId, "target", "target_id");
+                AddStringToken(serializer, task, knownTokens, nbtTask.RequiredNbt, "nbt", "required_nbt");
+                break;
+            case CommandTask commandTask:
+                AddStringToken(serializer, task, knownTokens, commandTask.Command, "command");
                 break;
         }
     }
 
-    private static void AddIdentifierToken(
-        JsonSerializer serializer,
-        IDictionary<string, JToken> knownTokens,
-        IList<string> propertyOrder,
-        string key,
-        Identifier identifier)
+    private static void AddIdentifierToken(JsonSerializer serializer, TaskBase task, Dictionary<string, JToken> knownTokens, Identifier value, params string[] candidates)
     {
-        var identifierValue = identifier.Value;
+        var isDefault = EqualityComparer<Identifier>.Default.Equals(value, default);
 
-        if (!string.IsNullOrEmpty(identifierValue))
+        if (!ShouldWriteValue(task, candidates, isDefault))
         {
-            knownTokens[key] = JToken.FromObject(identifier, serializer);
+            return;
         }
-        else if (propertyOrder.Contains(key))
+
+        var key = ResolveKeyIgnoreCase(task.PropertyOrder, candidates)
+                  ?? ResolveKeyIgnoreCase(task.KnownProperties, candidates)
+                  ?? candidates[0];
+
+        if (isDefault)
         {
             knownTokens[key] = JValue.CreateNull();
         }
+        else
+        {
+            knownTokens[key] = JToken.FromObject(value, serializer);
+        }
+    }
+
+    private static void AddIntToken(JsonSerializer serializer, TaskBase task, Dictionary<string, JToken> knownTokens, int value, params string[] candidates)
+    {
+        var isDefault = value == default;
+
+        if (!ShouldWriteValue(task, candidates, isDefault))
+        {
+            return;
+        }
+
+        var key = ResolveKeyIgnoreCase(task.PropertyOrder, candidates)
+                  ?? ResolveKeyIgnoreCase(task.KnownProperties, candidates)
+                  ?? candidates[0];
+
+        knownTokens[key] = JToken.FromObject(value, serializer);
+    }
+
+    private static void AddBoolToken(JsonSerializer serializer, TaskBase task, Dictionary<string, JToken> knownTokens, bool value, params string[] candidates)
+    {
+        var isDefault = value == default;
+
+        if (!ShouldWriteValue(task, candidates, isDefault))
+        {
+            return;
+        }
+
+        var key = ResolveKeyIgnoreCase(task.PropertyOrder, candidates)
+                  ?? ResolveKeyIgnoreCase(task.KnownProperties, candidates)
+                  ?? candidates[0];
+
+        knownTokens[key] = JToken.FromObject(value, serializer);
+    }
+
+    private static void AddStringToken(JsonSerializer serializer, TaskBase task, Dictionary<string, JToken> knownTokens, string? value, params string[] candidates)
+    {
+        var isDefault = value is null;
+
+        if (!ShouldWriteValue(task, candidates, isDefault))
+        {
+            return;
+        }
+
+        var key = ResolveKeyIgnoreCase(task.PropertyOrder, candidates)
+                  ?? ResolveKeyIgnoreCase(task.KnownProperties, candidates)
+                  ?? candidates[0];
+
+        if (value is null)
+        {
+            knownTokens[key] = JValue.CreateNull();
+        }
+        else
+        {
+            knownTokens[key] = JToken.FromObject(value, serializer);
+        }
+    }
+
+    private static bool ShouldWriteValue(TaskBase task, IReadOnlyList<string> candidates, bool isDefault)
+    {
+        if (HasKnownProperty(task, candidates))
+        {
+            return true;
+        }
+
+        if (!isDefault)
+        {
+            return true;
+        }
+
+        return false;
+    }
+
+    private static bool HasKnownProperty(TaskBase task, IReadOnlyList<string> candidates)
+    {
+        return ResolveKeyIgnoreCase(task.KnownProperties, candidates) is not null;
+    }
+
+    private static string? ResolveKeyIgnoreCase(IEnumerable<string> propertyNames, IReadOnlyList<string> candidates)
+    {
+        foreach (var candidate in candidates)
+        {
+            foreach (var name in propertyNames)
+            {
+                if (string.Equals(name, candidate, StringComparison.OrdinalIgnoreCase))
+                {
+                    return name;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    private static bool Matches(string propertyName, params string[] candidates)
+    {
+        foreach (var candidate in candidates)
+        {
+            if (string.Equals(propertyName, candidate, StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static bool TryGetIdentifier(JToken token, out Identifier identifier)
+    {
+        identifier = default;
+
+        if (token.Type == JTokenType.String)
+        {
+            var value = token.Value<string>();
+            if (Identifier.IsValid(value))
+            {
+                identifier = new Identifier(value!);
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static bool TryGetInt(JToken token, out int value)
+    {
+        switch (token.Type)
+        {
+            case JTokenType.Integer:
+                value = token.Value<int>();
+                return true;
+            case JTokenType.Float:
+                value = Convert.ToInt32(token.Value<double>(), CultureInfo.InvariantCulture);
+                return true;
+            case JTokenType.String:
+                if (int.TryParse(token.Value<string>(), NumberStyles.Integer, CultureInfo.InvariantCulture, out value))
+                {
+                    return true;
+                }
+
+                break;
+        }
+
+        value = default;
+        return false;
+    }
+
+    private static bool TryGetBool(JToken token, out bool value)
+    {
+        switch (token.Type)
+        {
+            case JTokenType.Boolean:
+                value = token.Value<bool>();
+                return true;
+            case JTokenType.Integer:
+                value = token.Value<int>() != 0;
+                return true;
+            case JTokenType.Float:
+                value = Math.Abs(token.Value<double>()) > double.Epsilon;
+                return true;
+            case JTokenType.String:
+                var text = token.Value<string>();
+                if (bool.TryParse(text, out value))
+                {
+                    return true;
+                }
+
+                if (int.TryParse(text, NumberStyles.Integer, CultureInfo.InvariantCulture, out var numeric))
+                {
+                    value = numeric != 0;
+                    return true;
+                }
+
+                break;
+        }
+
+        value = default;
+        return false;
+    }
+
+    private static bool TryGetString(JToken token, out string? value)
+    {
+        if (token.Type == JTokenType.Null)
+        {
+            value = null;
+            return true;
+        }
+
+        if (token.Type == JTokenType.String)
+        {
+            value = token.Value<string>();
+            return true;
+        }
+
+        value = null;
+        return false;
     }
 }

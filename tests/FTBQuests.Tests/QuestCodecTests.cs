@@ -33,11 +33,12 @@ public class QuestCodecTests
         Assert.Equal(Guid.Parse("11111111-1111-1111-1111-111111111111"), quest.Dependencies[0]);
 
         Assert.Equal(2, quest.Tasks.Count);
-        Assert.IsType<ItemTask>(quest.Tasks[0]);
-        Assert.True(quest.Tasks[0].Extra.TryGetValue("item", out var itemToken));
-        Assert.Equal("minecraft:apple", itemToken!.Value<string>());
-        Assert.True(quest.Tasks[0].Extra.TryGetValue("count", out var countToken));
-        Assert.Equal(4, countToken!.Value<int>());
+        var itemTask = Assert.IsType<ItemTask>(quest.Tasks[0]);
+        Assert.Equal(new Identifier("minecraft:apple"), itemTask.ItemId);
+        Assert.Equal(4, itemTask.Count);
+        Assert.Null(itemTask.Nbt);
+        Assert.False(itemTask.Extra.TryGetValue("item", out _));
+        Assert.False(itemTask.Extra.TryGetValue("count", out _));
 
         Assert.IsType<UnknownTask>(quest.Tasks[1]);
         Assert.Equal("custom_mod:visit_biome", quest.Tasks[1].TypeId);
@@ -94,6 +95,9 @@ public class QuestCodecTests
         Assert.Equal("medium", metadataToken!["difficulty"]!.Value<string>());
 
         Assert.Equal(quest.Tasks.Count, roundTripped.Tasks.Count);
+        var roundTrippedItem = Assert.IsType<ItemTask>(roundTripped.Tasks[0]);
+        Assert.Equal(new Identifier("minecraft:apple"), roundTrippedItem.ItemId);
+        Assert.Equal(4, roundTrippedItem.Count);
         Assert.Equal(quest.Tasks[1].TypeId, roundTripped.Tasks[1].TypeId);
         Assert.True(roundTripped.Tasks[1].Extra.TryGetValue("biome", out var biomeToken));
         Assert.Equal("minecraft:plains", biomeToken!.Value<string>());
