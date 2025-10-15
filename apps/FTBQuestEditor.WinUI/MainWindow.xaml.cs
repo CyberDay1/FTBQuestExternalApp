@@ -4,6 +4,9 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using FTBQuestEditor.WinUI.Views;
 using FTBQuests.IO;
+using FTBQuests.IO.Presets;
+using FTBQuestEditor.WinUI.ViewModels;
+using FTBQuestEditor.WinUI.Views;
 using FTBQuests.Loot;
 using FTBQuests.Registry;
 using FTBQuests.Validation.Validators;
@@ -58,6 +61,26 @@ public sealed partial class MainWindow : Window
         }
     }
 
+    private async void OnPresetsClicked(object sender, RoutedEventArgs e)
+    {
+        if (Content is not FrameworkElement rootElement)
+        {
+            return;
+        }
+
+        string presetsDirectory = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+            "FTBQuestEditor",
+            "presets");
+
+        var store = new PresetSlotStore(presetsDirectory);
+        var dialog = new PresetsDialog
+        {
+            XamlRoot = rootElement.XamlRoot,
+            ViewModel = new PresetsDialogViewModel(store),
+        };
+
+        await dialog.ShowAsync();
     private async void OnLootTablesClicked(object sender, RoutedEventArgs e)
     {
         try
