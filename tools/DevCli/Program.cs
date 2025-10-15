@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using FTBQuestExternalApp.Codecs.Model;
 using FTBQuests.IO;
+using FTBQuests.Registry;
 using FTBQuests.Schema;
 using FTBQuests.Validation;
 using FTBQuests.Validation.Validators;
@@ -28,6 +29,7 @@ internal static class DevCliApp
             return command.ToLowerInvariant() switch
             {
                 "schema" => await RunSchemaAsync(commandArgs),
+                "export-probe" => await RunExportProbeAsync(commandArgs),
                 "validate" => await RunValidateAsync(commandArgs),
                 _ => UnknownCommand(command),
             };
@@ -82,6 +84,53 @@ internal static class DevCliApp
         emitter.Emit(fullOutput);
 
         Console.WriteLine($"Schemas written to {fullOutput}.");
+        return 0;
+    }
+
+    private static async Task<int> RunExportProbeAsync(string[] args)
+    {
+        var options = OptionParser.Parse(args);
+        if (!options.TryGetValue("out", out var outOption) || string.IsNullOrWhiteSpace(outOption))
+        {
+            throw new CliException("The --out option is required.");
+        }
+
+        string outputPath = Path.GetFullPath(outOption!, Directory.GetCurrentDirectory());
+        Directory.CreateDirectory(outputPath);
+
+        string packPath = options.TryGetValue("pack", out var packOption) && !string.IsNullOrWhiteSpace(packOption)
+            ? packOption!
+            : Directory.GetCurrentDirectory();
+        string fullPackPath = Path.GetFullPath(packPath, Directory.GetCurrentDirectory());
+        if (!Directory.Exists(fullPackPath))
+        {
+            throw new CliException($"Pack directory '{fullPackPath}' does not exist.");
+        }
+
+        string registryPath = options.TryGetValue("registry", out var registryOption) && !string.IsNullOrWhiteSpace(registryOption)
+            ? registryOption!
+            : fullPackPath;
+        string resolvedRegistryPath = Path.GetFullPath(registryPath, Directory.GetCurrentDirectory());
+        if (File.Exists(resolvedRegistryPath))
+        {
+            resolvedRegistryPath = Path.GetDirectoryName(resolvedRegistryPath) ?? resolvedRegistryPath;
+        }
+
+        if (!Directory.Exists(resolvedRegistryPath))
+        {
+            throw new CliException($"Registry directory '{resolvedRegistryPath}' does not exist.");
+        }
+
+        var loader = new QuestPackLoader();
+        QuestPack pack = await loader.LoadAsync(fullPackPath).ConfigureAwait(false);
+
+        var importer = new RegistryImporter();
+        RegistryDatabase registry = await importer.LoadFromProbeAsync(resolvedRegistryPath).ConfigureAwait(false);
+
+        var exporter = new ProbeExporter();
+        await exporter.ExportProbeAsync(pack, registry, outputPath).ConfigureAwait(false);
+
+        Console.WriteLine($"Probe export written to {outputPath}.");
         return 0;
     }
 
@@ -160,10 +209,12 @@ internal static class DevCliApp
         Console.WriteLine();
         Console.WriteLine("Usage:");
         Console.WriteLine("  dotnet run --project tools/DevCli -- schema emit [--out <directory>]");
+        Console.WriteLine("  dotnet run --project tools/DevCli -- export-probe --out <directory> [--pack <directory>] [--registry <directory>]");
         Console.WriteLine("  dotnet run --project tools/DevCli -- validate --pack <directory>");
         Console.WriteLine();
         Console.WriteLine("Commands:");
         Console.WriteLine("  schema emit   Emit JSON schemas for quest data.");
+        Console.WriteLine("  export-probe  Export quest content to probe-compatible JSON.");
         Console.WriteLine("  validate      Validate a quest pack directory.");
     }
 

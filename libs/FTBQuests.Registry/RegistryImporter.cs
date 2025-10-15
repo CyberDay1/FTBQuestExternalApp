@@ -38,7 +38,9 @@ public sealed class RegistryImporter
             ? ParseTags(tagsElement)
             : new Dictionary<string, IReadOnlyCollection<string>>(StringComparer.OrdinalIgnoreCase);
 
-        return new RegistryDatabase(items, tagMembership);
+        var database = new RegistryDatabase(items, tagMembership);
+        Seed.VanillaRegistrySeeder.EnsureBaseItems(database);
+        return database;
     }
 
     private static IEnumerable<RegistryItem> ParseItems(JsonElement array)

@@ -102,18 +102,18 @@ public static class QuestPackLoaderTests
         engineers["display_name"] = "Chief Engineers";
         engineers["color"] = "#5a9cfe";
 
-        var gatherQuest = FindQuest(pack, new Guid("31111111-1111-1111-1111-111111111001"));
+        var gatherQuest = FindQuest(pack, 2);
         gatherQuest.PositionX = -4;
         gatherQuest.PositionY = 3;
 
-        var craftQuest = FindQuest(pack, new Guid("31111111-1111-1111-1111-111111111002"));
+        var craftQuest = FindQuest(pack, 3);
         craftQuest.PositionX = 12;
         craftQuest.PositionY = -2;
         craftQuest.Page = 1;
         craftQuest.Dependencies.Clear();
         craftQuest.Dependencies.Add(gatherQuest.Id);
 
-        var furnaceQuest = FindQuest(pack, new Guid("41111111-1111-1111-1111-111111111001"));
+        var furnaceQuest = FindQuest(pack, 5);
         furnaceQuest.PositionX = 18;
         furnaceQuest.PositionY = 9;
         furnaceQuest.Page = 2;
@@ -171,7 +171,7 @@ public static class QuestPackLoaderTests
         return normalized.Replace(Path.AltDirectorySeparatorChar, '/');
     }
 
-    private static Quest FindQuest(QuestPack pack, Guid questId)
+    private static Quest FindQuest(QuestPack pack, long questId)
     {
         return pack.Chapters
             .SelectMany(chapter => chapter.Quests)

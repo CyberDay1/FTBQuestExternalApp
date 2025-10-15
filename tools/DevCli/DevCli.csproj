@@ -6,6 +6,7 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
   <ItemGroup>
+    <ProjectReference Include="../../libs/FTBQuests.Registry/FTBQuests.Registry.csproj" />
     <ProjectReference Include="../../libs/FTBQuests.Schema/FTBQuests.Schema.csproj" />
     <ProjectReference Include="../../libs/FTBQuests.Validation/FTBQuests.Validation.csproj" />
     <ProjectReference Include="../../libs/FTBQuests.IO/FTBQuests.IO.csproj" />

@@ -1,5 +1,5 @@
-using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using FTBQuestExternalApp.Codecs.Model;
 using Newtonsoft.Json;
@@ -33,7 +33,7 @@ public class ChapterConverter : JsonConverter<Chapter>
         chapter.Quests ??= new List<Quest>();
         chapter.Quests.Clear();
         chapter.Extra.Extra.Clear();
-        chapter.Id = Guid.Empty;
+        chapter.Id = 0;
         chapter.Description = null;
         chapter.IconId = null;
         chapter.Title = string.Empty;
@@ -43,9 +43,7 @@ public class ChapterConverter : JsonConverter<Chapter>
             switch (property.Name)
             {
                 case "id":
-                    chapter.Id = property.Value.Type == JTokenType.Null
-                        ? Guid.Empty
-                        : property.Value.ToObject<Guid>(serializer);
+                    chapter.Id = ConvertToLong(property.Value, serializer);
                     break;
                 case "title":
                     chapter.Title = property.Value.Type == JTokenType.Null
@@ -177,5 +175,27 @@ public class ChapterConverter : JsonConverter<Chapter>
         }
 
         jobject.WriteTo(writer);
+    }
+
+    private static long ConvertToLong(JToken token, JsonSerializer serializer)
+    {
+        return token.Type switch
+        {
+            JTokenType.Null => 0,
+            JTokenType.Integer => token.Value<long>(),
+            JTokenType.Float => System.Convert.ToInt64(token.Value<double>()),
+            JTokenType.String => TryParseString(token.Value<string>()),
+            _ => token.ToObject<long>(serializer),
+        };
+
+        static long TryParseString(string? value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                return 0;
+            }
+
+            return long.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var parsed) ? parsed : 0;
+        }
     }
 }

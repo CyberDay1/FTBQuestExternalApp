@@ -1,0 +1,13 @@
+namespace FTBQuestExternalApp.Codecs.Model;
+
+public sealed class XpTask : TaskBase
+{
+    public XpTask()
+        : base("xp")
+    {
+    }
+
+    public int Amount { get; set; }
+
+    public bool Levels { get; set; }
+}

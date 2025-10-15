@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using FTBQuestExternalApp.Codecs.Model;
@@ -14,18 +13,18 @@ public class CycleValidatorTests
     {
         var chapter = new Chapter
         {
-            Id = Guid.NewGuid(),
+            Id = 10,
             Title = "Chapter 1",
             Quests = new List<Quest>
             {
                 new()
                 {
-                    Id = Guid.NewGuid(),
+                    Id = 11,
                     Title = "Quest A",
                 },
                 new()
                 {
-                    Id = Guid.NewGuid(),
+                    Id = 12,
                     Title = "Quest B",
                 },
             },
@@ -41,9 +40,9 @@ public class CycleValidatorTests
     [Fact]
     public void Validate_DetectsCycleAcrossChapters()
     {
-        var questA = new Quest { Id = Guid.NewGuid(), Title = "Quest A" };
-        var questB = new Quest { Id = Guid.NewGuid(), Title = "Quest B" };
-        var questC = new Quest { Id = Guid.NewGuid(), Title = "Quest C" };
+        var questA = new Quest { Id = 21, Title = "Quest A" };
+        var questB = new Quest { Id = 22, Title = "Quest B" };
+        var questC = new Quest { Id = 23, Title = "Quest C" };
 
         questA.Dependencies.Add(questB.Id);
         questB.Dependencies.Add(questC.Id);
@@ -51,14 +50,14 @@ public class CycleValidatorTests
 
         var chapterOne = new Chapter
         {
-            Id = Guid.NewGuid(),
+            Id = 24,
             Title = "Chapter One",
             Quests = new List<Quest> { questA },
         };
 
         var chapterTwo = new Chapter
         {
-            Id = Guid.NewGuid(),
+            Id = 25,
             Title = "Chapter Two",
             Quests = new List<Quest> { questB, questC },
         };
@@ -82,10 +81,10 @@ public class CycleValidatorTests
     [Fact]
     public void Validate_DetectsMultipleDistinctCyclesDeterministically()
     {
-        var questA = new Quest { Id = Guid.NewGuid(), Title = "Quest A" };
-        var questB = new Quest { Id = Guid.NewGuid(), Title = "Quest B" };
-        var questC = new Quest { Id = Guid.NewGuid(), Title = "Quest C" };
-        var questD = new Quest { Id = Guid.NewGuid(), Title = "Quest D" };
+        var questA = new Quest { Id = 31, Title = "Quest A" };
+        var questB = new Quest { Id = 32, Title = "Quest B" };
+        var questC = new Quest { Id = 33, Title = "Quest C" };
+        var questD = new Quest { Id = 34, Title = "Quest D" };
 
         questA.Dependencies.Add(questB.Id);
         questB.Dependencies.Add(questA.Id);
@@ -95,14 +94,14 @@ public class CycleValidatorTests
 
         var chapterOne = new Chapter
         {
-            Id = Guid.NewGuid(),
+            Id = 35,
             Title = "Chapter One",
             Quests = new List<Quest> { questA, questB },
         };
 
         var chapterTwo = new Chapter
         {
-            Id = Guid.NewGuid(),
+            Id = 36,
             Title = "Chapter Two",
             Quests = new List<Quest> { questC, questD },
         };

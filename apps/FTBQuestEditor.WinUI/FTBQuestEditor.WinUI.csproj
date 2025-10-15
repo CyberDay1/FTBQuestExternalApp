@@ -1,4 +1,5 @@
 <Project Sdk="Microsoft.NET.Sdk">
+
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
     <TargetFramework>net8.0-windows10.0.19041.0</TargetFramework>
@@ -9,15 +10,37 @@
     <ApplicationManifest>app.manifest</ApplicationManifest>
   </PropertyGroup>
 
+  <PropertyGroup Condition="'$(Configuration)' == 'Release' and '$(RuntimeIdentifier)' == 'win-x64'">
+    <SelfContained>true</SelfContained>
+    <PublishSingleFile>true</PublishSingleFile>
+    <IncludeAllContentForSelfExtract>true</IncludeAllContentForSelfExtract>
+    <PublishDir>$(SolutionDir)dist$(DirectorySeparatorChar)portable$(DirectorySeparatorChar)</PublishDir>
+  </PropertyGroup>
+
   <ItemGroup>
     <Page Include="App.xaml" />
     <Page Include="MainWindow.xaml" />
+    <Page Include="Views\Panels\QuestProperties.xaml" />
+    <Page Include="Views\Panels\TaskProperties.xaml" />
+    <Page Include="Views\Panels\RewardProperties.xaml" />
     <Page Include="Views\GridViewPage.xaml" />
+    <Page Include="Views\ChapterNavigator.xaml" />
+    <Page Include="Views\PresetsDialog.xaml" />
+    <Page Include="Views\PresetManagerDialog.xaml" />
   </ItemGroup>
 
   <ItemGroup>
     <Compile Update="Views\GridViewPage.xaml.cs">
       <DependentUpon>GridViewPage.xaml</DependentUpon>
+    </Compile>
+    <Compile Update="Views\ChapterNavigator.xaml.cs">
+      <DependentUpon>ChapterNavigator.xaml</DependentUpon>
+    </Compile>
+    <Compile Update="Views\PresetsDialog.xaml.cs">
+      <DependentUpon>PresetsDialog.xaml</DependentUpon>
+    </Compile>
+    <Compile Update="Views\PresetManagerDialog.xaml.cs">
+      <DependentUpon>PresetManagerDialog.xaml</DependentUpon>
     </Compile>
   </ItemGroup>
 
@@ -40,4 +63,5 @@
     <ProjectReference Include="../../libs/FTBQuests.Validation/FTBQuests.Validation.csproj" />
     <ProjectReference Include="../../libs/FTBQuests.Assets/FTBQuests.Assets.csproj" />
   </ItemGroup>
+
 </Project>

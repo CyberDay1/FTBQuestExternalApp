@@ -15,7 +15,7 @@ public sealed class BrokenReferenceValidator : IValidator
         ArgumentNullException.ThrowIfNull(questPack);
 
         var issues = new List<ValidationIssue>();
-        var knownQuestIds = new HashSet<Guid>();
+        var knownQuestIds = new HashSet<long>();
 
         for (var chapterIndex = 0; chapterIndex < questPack.Chapters.Count; chapterIndex++)
         {
@@ -33,7 +33,7 @@ public sealed class BrokenReferenceValidator : IValidator
                     continue;
                 }
 
-                if (quest.Id != Guid.Empty)
+                if (quest.Id != 0)
                 {
                     knownQuestIds.Add(quest.Id);
                 }
@@ -59,7 +59,7 @@ public sealed class BrokenReferenceValidator : IValidator
                 for (var dependencyIndex = 0; dependencyIndex < quest.Dependencies.Count; dependencyIndex++)
                 {
                     var dependency = quest.Dependencies[dependencyIndex];
-                    if (dependency == Guid.Empty)
+                    if (dependency == 0)
                     {
                         issues.Add(new ValidationIssue(
                             ValidationSeverity.Error,
