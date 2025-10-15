@@ -1,0 +1,59 @@
+using System;
+using System.Linq;
+using FTBQuestExternalApp.Codecs.Model;
+using FTBQuests.Validation.Validators;
+using Xunit;
+
+namespace FTBQuests.Tests.Validation;
+
+public class RequiredFieldsValidatorTests
+{
+    [Fact]
+    public void Validate_ReturnsIssuesForMissingCriticalFields()
+    {
+        var questWithoutTitle = new Quest
+        {
+            Id = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"),
+        };
+
+        var questWithMissingId = new Quest
+        {
+            Title = "Missing Id",
+        };
+
+        var chapter = new Chapter
+        {
+            Quests = { questWithoutTitle, questWithMissingId },
+        };
+
+        var pack = new QuestPack();
+        pack.Chapters.Add(chapter);
+
+        var validator = new RequiredFieldsValidator();
+
+        var issues = validator.Validate(pack).ToList();
+
+        Assert.Collection(
+            issues.OrderBy(i => i.Code).ThenBy(i => i.Path),
+            issue =>
+            {
+                Assert.Equal("REQ_CHAPTER_ID", issue.Code);
+                Assert.Equal("chapters[0].id", issue.Path);
+            },
+            issue =>
+            {
+                Assert.Equal("REQ_CHAPTER_TITLE", issue.Code);
+                Assert.Equal("chapters[0].title", issue.Path);
+            },
+            issue =>
+            {
+                Assert.Equal("REQ_QUEST_TITLE", issue.Code);
+                Assert.Equal("chapters[0].quests[0].title", issue.Path);
+            },
+            issue =>
+            {
+                Assert.Equal("REQ_QUEST_ID", issue.Code);
+                Assert.Equal("chapters[0].quests[1].id", issue.Path);
+            });
+    }
+}
