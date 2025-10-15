@@ -13,17 +13,20 @@ namespace FTBQuests.IO;
 
 public class QuestPackLoader
 {
-    public async Task<QuestPack> LoadAsync(string rootPath, CancellationToken ct = default)
+    public Task<QuestPack> LoadAsync(string rootPath, CancellationToken ct = default)
+    {
+        return LoadAsync(rootPath, options: null, ct);
+    }
+
+    public async Task<QuestPack> LoadAsync(string rootPath, ImportOptions? options, CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(rootPath);
         ct.ThrowIfCancellationRequested();
 
+        options ??= new ImportOptions();
+
         var pack = new QuestPack();
-        var ftbRoot = Path.Combine(rootPath, "data", "ftbquests");
-        if (!Directory.Exists(ftbRoot))
-        {
-            return pack;
-        }
+        var ftbRoot = ResolveQuestRoot(rootPath, options);
 
         var serializer = JsonSerializer.Create(JsonSettings.Create());
         var metadataOrder = new List<string>();
@@ -221,5 +224,80 @@ public class QuestPackLoader
         }
 
         return candidate;
+    }
+
+    private static string ResolveQuestRoot(string rootPath, ImportOptions options)
+    {
+        var basePath = ResolveBasePath(rootPath, options.RootPath);
+        var candidates = BuildCandidateRoots(basePath, options.PreferConfigPath).ToList();
+
+        foreach (var candidate in candidates)
+        {
+            if (Directory.Exists(candidate))
+            {
+                return candidate;
+            }
+        }
+
+        var searched = candidates.Count == 0
+            ? basePath
+            : string.Join(", ", candidates.Select(path => $"'{path}'"));
+
+        throw new DirectoryNotFoundException(
+            $"Could not find an FTB Quests directory under '{basePath}'. Checked: {searched}.");
+    }
+
+    private static string ResolveBasePath(string rootPath, string additional)
+    {
+        var resolvedRoot = Path.GetFullPath(rootPath);
+
+        if (string.IsNullOrWhiteSpace(additional))
+        {
+            return resolvedRoot;
+        }
+
+        if (Path.IsPathRooted(additional))
+        {
+            return Path.GetFullPath(additional);
+        }
+
+        return Path.GetFullPath(Path.Combine(resolvedRoot, additional));
+    }
+
+    private static IEnumerable<string> BuildCandidateRoots(string basePath, bool preferConfig)
+    {
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var candidate in EnumerateRootCandidates(basePath, preferConfig))
+        {
+            var normalized = Path.GetFullPath(candidate);
+            if (seen.Add(normalized))
+            {
+                yield return normalized;
+            }
+        }
+    }
+
+    private static IEnumerable<string> EnumerateRootCandidates(string basePath, bool preferConfig)
+    {
+        var trimmed = Path.TrimEndingDirectorySeparator(basePath);
+        if (string.Equals(Path.GetFileName(trimmed), "ftbquests", StringComparison.OrdinalIgnoreCase))
+        {
+            yield return basePath;
+        }
+
+        var configPath = Path.Combine(basePath, "config", "ftbquests");
+        var dataPath = Path.Combine(basePath, "data", "ftbquests");
+
+        if (preferConfig)
+        {
+            yield return configPath;
+            yield return dataPath;
+        }
+        else
+        {
+            yield return dataPath;
+            yield return configPath;
+        }
     }
 }

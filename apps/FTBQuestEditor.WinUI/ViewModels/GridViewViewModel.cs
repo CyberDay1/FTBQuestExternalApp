@@ -1,8 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Globalization;
 using System.Linq;
 using CommunityToolkit.Mvvm.ComponentModel;
+using FTBQuests.IO;
 
 namespace FTBQuestEditor.WinUI.ViewModels;
 
@@ -35,18 +37,18 @@ public sealed partial class QuestIconViewModel : ObservableObject
     private double _y;
     private bool _isSelected;
 
-    public QuestIconViewModel(int id, int iconIndex, double x, double y, ValidationBadge badge)
+    public QuestIconViewModel(long id, string label, double x, double y, ValidationBadge badge)
     {
         Id = id;
-        IconIndex = iconIndex;
+        Label = label;
         _x = GridConstants.Snap(x);
         _y = GridConstants.Snap(y);
         Badge = badge;
     }
 
-    public int Id { get; }
+    public long Id { get; }
 
-    public int IconIndex { get; }
+    public string Label { get; }
 
     public ValidationBadge Badge { get; }
 
@@ -71,8 +73,6 @@ public sealed partial class QuestIconViewModel : ObservableObject
     public double Size => GridConstants.CellSize;
 
     public double IconScale => GridConstants.IconScale;
-
-    public string Label => IconIndex.ToString();
 
     public bool HasBadge => Badge != ValidationBadge.None;
 
@@ -100,7 +100,7 @@ public sealed partial class GridViewViewModel : ObservableObject
     private const double MinZoom = 0.35d;
     private const double MaxZoom = 3.5d;
 
-    private readonly Dictionary<int, QuestIconViewModel> _iconLookup;
+    private readonly Dictionary<long, QuestIconViewModel> _iconLookup;
     private readonly Dictionary<QuestIconViewModel, (double X, double Y)> _dragSnapshot = new();
 
     private double _zoom = 1d;
@@ -116,17 +116,8 @@ public sealed partial class GridViewViewModel : ObservableObject
 
     public GridViewViewModel()
     {
-        var sampleIcons = new[]
-        {
-            new QuestIconViewModel(1, 12, 0, 0, ValidationBadge.None),
-            new QuestIconViewModel(2, 9, GridConstants.CellWithSpacing, 0, ValidationBadge.Warning),
-            new QuestIconViewModel(3, 21, GridConstants.CellWithSpacing * 2, GridConstants.CellWithSpacing, ValidationBadge.Error),
-            new QuestIconViewModel(4, 5, 0, GridConstants.CellWithSpacing * 2, ValidationBadge.None),
-            new QuestIconViewModel(5, 17, GridConstants.CellWithSpacing * 4, GridConstants.CellWithSpacing, ValidationBadge.Warning),
-        };
-
-        Icons = new ObservableCollection<QuestIconViewModel>(sampleIcons);
-        _iconLookup = Icons.ToDictionary(icon => icon.Id);
+        Icons = new ObservableCollection<QuestIconViewModel>();
+        _iconLookup = new Dictionary<long, QuestIconViewModel>();
     }
 
     public ObservableCollection<QuestIconViewModel> Icons { get; }
@@ -169,12 +160,54 @@ public sealed partial class GridViewViewModel : ObservableObject
 
     public IReadOnlyCollection<QuestIconViewModel> SelectedIcons => Icons.Where(icon => icon.IsSelected).ToList();
 
+    public void LoadQuestPack(QuestPack pack)
+    {
+        ArgumentNullException.ThrowIfNull(pack);
+
+        ClearSelection();
+
+        Icons.Clear();
+        _iconLookup.Clear();
+
+        foreach (var chapter in pack.Chapters)
+        {
+            if (chapter?.Quests is null)
+            {
+                continue;
+            }
+
+            foreach (var quest in chapter.Quests)
+            {
+                if (quest is null)
+                {
+                    continue;
+                }
+
+                var label = string.IsNullOrWhiteSpace(quest.Title)
+                    ? quest.Id.ToString(CultureInfo.InvariantCulture)
+                    : quest.Title;
+
+                var icon = new QuestIconViewModel(
+                    quest.Id,
+                    label,
+                    quest.PositionX * GridConstants.CellSize,
+                    quest.PositionY * GridConstants.CellSize,
+                    ValidationBadge.None);
+
+                Icons.Add(icon);
+                _iconLookup[icon.Id] = icon;
+            }
+        }
+
+        NotifySelectionChanged();
+    }
+
     private void NotifySelectionChanged()
     {
         OnPropertyChanged(nameof(SelectedIcons));
     }
 
-    public void BeginIconDrag(int iconId, double pointerX, double pointerY, SelectionModifier modifier)
+    public void BeginIconDrag(long iconId, double pointerX, double pointerY, SelectionModifier modifier)
     {
         if (!_iconLookup.TryGetValue(iconId, out var icon))
         {

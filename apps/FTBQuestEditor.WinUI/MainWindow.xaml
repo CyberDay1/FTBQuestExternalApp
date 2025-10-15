@@ -3,5 +3,16 @@
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:views="using:FTBQuestEditor.WinUI.Views">
-    <views:GridViewPage />
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <CommandBar x:Name="Toolbar" DefaultLabelPosition="Right">
+            <AppBarButton Icon="OpenFile" Label="Import" Click="OnImportClicked" />
+        </CommandBar>
+
+        <views:GridViewPage x:Name="GridView" Grid.Row="1" />
+    </Grid>
 </Window>
