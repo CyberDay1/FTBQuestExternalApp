@@ -12,6 +12,9 @@
   <ItemGroup>
     <Page Include="App.xaml" />
     <Page Include="MainWindow.xaml" />
+    <Page Include="Views\Panels\QuestProperties.xaml" />
+    <Page Include="Views\Panels\TaskProperties.xaml" />
+    <Page Include="Views\Panels\RewardProperties.xaml" />
   </ItemGroup>
 
   <ItemGroup>
