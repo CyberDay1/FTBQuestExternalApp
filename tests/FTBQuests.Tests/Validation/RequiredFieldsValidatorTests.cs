@@ -24,13 +24,12 @@ public class RequiredFieldsValidatorTests
             Title = "Missing Id",
         };
 
-        var chapter = new Chapter
-        {
-            Quests = { questWithoutTitle, questWithMissingId },
-        };
+        var chapter = new Chapter();
+        chapter.AddQuest(questWithoutTitle);
+        chapter.AddQuest(questWithMissingId);
 
         var pack = new QuestPack();
-        pack.Chapters.Add(chapter);
+        pack.AddChapter(chapter);
 
         var validator = new RequiredFieldsValidator();
 

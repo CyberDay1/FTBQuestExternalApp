@@ -24,7 +24,7 @@ public sealed class BrokenReferenceValidator : IValidator
         for (var chapterIndex = 0; chapterIndex < questPack.Chapters.Count; chapterIndex++)
         {
             var chapter = questPack.Chapters[chapterIndex];
-            if (chapter?.Quests is null)
+            if (chapter is null)
             {
                 continue;
             }
@@ -47,7 +47,7 @@ public sealed class BrokenReferenceValidator : IValidator
         for (var chapterIndex = 0; chapterIndex < questPack.Chapters.Count; chapterIndex++)
         {
             var chapter = questPack.Chapters[chapterIndex];
-            if (chapter?.Quests is null)
+            if (chapter is null)
             {
                 continue;
             }
@@ -55,7 +55,7 @@ public sealed class BrokenReferenceValidator : IValidator
             for (var questIndex = 0; questIndex < chapter.Quests.Count; questIndex++)
             {
                 var quest = chapter.Quests[questIndex];
-                if (quest?.Dependencies is null)
+                if (quest is null)
                 {
                     continue;
                 }

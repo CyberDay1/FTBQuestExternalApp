@@ -37,7 +37,7 @@ public sealed class CycleValidator
                 continue;
             }
 
-            foreach (var quest in chapter.Quests ?? Enumerable.Empty<Quest>())
+            foreach (var quest in chapter.Quests)
             {
                 if (quest is null)
                 {

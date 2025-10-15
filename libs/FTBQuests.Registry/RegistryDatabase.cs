@@ -80,7 +80,7 @@ public sealed class RegistryDatabase
                 : normalizedIdentifiers;
         }
 
-        tagMembership = new ReadOnlyDictionary<string, IReadOnlyCollection<string>>(normalizedMembership);
+        this.tagMembership = new ReadOnlyDictionary<string, IReadOnlyCollection<string>>(normalizedMembership);
 
         itemsByTag = new Dictionary<string, RegistryItem[]>(StringComparer.OrdinalIgnoreCase);
         foreach ((string tag, IReadOnlyCollection<string> identifiers) in normalizedMembership)
@@ -206,7 +206,7 @@ public sealed class RegistryDatabase
     }
     /// Gets the normalized tag membership captured during construction.
     /// </summary>
-    public IReadOnlyDictionary<string, IReadOnlyCollection<string>> TagMembership => tagMembership;
+    public IReadOnlyDictionary<string, IReadOnlyCollection<string>> TagMembership => this.tagMembership;
 
     /// <summary>
     /// Adds the specified item when it is not already tracked.

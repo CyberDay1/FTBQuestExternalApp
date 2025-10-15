@@ -45,19 +45,19 @@ public sealed class MainViewModel : ObservableObject
             Page = 0,
         };
 
-        quest.Tasks.Add(new ItemTask
+        quest.AddTask(new ItemTask
         {
             ItemId = "minecraft:stone",
             Count = 16,
         });
-        quest.Rewards.Add(new XpReward
+        quest.AddReward(new XpReward
         {
             Amount = 50,
             Levels = false,
         });
 
-        chapter.Quests.Add(quest);
-        questPack.Chapters.Add(chapter);
+        chapter.AddQuest(quest);
+        questPack.AddChapter(chapter);
 
         Quest = new QuestPropertiesViewModel(quest, "chapters[0].quests[0]");
 

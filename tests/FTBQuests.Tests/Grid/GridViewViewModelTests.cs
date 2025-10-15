@@ -75,26 +75,25 @@ public class GridViewViewModelTests
         {
             Id = 1,
             Title = "Basics",
-            Quests = new List<Quest>
-            {
-                new()
-                {
-                    Id = 1,
-                    Title = "First Quest",
-                    PositionX = 0,
-                    PositionY = 0,
-                },
-                new()
-                {
-                    Id = 2,
-                    Title = "Second Quest",
-                    PositionX = 1,
-                    PositionY = 1,
-                },
-            },
         };
 
-        pack.Chapters.Add(chapter);
+        chapter.AddQuest(new Quest
+        {
+            Id = 1,
+            Title = "First Quest",
+            PositionX = 0,
+            PositionY = 0,
+        });
+
+        chapter.AddQuest(new Quest
+        {
+            Id = 2,
+            Title = "Second Quest",
+            PositionX = 1,
+            PositionY = 1,
+        });
+
+        pack.AddChapter(chapter);
 
         var viewModel = new GridViewViewModel();
         viewModel.LoadChapter(chapter);

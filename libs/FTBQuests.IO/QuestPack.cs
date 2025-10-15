@@ -51,8 +51,7 @@ public class QuestPack
             Id = GetNextId(),
         };
 
-        chapter.Quests ??= new List<Quest>();
-        chapter.Quests.Add(quest);
+        chapter.AddQuest(quest);
         return quest;
     }
 
@@ -121,11 +120,6 @@ public class QuestPack
         if (chapter.Id != 0)
         {
             idAllocator.Register(chapter.Id);
-        }
-
-        if (chapter.Quests is null)
-        {
-            return;
         }
 
         foreach (var quest in chapter.Quests)

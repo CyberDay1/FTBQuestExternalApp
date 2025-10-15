@@ -122,26 +122,23 @@ public class ChapterListViewModelTests
         {
             Id = 1,
             Title = "Basics",
-            Quests = new List<Quest>()
         };
 
         chapterTwo = new Chapter
         {
             Id = 2,
             Title = "Advanced",
-            Quests = new List<Quest>()
         };
 
         chapterThree = new Chapter
         {
             Id = 3,
             Title = "Extras",
-            Quests = new List<Quest>()
         };
 
-        pack.Chapters.Add(chapterOne);
-        pack.Chapters.Add(chapterTwo);
-        pack.Chapters.Add(chapterThree);
+        pack.AddChapter(chapterOne);
+        pack.AddChapter(chapterTwo);
+        pack.AddChapter(chapterThree);
 
         return pack;
     }

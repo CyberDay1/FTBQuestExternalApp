@@ -34,8 +34,7 @@ public class ChapterConverter : JsonConverter<Chapter>
         var properties = jobject.Properties().ToList();
 
         chapter.SetPropertyOrder(properties.Select(p => p.Name));
-        chapter.Quests ??= new List<Quest>();
-        chapter.Quests.Clear();
+        chapter.ClearQuests();
         chapter.Extra.Extra.Clear();
         chapter.Id = 0;
         chapter.Description = null;
@@ -76,13 +75,13 @@ public class ChapterConverter : JsonConverter<Chapter>
                 case "quests":
                     if (property.Value.Type == JTokenType.Null)
                     {
-                        chapter.Quests.Clear();
+                        chapter.ClearQuests();
                     }
                     else
                     {
                         var quests = property.Value.ToObject<List<Quest>>(serializer) ?? new List<Quest>();
-                        chapter.Quests.Clear();
-                        chapter.Quests.AddRange(quests);
+                        chapter.ClearQuests();
+                        chapter.AddQuests(quests);
                     }
 
                     break;

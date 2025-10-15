@@ -180,7 +180,7 @@ public sealed partial class GridViewViewModel : ObservableObject
         Icons.Clear();
         _iconLookup.Clear();
 
-        if (chapter?.Quests is null)
+        if (chapter is null)
         {
             NotifySelectionChanged();
             return;

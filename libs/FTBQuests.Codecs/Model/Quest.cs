@@ -9,6 +9,9 @@ namespace FTBQuestExternalApp.Codecs.Model;
 public class Quest : IExtraAware
 {
     private readonly List<string> propertyOrder = new();
+    private readonly List<ITask> tasks = new();
+    private readonly List<IReward> rewards = new();
+    private readonly List<long> dependencies = new();
 
     public long Id { get; set; }
 
@@ -18,11 +21,11 @@ public class Quest : IExtraAware
 
     public Identifier? IconId { get; set; }
 
-    public List<ITask> Tasks { get; } = new();
+    public IReadOnlyList<ITask> Tasks => tasks;
 
-    public List<IReward> Rewards { get; } = new();
+    public IReadOnlyList<IReward> Rewards => rewards;
 
-    public List<long> Dependencies { get; } = new();
+    public IReadOnlyList<long> Dependencies => dependencies;
 
     public int PositionX { get; set; }
 
@@ -33,6 +36,51 @@ public class Quest : IExtraAware
     public PropertyBag Extra { get; } = new();
 
     internal IList<string> PropertyOrder => propertyOrder;
+
+    public void AddTask(ITask task)
+    {
+        tasks.Add(task);
+    }
+
+    public void AddTasks(IEnumerable<ITask> tasks)
+    {
+        this.tasks.AddRange(tasks);
+    }
+
+    public void ClearTasks()
+    {
+        tasks.Clear();
+    }
+
+    public void AddReward(IReward reward)
+    {
+        rewards.Add(reward);
+    }
+
+    public void AddRewards(IEnumerable<IReward> rewards)
+    {
+        this.rewards.AddRange(rewards);
+    }
+
+    public void ClearRewards()
+    {
+        rewards.Clear();
+    }
+
+    public void AddDependency(long dependency)
+    {
+        dependencies.Add(dependency);
+    }
+
+    public void AddDependencies(IEnumerable<long> dependencies)
+    {
+        this.dependencies.AddRange(dependencies);
+    }
+
+    public void ClearDependencies()
+    {
+        dependencies.Clear();
+    }
 
     internal void SetPropertyOrder(IEnumerable<string> order)
     {

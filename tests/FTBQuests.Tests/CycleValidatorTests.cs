@@ -19,20 +19,17 @@ public class CycleValidatorTests
         {
             Id = 10,
             Title = "Chapter 1",
-            Quests = new List<Quest>
-            {
-                new()
-                {
-                    Id = 11,
-                    Title = "Quest A",
-                },
-                new()
-                {
-                    Id = 12,
-                    Title = "Quest B",
-                },
-            },
         };
+        chapter.AddQuest(new Quest
+        {
+            Id = 11,
+            Title = "Quest A",
+        });
+        chapter.AddQuest(new Quest
+        {
+            Id = 12,
+            Title = "Quest B",
+        });
 
         var validator = new CycleValidator();
 
@@ -48,23 +45,24 @@ public class CycleValidatorTests
         var questB = new Quest { Id = 22, Title = "Quest B" };
         var questC = new Quest { Id = 23, Title = "Quest C" };
 
-        questA.Dependencies.Add(questB.Id);
-        questB.Dependencies.Add(questC.Id);
-        questC.Dependencies.Add(questA.Id);
+        questA.AddDependency(questB.Id);
+        questB.AddDependency(questC.Id);
+        questC.AddDependency(questA.Id);
 
         var chapterOne = new Chapter
         {
             Id = 24,
             Title = "Chapter One",
-            Quests = new List<Quest> { questA },
         };
+        chapterOne.AddQuest(questA);
 
         var chapterTwo = new Chapter
         {
             Id = 25,
             Title = "Chapter Two",
-            Quests = new List<Quest> { questB, questC },
         };
+        chapterTwo.AddQuest(questB);
+        chapterTwo.AddQuest(questC);
 
         var validator = new CycleValidator();
 
@@ -90,25 +88,27 @@ public class CycleValidatorTests
         var questC = new Quest { Id = 33, Title = "Quest C" };
         var questD = new Quest { Id = 34, Title = "Quest D" };
 
-        questA.Dependencies.Add(questB.Id);
-        questB.Dependencies.Add(questA.Id);
+        questA.AddDependency(questB.Id);
+        questB.AddDependency(questA.Id);
 
-        questC.Dependencies.Add(questD.Id);
-        questD.Dependencies.Add(questC.Id);
+        questC.AddDependency(questD.Id);
+        questD.AddDependency(questC.Id);
 
         var chapterOne = new Chapter
         {
             Id = 35,
             Title = "Chapter One",
-            Quests = new List<Quest> { questA, questB },
         };
+        chapterOne.AddQuest(questA);
+        chapterOne.AddQuest(questB);
 
         var chapterTwo = new Chapter
         {
             Id = 36,
             Title = "Chapter Two",
-            Quests = new List<Quest> { questC, questD },
         };
+        chapterTwo.AddQuest(questC);
+        chapterTwo.AddQuest(questD);
 
         var validator = new CycleValidator();
 
