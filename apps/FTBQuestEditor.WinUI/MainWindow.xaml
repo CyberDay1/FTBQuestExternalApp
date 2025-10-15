@@ -2,9 +2,49 @@
     x:Class="FTBQuestEditor.WinUI.MainWindow"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:local="using:FTBQuestEditor.WinUI">
-    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="12">
-        <TextBlock Text="FTB Quest Editor" FontSize="24" FontWeight="SemiBold" TextAlignment="Center" />
-        <TextBlock Text="WinUI shell ready for future tooling." TextAlignment="Center" />
-    </StackPanel>
+    xmlns:local="using:FTBQuestEditor.WinUI"
+    xmlns:views="using:FTBQuestEditor.WinUI.Views"
+    xmlns:vm="using:FTBQuestEditor.WinUI.ViewModels"
+    x:Name="Self"
+    x:DataType="local:MainWindow">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <StackPanel Orientation="Vertical" Spacing="4" Margin="24">
+            <TextBlock Text="Quest Dependency Graph" FontSize="24" FontWeight="SemiBold" />
+            <TextBlock Text="Drag from one quest to another to create dependencies. Right-click a link to delete it." Opacity="0.7" />
+        </StackPanel>
+
+        <Grid Grid.Row="1">
+            <GridView
+                x:Name="QuestGrid"
+                ItemsSource="{x:Bind ViewModel.Quests, Mode=OneWay}"
+                SelectionMode="None"
+                IsItemClickEnabled="False"
+                Margin="12"
+                IsSwipeEnabled="False">
+                <GridView.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <ItemsWrapGrid Orientation="Horizontal" />
+                    </ItemsPanelTemplate>
+                </GridView.ItemsPanel>
+                <GridView.ItemTemplate>
+                    <DataTemplate x:DataType="vm:QuestNodeViewModel">
+                        <views:QuestCard />
+                    </DataTemplate>
+                </GridView.ItemTemplate>
+            </GridView>
+
+            <views:GraphOverlay
+                Links="{x:Bind ViewModel.Links, Mode=OneWay}"
+                Nodes="{x:Bind ViewModel.Quests, Mode=OneWay}"
+                Target="{x:Bind QuestGrid}"
+                CreateLinkCommand="{x:Bind ViewModel.CreateLinkCommand}"
+                DeleteLinkCommand="{x:Bind ViewModel.DeleteLinkCommand}"
+                ValidationIssues="{x:Bind ViewModel.ValidationIssues, Mode=OneWay}" />
+        </Grid>
+    </Grid>
 </Window>

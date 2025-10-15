@@ -12,6 +12,8 @@
   <ItemGroup>
     <Page Include="App.xaml" />
     <Page Include="MainWindow.xaml" />
+    <Page Include="Views\GraphOverlay.xaml" />
+    <Page Include="Views\QuestCard.xaml" />
   </ItemGroup>
 
   <ItemGroup>
