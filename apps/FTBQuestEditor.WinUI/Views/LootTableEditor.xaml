@@ -1,0 +1,87 @@
+<Page
+    x:Class="FTBQuestEditor.WinUI.Views.LootTableEditor"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:vm="using:FTBQuestEditor.WinUI.ViewModels"
+    mc:Ignorable="d">
+
+    <Grid Background="{ThemeResource LayerFillColorDefaultBrush}" Padding="12" RowSpacing="12" ColumnSpacing="12">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="2*" />
+            <ColumnDefinition Width="3*" />
+        </Grid.ColumnDefinitions>
+
+        <StackPanel Grid.ColumnSpan="2" Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+            <TextBlock Text="Loot Table" FontSize="20" FontWeight="SemiBold" />
+            <TextBlock Text="Name:" VerticalAlignment="Center" />
+            <TextBox Width="200" Text="{Binding TableName, Mode=TwoWay}" />
+            <TextBlock Text="Filter:" VerticalAlignment="Center" />
+            <ComboBox Width="200" ItemsSource="{Binding ModFilters}" SelectedItem="{Binding SelectedModId, Mode=TwoWay}" />
+        </StackPanel>
+
+        <Border Grid.Row="1" Background="{ThemeResource SolidBackgroundFillColorBaseBrush}" CornerRadius="8" Padding="8" BorderThickness="1" BorderBrush="{ThemeResource ControlStrokeColorDefaultBrush}">
+            <Grid ColumnSpacing="12">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="2*" />
+                </Grid.ColumnDefinitions>
+
+                <StackPanel Grid.Column="0" Spacing="8">
+                    <TextBlock Text="Available Items" FontWeight="SemiBold" />
+                    <ListView ItemsSource="{Binding AvailableItems}" AllowDrop="True" CanDrag="True">
+                        <ListView.ItemTemplate>
+                            <DataTemplate x:DataType="vm:LootTableEditorViewModel.RegistryItemViewModel">
+                                <TextBlock Text="{x:Bind Label}" />
+                            </DataTemplate>
+                        </ListView.ItemTemplate>
+                    </ListView>
+                </StackPanel>
+
+                <StackPanel Grid.Column="1" Spacing="8">
+                    <TextBlock Text="Loot Table Entries" FontWeight="SemiBold" />
+                    <ListView ItemsSource="{Binding Entries}" AllowDrop="True" CanDragItems="True">
+                        <ListView.ItemTemplate>
+                            <DataTemplate x:DataType="vm:LootTableEditorViewModel.LootEntryViewModel">
+                                <Grid ColumnSpacing="8" RowSpacing="4">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="2*" />
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+
+                                    <TextBox Grid.Column="0" Text="{x:Bind ItemId, Mode=TwoWay}" />
+                                    <NumberBox Grid.Column="1" Width="80" Value="{x:Bind Weight, Mode=TwoWay}" Minimum="1" Header="Weight" />
+                                    <NumberBox Grid.Column="2" Width="80" Value="{x:Bind CountMin, Mode=TwoWay}" Minimum="0" Header="Min" />
+                                    <NumberBox Grid.Column="3" Width="80" Value="{x:Bind CountMax, Mode=TwoWay}" Minimum="0" Header="Max" />
+                                    <TextBox Grid.Column="4" Text="{x:Bind Conditions, Mode=TwoWay}" PlaceholderText="Conditions (JSON)" />
+                                </Grid>
+                            </DataTemplate>
+                        </ListView.ItemTemplate>
+                    </ListView>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <Border Grid.Row="2" Grid.ColumnSpan="2" Background="{ThemeResource SolidBackgroundFillColorTertiaryBrush}" Padding="12" CornerRadius="6">
+            <StackPanel>
+                <TextBlock Text="Validation" FontWeight="SemiBold" />
+                <ItemsControl ItemsSource="{Binding ValidationMessages}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="•  {Binding}" />
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </StackPanel>
+        </Border>
+    </Grid>
+</Page>

@@ -112,6 +112,20 @@ public sealed class RegistryDatabase
     }
 
     /// <summary>
+    /// Retrieves the items provided by the supplied mod identifier.
+    /// </summary>
+    /// <param name="modId">The originating mod identifier.</param>
+    /// <returns>A read-only list of registry items.</returns>
+    public IReadOnlyList<RegistryItem> GetItemsByMod(string modId) => GetBySourceModId(modId);
+
+    /// <summary>
+    /// Gets the set of known source mod identifiers.
+    /// </summary>
+    public IReadOnlyCollection<string> GetModIdentifiers() => itemsBySourceMod.Keys
+        .OrderBy(static id => id, StringComparer.OrdinalIgnoreCase)
+        .ToList();
+
+    /// <summary>
     /// Adds the specified item when it is not already tracked.
     /// </summary>
     /// <param name="item">The item to register.</param>
