@@ -13,5 +13,11 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="../../libs/FTBQuests.Codecs/FTBQuests.Codecs.csproj" />
+    <ProjectReference Include="../../libs/FTBQuests.IO/FTBQuests.IO.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Update="Fixtures/**/*">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 </Project>
