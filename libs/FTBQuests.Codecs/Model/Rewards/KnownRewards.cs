@@ -26,6 +26,16 @@ public sealed class LootReward : RewardBase
     public Identifier LootTable { get; set; }
 }
 
+public sealed class LootTableReward : RewardBase
+{
+    public LootTableReward()
+        : base("loot_table", RewardType.LootTable)
+    {
+    }
+
+    public string TableName { get; set; } = string.Empty;
+}
+
 public sealed class XpReward : RewardBase
 {
     public XpReward()

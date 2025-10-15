@@ -12,6 +12,7 @@ public static class RewardDiscriminator
         {
             [RewardType.Item] = typeof(ItemReward),
             [RewardType.Loot] = typeof(LootReward),
+            [RewardType.LootTable] = typeof(LootTableReward),
             [RewardType.Xp] = typeof(XpReward),
             [RewardType.Command] = typeof(CommandReward),
             [RewardType.Custom] = typeof(CustomReward),

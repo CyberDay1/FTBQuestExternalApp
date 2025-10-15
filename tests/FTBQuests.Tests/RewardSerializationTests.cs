@@ -65,6 +65,27 @@ public class RewardSerializationTests
     }
 
     [Fact]
+    public void LootTableReward_RoundTrips()
+    {
+        var rewardJson = CreateQuestJson(
+            new JObject
+            {
+                ["type"] = "loot_table",
+                ["table_name"] = "starter_items",
+            });
+
+        var quest = JsonConvert.DeserializeObject<Quest>(rewardJson, Settings)!;
+        var reward = Assert.IsType<LootTableReward>(quest.Rewards.Single());
+        Assert.Equal("starter_items", reward.TableName);
+        Assert.Empty(reward.Extra.Extra);
+
+        var serialized = JsonConvert.SerializeObject(quest, Formatting.None, Settings);
+        var roundTripped = JsonConvert.DeserializeObject<Quest>(serialized, Settings)!;
+        var roundTrippedReward = Assert.IsType<LootTableReward>(roundTripped.Rewards.Single());
+        Assert.Equal(reward.TableName, roundTrippedReward.TableName);
+    }
+
+    [Fact]
     public void XpReward_RoundTrips()
     {
         var rewardJson = CreateQuestJson(
@@ -124,6 +145,7 @@ public class RewardSerializationTests
     [Theory]
     [InlineData(RewardType.Item, typeof(ItemReward))]
     [InlineData(RewardType.Loot, typeof(LootReward))]
+    [InlineData(RewardType.LootTable, typeof(LootTableReward))]
     [InlineData(RewardType.Xp, typeof(XpReward))]
     [InlineData(RewardType.Command, typeof(CommandReward))]
     [InlineData(RewardType.Custom, typeof(CustomReward))]
