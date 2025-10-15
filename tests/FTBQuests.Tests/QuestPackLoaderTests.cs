@@ -110,16 +110,16 @@ public static class QuestPackLoaderTests
         craftQuest.PositionX = 12;
         craftQuest.PositionY = -2;
         craftQuest.Page = 1;
-        craftQuest.Dependencies.Clear();
-        craftQuest.Dependencies.Add(gatherQuest.Id);
+        craftQuest.ClearDependencies();
+        craftQuest.AddDependency(gatherQuest.Id);
 
         var furnaceQuest = FindQuest(pack, 5);
         furnaceQuest.PositionX = 18;
         furnaceQuest.PositionY = 9;
         furnaceQuest.Page = 2;
-        furnaceQuest.Dependencies.Clear();
-        furnaceQuest.Dependencies.Add(gatherQuest.Id);
-        furnaceQuest.Dependencies.Add(craftQuest.Id);
+        furnaceQuest.ClearDependencies();
+        furnaceQuest.AddDependency(gatherQuest.Id);
+        furnaceQuest.AddDependency(craftQuest.Id);
 
         var expectedSnapshot = CreateSnapshot(pack, serializer);
 

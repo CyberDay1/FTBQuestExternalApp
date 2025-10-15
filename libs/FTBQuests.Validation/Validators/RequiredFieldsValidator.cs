@@ -47,16 +47,6 @@ public sealed class RequiredFieldsValidator : IValidator
                     "REQ_CHAPTER_TITLE"));
             }
 
-            if (chapter.Quests is null)
-            {
-                issues.Add(new ValidationIssue(
-                    ValidationSeverity.Error,
-                    $"chapters[{chapterIndex}].quests",
-                    "Chapter quests collection is missing.",
-                    "REQ_CHAPTER_QUESTS"));
-                continue;
-            }
-
             for (var questIndex = 0; questIndex < chapter.Quests.Count; questIndex++)
             {
                 var quest = chapter.Quests[questIndex];
