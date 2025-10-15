@@ -1,5 +1,6 @@
 using System;
 using System.Threading.Tasks;
+using FTBQuestEditor.WinUI.Views;
 using FTBQuests.IO;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
@@ -11,6 +12,7 @@ namespace FTBQuestEditor.WinUI;
 public sealed partial class MainWindow : Window
 {
     private readonly QuestPackLoader loader = new();
+    private readonly PresetStore presetStore = new();
 
     public MainWindow()
     {
@@ -41,6 +43,22 @@ public sealed partial class MainWindow : Window
         {
             await ShowImportErrorAsync(ex);
         }
+    }
+
+    private async void OnPresetsClicked(object sender, RoutedEventArgs e)
+    {
+        if (Content is not FrameworkElement rootElement)
+        {
+            return;
+        }
+
+        var dialog = new PresetManagerDialog(
+            presetStore,
+            () => Navigator?.ChapterViewModel.Pack,
+            pack => Navigator?.LoadQuestPack(pack),
+            rootElement);
+
+        await dialog.ShowAsync();
     }
 
     private async Task ShowImportErrorAsync(Exception ex)

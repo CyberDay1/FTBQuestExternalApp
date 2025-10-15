@@ -21,6 +21,7 @@
     <Page Include="MainWindow.xaml" />
     <Page Include="Views\GridViewPage.xaml" />
     <Page Include="Views\ChapterNavigator.xaml" />
+    <Page Include="Views\PresetManagerDialog.xaml" />
   </ItemGroup>
 
   <ItemGroup>
@@ -29,6 +30,9 @@
     </Compile>
     <Compile Update="Views\ChapterNavigator.xaml.cs">
       <DependentUpon>ChapterNavigator.xaml</DependentUpon>
+    </Compile>
+    <Compile Update="Views\PresetManagerDialog.xaml.cs">
+      <DependentUpon>PresetManagerDialog.xaml</DependentUpon>
     </Compile>
   </ItemGroup>
 
