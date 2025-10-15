@@ -1,4 +1,3 @@
-using System;
 using System.Linq;
 using FTBQuestExternalApp.Codecs.Model;
 using FTBQuestExternalApp.Codecs.Serialization;
@@ -10,7 +9,7 @@ namespace FTBQuests.Tests;
 
 public class QuestCodecTests
 {
-    private const string GoldenJson = "{\n  \"title\": \"Collect Apples\",\n  \"id\": \"33333333-3333-3333-3333-333333333333\",\n  \"subtitle\": \"Gather resources\",\n  \"icon\": \"minecraft:apple\",\n  \"x\": 10,\n  \"y\": -2,\n  \"page\": 1,\n  \"dependencies\": [\n    \"11111111-1111-1111-1111-111111111111\"\n  ],\n  \"tasks\": [\n    {\n      \"type\": \"item\",\n      \"item\": \"minecraft:apple\",\n      \"count\": 4\n    },\n    {\n      \"type\": \"custom_mod:visit_biome\",\n      \"biome\": \"minecraft:plains\"\n    }\n  ],\n  \"rewards\": [\n    {\n      \"type\": \"xp\",\n      \"amount\": 150\n    },\n    {\n      \"type\": \"loot\",\n      \"table\": \"minecraft:chests/simple_dungeon\"\n    }\n  ],\n  \"metadata\": {\n    \"difficulty\": \"medium\"\n  }\n}";
+    private const string GoldenJson = "{\n  \"title\": \"Collect Apples\",\n  \"id\": 3333,\n  \"subtitle\": \"Gather resources\",\n  \"icon\": \"minecraft:apple\",\n  \"x\": 10,\n  \"y\": -2,\n  \"page\": 1,\n  \"dependencies\": [\n    1111\n  ],\n  \"tasks\": [\n    {\n      \"type\": \"item\",\n      \"item\": \"minecraft:apple\",\n      \"count\": 4\n    },\n    {\n      \"type\": \"custom_mod:visit_biome\",\n      \"biome\": \"minecraft:plains\"\n    }\n  ],\n  \"rewards\": [\n    {\n      \"type\": \"xp\",\n      \"amount\": 150\n    },\n    {\n      \"type\": \"loot\",\n      \"table\": \"minecraft:chests/simple_dungeon\"\n    }\n  ],\n  \"metadata\": {\n    \"difficulty\": \"medium\"\n  }\n}";
 
     private static readonly JsonSerializerSettings Settings = new()
     {
@@ -22,7 +21,7 @@ public class QuestCodecTests
     {
         var quest = JsonConvert.DeserializeObject<Quest>(GoldenJson, Settings)!;
 
-        Assert.Equal(Guid.Parse("33333333-3333-3333-3333-333333333333"), quest.Id);
+        Assert.Equal(3333, quest.Id);
         Assert.Equal("Collect Apples", quest.Title);
         Assert.Equal("Gather resources", quest.Subtitle);
         Assert.Equal(new Identifier("minecraft:apple"), quest.IconId);
@@ -30,7 +29,7 @@ public class QuestCodecTests
         Assert.Equal(-2, quest.PositionY);
         Assert.Equal(1, quest.Page);
         Assert.Single(quest.Dependencies);
-        Assert.Equal(Guid.Parse("11111111-1111-1111-1111-111111111111"), quest.Dependencies[0]);
+        Assert.Equal(1111, quest.Dependencies[0]);
 
         Assert.Equal(2, quest.Tasks.Count);
         var itemTask = Assert.IsType<ItemTask>(quest.Tasks[0]);

@@ -1,4 +1,3 @@
-using System;
 using System.Linq;
 using FTBQuestExternalApp.Codecs.Enums;
 using FTBQuestExternalApp.Codecs.Model;
@@ -181,7 +180,8 @@ public class TaskCodecTests
 
     private static Quest Deserialize(string taskJson)
     {
-        var questJson = $"{{\"id\":\"{Guid.Empty}\",\"title\":\"Test\",\"tasks\":[{taskJson}]}}";
+        const int questId = 123;
+        var questJson = $"{{\"id\":{questId},\"title\":\"Test\",\"tasks\":[{taskJson}]}}";
         return JsonConvert.DeserializeObject<Quest>(questJson, Settings)!;
     }
 

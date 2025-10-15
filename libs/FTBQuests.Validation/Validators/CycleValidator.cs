@@ -23,8 +23,8 @@ public sealed class CycleValidator
             throw new ArgumentNullException(nameof(chapters));
         }
 
-        var questLookup = new Dictionary<Guid, QuestContext>();
-        var visitOrder = new List<Guid>();
+        var questLookup = new Dictionary<long, QuestContext>();
+        var visitOrder = new List<long>();
 
         foreach (var chapter in chapters)
         {
@@ -40,13 +40,18 @@ public sealed class CycleValidator
                     continue;
                 }
 
+                if (quest.Id == 0)
+                {
+                    continue;
+                }
+
                 questLookup[quest.Id] = new QuestContext(chapter, quest);
                 visitOrder.Add(quest.Id);
             }
         }
 
-        var visitStates = new Dictionary<Guid, VisitState>();
-        var stack = new List<Guid>();
+        var visitStates = new Dictionary<long, VisitState>();
+        var stack = new List<long>();
         var seenCycles = new HashSet<string>(StringComparer.Ordinal);
         var results = new List<CycleValidationResult>();
 
@@ -60,14 +65,14 @@ public sealed class CycleValidator
 
         return results;
 
-        void DepthFirstSearch(Guid questId)
+        void DepthFirstSearch(long questId)
         {
             visitStates[questId] = VisitState.Gray;
             stack.Add(questId);
 
             foreach (var dependencyId in questLookup[questId].Quest.Dependencies)
             {
-                if (!questLookup.ContainsKey(dependencyId))
+                if (dependencyId == 0 || !questLookup.ContainsKey(dependencyId))
                 {
                     continue;
                 }
@@ -101,15 +106,15 @@ public sealed class CycleValidator
             visitStates[questId] = VisitState.Black;
         }
 
-        List<Guid> ExtractCyclePath(Guid startId, Guid currentId)
+        List<long> ExtractCyclePath(long startId, long currentId)
         {
             var startIndex = stack.IndexOf(startId);
             if (startIndex < 0)
             {
-                return new List<Guid> { startId, currentId };
+                return new List<long> { startId, currentId };
             }
 
-            var cycle = new List<Guid>();
+            var cycle = new List<long>();
             for (var i = startIndex; i < stack.Count; i++)
             {
                 cycle.Add(stack[i]);
@@ -119,7 +124,7 @@ public sealed class CycleValidator
             return cycle;
         }
 
-        static string BuildCycleKey(IReadOnlyList<Guid> cycle)
+        static string BuildCycleKey(IReadOnlyList<long> cycle)
         {
             if (cycle.Count == 0)
             {
@@ -144,15 +149,17 @@ public sealed class CycleValidator
 
             return best;
 
-            static string ToKey(Guid[] values, int offset)
+            static string ToKey(long[] values, int offset)
             {
-                var span = new Guid[values.Length];
+                var span = new long[values.Length];
                 for (var i = 0; i < values.Length; i++)
                 {
                     span[i] = values[(i + offset) % values.Length];
                 }
 
-                return string.Join("->", span.Select(v => v.ToString("D"))) + "->" + span[0].ToString("D");
+                return string.Join("->", span.Select(v => v.ToString(System.Globalization.CultureInfo.InvariantCulture)))
+                       + "->"
+                       + span[0].ToString(System.Globalization.CultureInfo.InvariantCulture);
             }
         }
     }
@@ -170,7 +177,7 @@ public sealed class CycleValidator
 /// <summary>
 /// Represents a node in a dependency cycle.
 /// </summary>
-public sealed record CyclePathNode(string ChapterTitle, string QuestTitle, Guid QuestId);
+public sealed record CyclePathNode(string ChapterTitle, string QuestTitle, long QuestId);
 
 /// <summary>
 /// Represents a detected dependency cycle.

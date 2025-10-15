@@ -80,9 +80,7 @@ public class QuestConverter : JsonConverter<Quest>
             switch (property.Name)
             {
                 case "id":
-                    quest.Id = property.Value.Type == JTokenType.Null
-                        ? Guid.Empty
-                        : property.Value.ToObject<Guid>(serializer);
+                    quest.Id = ConvertToLong(property.Value, serializer);
                     break;
                 case "title":
                     quest.Title = property.Value.Type == JTokenType.Null
@@ -124,15 +122,17 @@ public class QuestConverter : JsonConverter<Quest>
                         : property.Value.Value<int>();
                     break;
                 case "dependencies":
-                    if (property.Value.Type == JTokenType.Null)
+                    quest.Dependencies.Clear();
+
+                    if (property.Value.Type != JTokenType.Null)
                     {
-                        quest.Dependencies.Clear();
-                    }
-                    else
-                    {
-                        var dependencies = property.Value.ToObject<List<Guid>>(serializer) ?? new List<Guid>();
-                        quest.Dependencies.Clear();
-                        quest.Dependencies.AddRange(dependencies);
+                        if (property.Value is JArray dependencyArray)
+                        {
+                            foreach (var element in dependencyArray)
+                            {
+                                quest.Dependencies.Add(ConvertToLong(element, serializer));
+                            }
+                        }
                     }
 
                     break;
@@ -295,6 +295,28 @@ public class QuestConverter : JsonConverter<Quest>
         }
 
         jobject.WriteTo(writer);
+    }
+
+    private static long ConvertToLong(JToken token, JsonSerializer serializer)
+    {
+        return token.Type switch
+        {
+            JTokenType.Null => 0,
+            JTokenType.Integer => token.Value<long>(),
+            JTokenType.Float => System.Convert.ToInt64(token.Value<double>()),
+            JTokenType.String => TryParseString(token.Value<string>()),
+            _ => token.ToObject<long>(serializer),
+        };
+
+        static long TryParseString(string? value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                return 0;
+            }
+
+            return long.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var parsed) ? parsed : 0;
+        }
     }
 
     private static string? ResolveKey(IList<string> propertyOrder, IReadOnlyList<string> candidates)
