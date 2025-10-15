@@ -4,6 +4,7 @@ using System.Collections.ObjectModel;
 using System.Globalization;
 using System.Linq;
 using CommunityToolkit.Mvvm.ComponentModel;
+using FTBQuestExternalApp.Codecs.Model;
 using FTBQuests.IO;
 
 namespace FTBQuestEditor.WinUI.ViewModels;
@@ -164,39 +165,43 @@ public sealed partial class GridViewViewModel : ObservableObject
     {
         ArgumentNullException.ThrowIfNull(pack);
 
+        var firstChapter = pack.Chapters.FirstOrDefault(chapter => chapter is not null);
+        LoadChapter(firstChapter);
+    }
+
+    public void LoadChapter(Chapter? chapter)
+    {
         ClearSelection();
 
         Icons.Clear();
         _iconLookup.Clear();
 
-        foreach (var chapter in pack.Chapters)
+        if (chapter?.Quests is null)
         {
-            if (chapter?.Quests is null)
+            NotifySelectionChanged();
+            return;
+        }
+
+        foreach (var quest in chapter.Quests)
+        {
+            if (quest is null)
             {
                 continue;
             }
 
-            foreach (var quest in chapter.Quests)
-            {
-                if (quest is null)
-                {
-                    continue;
-                }
+            var label = string.IsNullOrWhiteSpace(quest.Title)
+                ? quest.Id.ToString(CultureInfo.InvariantCulture)
+                : quest.Title;
 
-                var label = string.IsNullOrWhiteSpace(quest.Title)
-                    ? quest.Id.ToString(CultureInfo.InvariantCulture)
-                    : quest.Title;
+            var icon = new QuestIconViewModel(
+                quest.Id,
+                label,
+                quest.PositionX * GridConstants.CellSize,
+                quest.PositionY * GridConstants.CellSize,
+                ValidationBadge.None);
 
-                var icon = new QuestIconViewModel(
-                    quest.Id,
-                    label,
-                    quest.PositionX * GridConstants.CellSize,
-                    quest.PositionY * GridConstants.CellSize,
-                    ValidationBadge.None);
-
-                Icons.Add(icon);
-                _iconLookup[icon.Id] = icon;
-            }
+            Icons.Add(icon);
+            _iconLookup[icon.Id] = icon;
         }
 
         NotifySelectionChanged();

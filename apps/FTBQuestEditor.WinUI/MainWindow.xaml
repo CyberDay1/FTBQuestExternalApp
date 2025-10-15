@@ -13,6 +13,6 @@
             <AppBarButton Icon="OpenFile" Label="Import" Click="OnImportClicked" />
         </CommandBar>
 
-        <views:GridViewPage x:Name="GridView" Grid.Row="1" />
+        <views:ChapterNavigator x:Name="Navigator" Grid.Row="1" />
     </Grid>
 </Window>

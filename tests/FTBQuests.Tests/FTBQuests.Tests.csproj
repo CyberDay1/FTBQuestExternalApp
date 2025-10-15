@@ -26,5 +26,8 @@
     <Compile Include="../../apps/FTBQuestEditor.WinUI/ViewModels/GridConstants.cs" Link="WinUI/ViewModels/GridConstants.cs" />
     <Compile Include="../../apps/FTBQuestEditor.WinUI/ViewModels/GridViewViewModel.cs" Link="WinUI/ViewModels/GridViewViewModel.cs" />
     <Compile Include="../../apps/FTBQuestEditor.WinUI/ViewModels/LootTableEditorViewModel.cs" Link="WinUI/ViewModels/LootTableEditorViewModel.cs" />
+    <Compile Include="../../apps/FTBQuestEditor.WinUI/ViewModels/ChapterNode.cs" Link="WinUI/ViewModels/ChapterNode.cs" />
+    <Compile Include="../../apps/FTBQuestEditor.WinUI/ViewModels/ChapterListViewModel.cs" Link="WinUI/ViewModels/ChapterListViewModel.cs" />
+    <Compile Include="../../apps/FTBQuestEditor.WinUI/ViewModels/ChapterViewModel.cs" Link="WinUI/ViewModels/ChapterViewModel.cs" />
   </ItemGroup>
 </Project>

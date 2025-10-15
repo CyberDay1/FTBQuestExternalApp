@@ -35,7 +35,7 @@ public sealed partial class MainWindow : Window
         try
         {
             var pack = await loader.LoadAsync(folder.Path);
-            GridView?.ViewModel.LoadQuestPack(pack);
+            Navigator?.LoadQuestPack(pack);
         }
         catch (Exception ex)
         {
