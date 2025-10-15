@@ -1,4 +1,5 @@
 <Project Sdk="Microsoft.NET.Sdk">
+
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
     <TargetFramework>net8.0-windows10.0.19041.0</TargetFramework>
@@ -34,6 +35,7 @@
     </Compile>
     <Compile Update="Views\PresetsDialog.xaml.cs">
       <DependentUpon>PresetsDialog.xaml</DependentUpon>
+    </Compile>
     <Compile Update="Views\PresetManagerDialog.xaml.cs">
       <DependentUpon>PresetManagerDialog.xaml</DependentUpon>
     </Compile>
@@ -58,4 +60,5 @@
     <ProjectReference Include="../../libs/FTBQuests.Validation/FTBQuests.Validation.csproj" />
     <ProjectReference Include="../../libs/FTBQuests.Assets/FTBQuests.Assets.csproj" />
   </ItemGroup>
+
 </Project>
