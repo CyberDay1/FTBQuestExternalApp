@@ -20,6 +20,9 @@
   <ItemGroup>
     <Page Include="App.xaml" />
     <Page Include="MainWindow.xaml" />
+    <Page Include="Views\Panels\QuestProperties.xaml" />
+    <Page Include="Views\Panels\TaskProperties.xaml" />
+    <Page Include="Views\Panels\RewardProperties.xaml" />
     <Page Include="Views\GridViewPage.xaml" />
     <Page Include="Views\ChapterNavigator.xaml" />
     <Page Include="Views\PresetsDialog.xaml" />
