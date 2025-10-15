@@ -26,7 +26,17 @@ public class QuestConverter : JsonConverter<Quest>
 
     private static readonly string[] DefaultTaskPropertyOrder = { TaskDiscriminator.FieldName };
 
-    private static readonly string[] DefaultRewardPropertyOrder = { "type" };
+    private static readonly string[] DefaultRewardPropertyOrder =
+    {
+        "type",
+        "item",
+        "count",
+        "nbt",
+        "table",
+        "amount",
+        "levels",
+        "command",
+    };
 
     private static readonly IReadOnlyDictionary<string, Func<RewardBase>> RewardFactories =
         new Dictionary<string, Func<RewardBase>>(StringComparer.OrdinalIgnoreCase)
@@ -391,6 +401,11 @@ public class QuestConverter : JsonConverter<Quest>
                 continue;
             }
 
+            if (TryAssignKnownRewardProperty(reward, property))
+            {
+                continue;
+            }
+
             reward.Extra.Add(property.Name, property.Value.DeepClone());
         }
 
@@ -514,6 +529,8 @@ public class QuestConverter : JsonConverter<Quest>
         {
             ["type"] = JToken.FromObject(rewardBase.TypeId, serializer),
         };
+
+        AddKnownRewardTokens(serializer, rewardBase, knownTokens);
 
         var orderedKeys = rewardBase.PropertyOrder.Count > 0 ? rewardBase.PropertyOrder : DefaultRewardPropertyOrder;
         var written = new HashSet<string>(StringComparer.Ordinal);

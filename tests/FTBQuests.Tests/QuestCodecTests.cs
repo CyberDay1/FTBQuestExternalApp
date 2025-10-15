@@ -46,12 +46,14 @@ public class QuestCodecTests
         Assert.Equal("minecraft:plains", biomeToken!.Value<string>());
 
         Assert.Equal(2, quest.Rewards.Count);
-        Assert.IsType<XpReward>(quest.Rewards[0]);
-        Assert.True(quest.Rewards[0].Extra.TryGetValue("amount", out var amountToken));
-        Assert.Equal(150, amountToken!.Value<int>());
-        Assert.IsType<LootReward>(quest.Rewards[1]);
-        Assert.True(quest.Rewards[1].Extra.TryGetValue("table", out var tableToken));
-        Assert.Equal("minecraft:chests/simple_dungeon", tableToken!.Value<string>());
+        var xpReward = Assert.IsType<XpReward>(quest.Rewards[0]);
+        Assert.Equal(150, xpReward.Amount);
+        Assert.False(xpReward.Levels);
+        Assert.Empty(xpReward.Extra.Extra);
+
+        var lootReward = Assert.IsType<LootReward>(quest.Rewards[1]);
+        Assert.Equal(new Identifier("minecraft:chests/simple_dungeon"), lootReward.LootTable);
+        Assert.Empty(lootReward.Extra.Extra);
 
         Assert.True(quest.Extra.TryGetValue("metadata", out var metadataToken));
         Assert.Equal("medium", metadataToken!["difficulty"]!.Value<string>());
@@ -101,7 +103,12 @@ public class QuestCodecTests
         Assert.Equal("minecraft:plains", biomeToken!.Value<string>());
 
         Assert.Equal(quest.Rewards.Count, roundTripped.Rewards.Count);
-        Assert.True(roundTripped.Rewards[0].Extra.TryGetValue("amount", out var amountToken));
-        Assert.Equal(150, amountToken!.Value<int>());
+
+        var roundTrippedXp = Assert.IsType<XpReward>(roundTripped.Rewards[0]);
+        Assert.Equal(150, roundTrippedXp.Amount);
+        Assert.False(roundTrippedXp.Levels);
+
+        var roundTrippedLoot = Assert.IsType<LootReward>(roundTripped.Rewards[1]);
+        Assert.Equal(new Identifier("minecraft:chests/simple_dungeon"), roundTrippedLoot.LootTable);
     }
 }
