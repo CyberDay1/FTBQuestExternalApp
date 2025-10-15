@@ -6,4 +6,13 @@
   <ItemGroup>
     <PackageReference Include="StyleCop.Analyzers" Version="1.2.0-beta.556" PrivateAssets="all" />
   </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="../FTBQuests.Codecs/FTBQuests.Codecs.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="../../data/minecraft_registry/vanilla_items.json">
+      <Link>data/minecraft_registry/vanilla_items.json</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
 </Project>

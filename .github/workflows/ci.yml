@@ -30,6 +30,9 @@ jobs:
       - name: Build
         run: dotnet build FTBQuestExternalApp.sln --no-restore
 
+      - name: Verify portable publish
+        run: dotnet publish apps/FTBQuestEditor.WinUI -c Release -r win-x64 --self-contained true /p:PublishSingleFile=true /p:IncludeAllContentForSelfExtract=true
+
       - name: Test
         run: dotnet test FTBQuestExternalApp.sln --no-build --logger "trx;LogFileName=test-results.trx" --results-directory TestResults
 

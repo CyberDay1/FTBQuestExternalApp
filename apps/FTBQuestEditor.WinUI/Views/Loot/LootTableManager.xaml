@@ -1,0 +1,95 @@
+<Page
+    x:Class="FTBQuestEditor.WinUI.Views.Loot.LootTableManager"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:vm="using:FTBQuestEditor.WinUI.ViewModels.Loot"
+    xmlns:views="using:FTBQuestEditor.WinUI.Views"
+    x:Name="Root">
+    <Grid x:DefaultBindMode="TwoWay" ColumnSpacing="12" RowSpacing="12">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="320" />
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <CommandBar Grid.ColumnSpan="2">
+            <AppBarButton Icon="Add" Label="Add Group" Click="OnAddGroup" />
+            <AppBarButton Icon="Edit" Label="Rename Group" Click="OnRenameGroup" />
+            <AppBarButton Icon="Delete" Label="Delete Group" Click="OnDeleteGroup" />
+            <AppBarSeparator />
+            <AppBarButton Icon="Add" Label="Add Table" Click="OnAddTable" />
+            <AppBarButton Icon="Delete" Label="Delete Table" Click="OnDeleteTable" />
+            <AppBarButton Icon="Save" Label="Apply Changes" Click="OnApplyTable" />
+            <AppBarButton Icon="Forward" Label="Move To Group" Click="OnMoveTableToGroup" />
+        </CommandBar>
+
+        <Grid Grid.Row="1" ColumnSpacing="12">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="2" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+
+            <Grid Grid.Column="0" RowSpacing="8">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+
+                <TextBlock
+                    Grid.Row="0"
+                    FontSize="16"
+                    FontWeight="SemiBold"
+                    Text="Groups" />
+
+                <StackPanel Grid.Row="1" Spacing="8">
+                    <Button Content="Ungrouped" Click="OnShowUngrouped" />
+                    <ListView
+                        ItemsSource="{x:Bind ViewModel.Groups}"
+                        SelectedItem="{x:Bind ViewModel.SelectedGroup, Mode=TwoWay}"
+                        SelectionMode="Single">
+                        <ListView.ItemTemplate>
+                            <DataTemplate x:DataType="vm:LootTableManagerViewModel.GroupViewModel">
+                                <TextBlock Text="{x:Bind Name}" />
+                            </DataTemplate>
+                        </ListView.ItemTemplate>
+                    </ListView>
+                </StackPanel>
+
+                <TextBlock
+                    Grid.Row="2"
+                    FontSize="16"
+                    FontWeight="SemiBold"
+                    Margin="0,16,0,0"
+                    Text="Tables" />
+
+                <ListView
+                    Grid.Row="3"
+                    ItemsSource="{x:Bind ViewModel.VisibleTables}"
+                    SelectedItem="{x:Bind ViewModel.SelectedTable, Mode=TwoWay}"
+                    SelectionMode="Single">
+                    <ListView.ItemTemplate>
+                        <DataTemplate x:DataType="vm:LootTableManagerViewModel.LootTableItemViewModel">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <TextBlock Text="{x:Bind Name}" />
+                                <TextBlock Foreground="Gray" Text="{x:Bind Group?.Name, Mode=OneWay}" />
+                            </StackPanel>
+                        </DataTemplate>
+                    </ListView.ItemTemplate>
+                </ListView>
+            </Grid>
+
+            <Border Grid.Column="1" Background="{ThemeResource SystemControlBackgroundChromeLowBrush}" />
+
+            <views:LootTableEditor
+                Grid.Column="2"
+                Margin="12,0,0,0"
+                ViewModel="{x:Bind ViewModel.Editor, Mode=OneWay}" />
+        </Grid>
+    </Grid>
+</Page>

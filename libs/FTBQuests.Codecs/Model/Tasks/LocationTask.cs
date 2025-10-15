@@ -1,0 +1,19 @@
+namespace FTBQuestExternalApp.Codecs.Model;
+
+public sealed class LocationTask : TaskBase
+{
+    public LocationTask()
+        : base("location")
+    {
+    }
+
+    public int X { get; set; }
+
+    public int Y { get; set; }
+
+    public int Z { get; set; }
+
+    public string? Dimension { get; set; }
+
+    public int Radius { get; set; }
+}

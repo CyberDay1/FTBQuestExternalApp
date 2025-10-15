@@ -1,0 +1,14 @@
+[
+  {
+    "Id": "minecraft:stone",
+    "DisplayName": "Stone",
+    "OptionalNbtTemplate": null,
+    "SourceModId": "minecraft"
+  },
+  {
+    "Id": "minecraft:iron_pickaxe",
+    "DisplayName": "Iron Pickaxe",
+    "OptionalNbtTemplate": null,
+    "SourceModId": "minecraft"
+  }
+]

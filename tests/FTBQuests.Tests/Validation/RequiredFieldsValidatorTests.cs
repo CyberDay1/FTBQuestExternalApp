@@ -1,4 +1,3 @@
-using System;
 using System.Linq;
 using FTBQuestExternalApp.Codecs.Model;
 using FTBQuests.Validation.Validators;
@@ -13,7 +12,7 @@ public class RequiredFieldsValidatorTests
     {
         var questWithoutTitle = new Quest
         {
-            Id = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"),
+            Id = 101,
         };
 
         var questWithMissingId = new Quest

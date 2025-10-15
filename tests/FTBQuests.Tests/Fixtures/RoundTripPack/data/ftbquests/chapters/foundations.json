@@ -1,0 +1,58 @@
+{
+  "id": 1,
+  "title": "Foundations",
+  "description": "Lay the groundwork for automation.",
+  "icon": "minecraft:oak_sapling",
+  "chapter_color": "#ffcc00",
+  "quests": [
+    {
+      "id": 2,
+      "title": "Gather Logs",
+      "subtitle": "Stockpile raw wood.",
+      "icon": "minecraft:oak_log",
+      "x": 0,
+      "y": 0,
+      "page": 0,
+      "dependencies": [],
+      "tasks": [
+        {
+          "type": "item",
+          "item": "minecraft:oak_log",
+          "count": 16
+        }
+      ],
+      "rewards": [
+        {
+          "type": "item",
+          "item": "minecraft:crafting_table"
+        }
+      ],
+      "notes": "Keep a spare stack handy."
+    },
+    {
+      "id": 3,
+      "title": "Craft Workbench",
+      "icon": "minecraft:crafting_table",
+      "x": 6,
+      "y": 2,
+      "page": 0,
+      "dependencies": [
+        2
+      ],
+      "tasks": [
+        {
+          "type": "item",
+          "item": "minecraft:crafting_table"
+        }
+      ],
+      "rewards": [
+        {
+          "type": "xp",
+          "amount": 50,
+          "levels": false
+        }
+      ],
+      "custom_property": "highlight"
+    }
+  ]
+}
