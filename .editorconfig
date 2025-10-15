@@ -1,0 +1,26 @@
+root = true
+
+[*.cs]
+dotnet_sort_system_directives_first = true
+dotnet_style_require_accessibility_modifiers = for_non_interface_members:silent
+csharp_style_namespace_declarations = file_scoped:suggestion
+
+# Naming rules
+# Public members use PascalCase
+dotnet_naming_rule.public_members_should_be_pascal_case.severity = suggestion
+dotnet_naming_rule.public_members_should_be_pascal_case.symbols = public_symbols
+dotnet_naming_rule.public_members_should_be_pascal_case.style = pascal_case
+
+dotnet_naming_symbols.public_symbols.applicable_kinds = class, struct, interface, enum, property, method, field, event, delegate
+dotnet_naming_symbols.public_symbols.applicable_accessibilities = public, protected, protected_internal
+
+# Private fields use camelCase
+dotnet_naming_rule.private_fields_should_be_camel_case.severity = suggestion
+dotnet_naming_rule.private_fields_should_be_camel_case.symbols = private_fields
+dotnet_naming_rule.private_fields_should_be_camel_case.style = camel_case
+
+dotnet_naming_symbols.private_fields.applicable_kinds = field
+dotnet_naming_symbols.private_fields.applicable_accessibilities = private
+
+dotnet_naming_style.pascal_case.capitalization = pascal_case
+dotnet_naming_style.camel_case.capitalization = camel_case
