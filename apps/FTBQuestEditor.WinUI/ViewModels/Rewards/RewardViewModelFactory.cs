@@ -1,0 +1,21 @@
+using FTBQuestEditor.WinUI.ViewModels.Rewards;
+using FTBQuestExternalApp.Codecs.Model;
+
+namespace FTBQuestEditor.WinUI.ViewModels.Rewards;
+
+internal static class RewardViewModelFactory
+{
+    public static RewardPropertiesViewModel Create(IReward reward, string pathPrefix)
+    {
+        return reward switch
+        {
+            ItemReward itemReward => new ItemRewardPropertiesViewModel(itemReward, pathPrefix),
+            LootReward lootReward => new LootRewardPropertiesViewModel(lootReward, pathPrefix),
+            XpReward xpReward => new XpRewardPropertiesViewModel(xpReward, pathPrefix),
+            CommandReward commandReward => new CommandRewardPropertiesViewModel(commandReward, pathPrefix),
+            CustomReward customReward => new CustomRewardPropertiesViewModel(customReward, pathPrefix),
+            UnknownReward unknownReward => new UnknownRewardPropertiesViewModel(unknownReward, pathPrefix),
+            _ => new ExternalRewardPropertiesViewModel(reward, pathPrefix),
+        };
+    }
+}

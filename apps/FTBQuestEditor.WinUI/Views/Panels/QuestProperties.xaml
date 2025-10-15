@@ -1,0 +1,179 @@
+<UserControl
+    x:Class="FTBQuestEditor.WinUI.Views.Panels.QuestProperties"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="using:Microsoft.UI.Xaml.Controls"
+    xmlns:converters="using:FTBQuestEditor.WinUI.Converters"
+    xmlns:viewModels="using:FTBQuestEditor.WinUI.ViewModels.Quests">
+    <UserControl.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="ms-appx:///Views/Panels/TaskProperties.xaml" />
+                <ResourceDictionary Source="ms-appx:///Views/Panels/RewardProperties.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+            <converters:StringToVisibilityConverter x:Key="StringToVisibilityConverter" />
+            <Style x:Key="SectionHeaderStyle" TargetType="TextBlock">
+                <Setter Property="FontSize" Value="20" />
+                <Setter Property="FontWeight" Value="SemiBold" />
+                <Setter Property="Margin" Value="0,16,0,8" />
+            </Style>
+            <Style x:Key="FieldLabelStyle" TargetType="TextBlock">
+                <Setter Property="FontWeight" Value="SemiBold" />
+                <Setter Property="Margin" Value="0,0,0,4" />
+            </Style>
+        </ResourceDictionary>
+    </UserControl.Resources>
+
+    <ScrollViewer>
+        <StackPanel Spacing="24" Padding="24">
+            <TextBlock Style="{StaticResource SectionHeaderStyle}" Text="Quest Details" />
+
+            <Grid ColumnSpacing="16" RowSpacing="12">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="180" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+
+                <TextBlock Grid.Row="0" Grid.Column="0" Text="Identifier" Style="{StaticResource FieldLabelStyle}" />
+                <StackPanel Grid.Row="0" Grid.Column="1" Spacing="4">
+                    <TextBox
+                        Text="{Binding QuestId, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                        ToolTipService.ToolTip="{Binding QuestIdIssue}" />
+                    <TextBlock
+                        Text="{Binding QuestIdIssue}"
+                        Foreground="{ThemeResource SystemFillColorCriticalBrush}"
+                        Visibility="{Binding QuestIdIssue, Converter={StaticResource StringToVisibilityConverter}}" />
+                </StackPanel>
+
+                <TextBlock Grid.Row="1" Grid.Column="0" Text="Title" Style="{StaticResource FieldLabelStyle}" />
+                <StackPanel Grid.Row="1" Grid.Column="1" Spacing="4">
+                    <TextBox
+                        Text="{Binding Title, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                        ToolTipService.ToolTip="{Binding TitleIssue}" />
+                    <TextBlock
+                        Text="{Binding TitleIssue}"
+                        Foreground="{ThemeResource SystemFillColorCriticalBrush}"
+                        Visibility="{Binding TitleIssue, Converter={StaticResource StringToVisibilityConverter}}" />
+                </StackPanel>
+
+                <TextBlock Grid.Row="2" Grid.Column="0" Text="Subtitle" Style="{StaticResource FieldLabelStyle}" />
+                <StackPanel Grid.Row="2" Grid.Column="1" Spacing="4">
+                    <TextBox
+                        Text="{Binding Subtitle, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                        PlaceholderText="Optional"
+                        ToolTipService.ToolTip="{Binding SubtitleIssue}" />
+                    <TextBlock
+                        Text="{Binding SubtitleIssue}"
+                        Foreground="{ThemeResource SystemFillColorCriticalBrush}"
+                        Visibility="{Binding SubtitleIssue, Converter={StaticResource StringToVisibilityConverter}}" />
+                </StackPanel>
+
+                <TextBlock Grid.Row="3" Grid.Column="0" Text="Icon" Style="{StaticResource FieldLabelStyle}" />
+                <StackPanel Grid.Row="3" Grid.Column="1" Spacing="4">
+                    <TextBox
+                        Text="{Binding IconId, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                        PlaceholderText="namespace:path"
+                        ToolTipService.ToolTip="{Binding IconIssue}" />
+                    <TextBlock
+                        Text="{Binding IconIssue}"
+                        Foreground="{ThemeResource SystemFillColorCriticalBrush}"
+                        Visibility="{Binding IconIssue, Converter={StaticResource StringToVisibilityConverter}}" />
+                </StackPanel>
+
+                <TextBlock Grid.Row="4" Grid.Column="0" Text="Position" Style="{StaticResource FieldLabelStyle}" />
+                <StackPanel Grid.Row="4" Grid.Column="1" Orientation="Horizontal" Spacing="12">
+                    <StackPanel Width="120" Spacing="4">
+                        <TextBlock Text="X" FontWeight="SemiBold" />
+                        <controls:NumberBox
+                            Value="{Binding PositionX, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                            SmallChange="1"
+                            ToolTipService.ToolTip="{Binding PositionXIssue}" />
+                        <TextBlock
+                            Text="{Binding PositionXIssue}"
+                            Foreground="{ThemeResource SystemFillColorCriticalBrush}"
+                            Visibility="{Binding PositionXIssue, Converter={StaticResource StringToVisibilityConverter}}" />
+                    </StackPanel>
+                    <StackPanel Width="120" Spacing="4">
+                        <TextBlock Text="Y" FontWeight="SemiBold" />
+                        <controls:NumberBox
+                            Value="{Binding PositionY, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                            SmallChange="1"
+                            ToolTipService.ToolTip="{Binding PositionYIssue}" />
+                        <TextBlock
+                            Text="{Binding PositionYIssue}"
+                            Foreground="{ThemeResource SystemFillColorCriticalBrush}"
+                            Visibility="{Binding PositionYIssue, Converter={StaticResource StringToVisibilityConverter}}" />
+                    </StackPanel>
+                </StackPanel>
+
+                <TextBlock Grid.Row="5" Grid.Column="0" Text="Page" Style="{StaticResource FieldLabelStyle}" />
+                <StackPanel Grid.Row="5" Grid.Column="1" Spacing="4" Width="120">
+                    <controls:NumberBox
+                        Value="{Binding Page, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                        Minimum="0"
+                        SmallChange="1"
+                        ToolTipService.ToolTip="{Binding PageIssue}" />
+                    <TextBlock
+                        Text="{Binding PageIssue}"
+                        Foreground="{ThemeResource SystemFillColorCriticalBrush}"
+                        Visibility="{Binding PageIssue, Converter={StaticResource StringToVisibilityConverter}}" />
+                </StackPanel>
+            </Grid>
+
+            <StackPanel>
+                <TextBlock Style="{StaticResource SectionHeaderStyle}" Text="Tasks" />
+                <ItemsControl ItemsSource="{Binding Tasks}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Border
+                                BorderBrush="{ThemeResource SystemControlForegroundBaseLowBrush}"
+                                BorderThickness="1"
+                                CornerRadius="8"
+                                Padding="16"
+                                Margin="0,0,0,16">
+                                <ContentControl Content="{Binding}" />
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <StackPanel Spacing="16" />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                </ItemsControl>
+            </StackPanel>
+
+            <StackPanel>
+                <TextBlock Style="{StaticResource SectionHeaderStyle}" Text="Rewards" />
+                <ItemsControl ItemsSource="{Binding Rewards}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Border
+                                BorderBrush="{ThemeResource SystemControlForegroundBaseLowBrush}"
+                                BorderThickness="1"
+                                CornerRadius="8"
+                                Padding="16"
+                                Margin="0,0,0,16">
+                                <ContentControl Content="{Binding}" />
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <StackPanel Spacing="16" />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                </ItemsControl>
+            </StackPanel>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

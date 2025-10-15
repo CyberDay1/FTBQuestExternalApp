@@ -1,0 +1,18 @@
+using FTBQuestEditor.WinUI.ViewModels.Infrastructure;
+using FTBQuestExternalApp.Codecs.Model;
+
+namespace FTBQuestEditor.WinUI.ViewModels.Rewards;
+
+public sealed class CustomRewardPropertiesViewModel : RewardPropertiesViewModel
+{
+    public CustomRewardPropertiesViewModel(CustomReward reward, string pathPrefix)
+        : base(reward, pathPrefix, "Custom Reward")
+    {
+    }
+
+    public string Description => "Custom rewards expose additional JSON-defined fields.";
+
+    protected override void OnValidationIssuesChanged()
+    {
+    }
+}
