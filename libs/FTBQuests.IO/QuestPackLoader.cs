@@ -78,6 +78,15 @@ public class QuestPackLoader
         ct.ThrowIfCancellationRequested();
 
         var ftbRoot = Path.Combine(rootPath, "data", "ftbquests");
+        await WriteAsync(pack, ftbRoot, ct).ConfigureAwait(false);
+    }
+
+    internal async Task WriteAsync(QuestPack pack, string ftbRoot, CancellationToken ct)
+    {
+        ArgumentNullException.ThrowIfNull(pack);
+        ArgumentNullException.ThrowIfNull(ftbRoot);
+        ct.ThrowIfCancellationRequested();
+
         Directory.CreateDirectory(ftbRoot);
 
         var metadataTokens = pack.Metadata.Extra;
