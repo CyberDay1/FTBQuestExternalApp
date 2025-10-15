@@ -6,6 +6,7 @@ namespace FTBQuestExternalApp.Codecs.Model;
 public abstract class TaskBase : ITask
 {
     private readonly List<string> propertyOrder = new();
+    private readonly HashSet<string> knownProperties = new(StringComparer.OrdinalIgnoreCase);
     private readonly string canonicalTypeId;
     private string? customTypeId;
 
@@ -25,6 +26,8 @@ public abstract class TaskBase : ITask
 
     internal IList<string> PropertyOrder => propertyOrder;
 
+    internal IEnumerable<string> KnownProperties => knownProperties;
+
     internal string CanonicalTypeId => canonicalTypeId;
 
     internal void SetPropertyOrder(IEnumerable<string> order)
@@ -33,8 +36,26 @@ public abstract class TaskBase : ITask
         propertyOrder.AddRange(order);
     }
 
+    internal void ClearKnownProperties()
+    {
+        knownProperties.Clear();
+    }
+
     internal void SetTypeId(string? typeId)
     {
         customTypeId = string.IsNullOrEmpty(typeId) ? null : typeId;
+    }
+
+    internal void MarkKnownProperty(string propertyName)
+    {
+        if (!string.IsNullOrWhiteSpace(propertyName))
+        {
+            knownProperties.Add(propertyName);
+        }
+    }
+
+    internal bool HasKnownProperty(string propertyName)
+    {
+        return knownProperties.Contains(propertyName);
     }
 }
