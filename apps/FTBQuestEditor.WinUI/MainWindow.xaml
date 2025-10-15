@@ -21,6 +21,7 @@
         <CommandBar x:Name="Toolbar" Grid.Row="1" DefaultLabelPosition="Right">
             <AppBarButton Icon="OpenFile" Label="Import" Click="OnImportClicked" />
             <AppBarButton Icon="AllApps" Label="Presets" Click="OnPresetsClicked" />
+            <AppBarButton Icon="AllApps" Label="Loot Tables" Click="OnLootTablesClicked" />
             <AppBarButton Icon="Save" Label="Save" Click="OnSaveClicked" />
         </CommandBar>
 

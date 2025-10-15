@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using FTBQuestEditor.WinUI.ViewModels;
+using FTBQuestEditor.WinUI.ViewModels.Loot;
 using FTBQuestExternalApp.Codecs.Model;
 using FTBQuests.Loot;
 using FTBQuests.Registry;
@@ -99,6 +100,91 @@ public class LootTableTests
         viewModel.SelectedModId = "minecraft";
         Assert.Single(viewModel.AvailableItems);
         Assert.Equal("minecraft", viewModel.AvailableItems.Single().ModId);
+    }
+
+    [Fact]
+    public void LootTableGroupBuilder_RoundTripsThroughJson()
+    {
+        string root = CreateTempDirectory();
+        try
+        {
+            var builder = new LootTableGroupBuilder("boss_rewards");
+            builder.AddTable("boss_table").AddTable("rare_loot");
+
+            string path = builder.Save(root);
+            Assert.True(File.Exists(path));
+
+            LootTableGroup loaded = LootTableGroupBuilder.Load(path);
+            Assert.Equal("boss_rewards", loaded.Name);
+            Assert.Equal(2, loaded.TableNames.Count);
+            Assert.Contains("boss_table", loaded.TableNames);
+            Assert.Contains("rare_loot", loaded.TableNames);
+        }
+        finally
+        {
+            Directory.Delete(root, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void LootTableGroupValidator_FindsMissingTables()
+    {
+        var group = new LootTableGroup("boss_rewards");
+        group.TableNames.Add("existing");
+        group.TableNames.Add("missing");
+
+        var tables = new[] { new LootTable("existing") };
+        var validator = new LootTableGroupValidator();
+
+        IReadOnlyList<string> issues = validator.Validate(group, tables);
+        Assert.Single(issues);
+        Assert.Contains("missing", issues.Single(), StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void LootTableManagerViewModel_AddsRenamesAndDeletesGroups()
+    {
+        var items = new[]
+        {
+            new RegistryItem("minecraft:apple", "Apple", null, "minecraft"),
+        };
+
+        var registry = new RegistryDatabase(items, new Dictionary<string, IReadOnlyCollection<string>>());
+        var tableValidator = new LootTableValidator(registry);
+        var groupValidator = new LootTableGroupValidator();
+        var manager = new LootTableManagerViewModel(registry, tableValidator, groupValidator);
+        manager.Load(Array.Empty<LootTable>(), Array.Empty<LootTableGroup>());
+
+        LootTableManagerViewModel.GroupViewModel group = manager.AddGroup("group");
+        Assert.Equal(group, manager.SelectedGroup);
+        Assert.Single(manager.Groups);
+
+        LootTableManagerViewModel.LootTableItemViewModel table = manager.AddTable("table");
+        Assert.Equal(table, manager.SelectedTable);
+        Assert.Equal(group, table.Group);
+        Assert.Single(manager.VisibleTables);
+
+        // Apply editor changes with no entries to ensure syncing succeeds.
+        manager.SyncEditorToSelectedTable();
+
+        manager.RenameGroup(group, "renamed_group");
+        Assert.Equal("renamed_group", group.Name);
+
+        manager.AssignTableToGroup(table, null);
+        Assert.Null(table.Group);
+        Assert.Empty(group.Tables);
+        Assert.Empty(manager.VisibleTables);
+
+        manager.SelectedGroup = group;
+        manager.AssignTableToGroup(table, group);
+        Assert.Single(manager.VisibleTables);
+
+        IReadOnlyList<LootTableGroup> builtGroups = manager.BuildGroups();
+        Assert.Single(builtGroups);
+        Assert.Contains("table", builtGroups[0].TableNames);
+
+        manager.DeleteGroup(group);
+        Assert.Empty(manager.Groups);
     }
 
     private static string CreateTempDirectory()

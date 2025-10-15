@@ -1,0 +1,41 @@
+<ContentDialog
+    x:Class="FTBQuestEditor.WinUI.Views.PresetManagerDialog"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:vm="using:FTBQuestEditor.WinUI.ViewModels"
+    Title="Presets"
+    CloseButtonText="Close">
+    <StackPanel Spacing="16">
+        <TextBlock Text="Manage saved quest pack presets." />
+        <ItemsControl ItemsSource="{x:Bind Slots, Mode=OneWay}">
+            <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:PresetSlotViewModel">
+                    <Grid ColumnSpacing="8" RowSpacing="4">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+
+                        <TextBlock Text="{x:Bind SlotLabel}" VerticalAlignment="Center" />
+                        <TextBox Grid.Column="1" Text="{x:Bind EditableName, Mode=TwoWay}" PlaceholderText="Enter preset name" />
+                        <Button Grid.Column="2" Content="Save" Click="OnSaveClicked" IsEnabled="{x:Bind CanSave}" />
+                        <Button Grid.Column="3" Content="Load" Click="OnLoadClicked" IsEnabled="{x:Bind CanLoad}" />
+                        <Button Grid.Column="4" Content="Rename" Click="OnRenameClicked" IsEnabled="{x:Bind CanRename}" />
+                        <Button Grid.Column="5" Content="Delete" Click="OnDeleteClicked" IsEnabled="{x:Bind CanDelete}" />
+
+                        <TextBlock Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="5" Text="{x:Bind LastModifiedDisplay}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                    </Grid>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
+        <TextBlock x:Name="StatusText" TextWrapping="Wrap" />
+    </StackPanel>
+</ContentDialog>
