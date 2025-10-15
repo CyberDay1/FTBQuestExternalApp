@@ -9,6 +9,13 @@
     <ApplicationManifest>app.manifest</ApplicationManifest>
   </PropertyGroup>
 
+  <PropertyGroup Condition="'$(Configuration)' == 'Release' and '$(RuntimeIdentifier)' == 'win-x64'">
+    <SelfContained>true</SelfContained>
+    <PublishSingleFile>true</PublishSingleFile>
+    <IncludeAllContentForSelfExtract>true</IncludeAllContentForSelfExtract>
+    <PublishDir>$(SolutionDir)dist$(DirectorySeparatorChar)portable$(DirectorySeparatorChar)</PublishDir>
+  </PropertyGroup>
+
   <ItemGroup>
     <Page Include="App.xaml" />
     <Page Include="MainWindow.xaml" />
