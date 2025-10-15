@@ -1,0 +1,14 @@
+{
+  "teams": [
+    {
+      "id": "engineers",
+      "display_name": "Engineers",
+      "color": "#1f6feb"
+    },
+    {
+      "id": "builders",
+      "display_name": "Builders",
+      "color": "#d29922"
+    }
+  ]
+}
