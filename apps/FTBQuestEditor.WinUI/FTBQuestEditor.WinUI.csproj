@@ -20,11 +20,15 @@
     <Page Include="App.xaml" />
     <Page Include="MainWindow.xaml" />
     <Page Include="Views\GridViewPage.xaml" />
+    <Page Include="Views\ChapterNavigator.xaml" />
   </ItemGroup>
 
   <ItemGroup>
     <Compile Update="Views\GridViewPage.xaml.cs">
       <DependentUpon>GridViewPage.xaml</DependentUpon>
+    </Compile>
+    <Compile Update="Views\ChapterNavigator.xaml.cs">
+      <DependentUpon>ChapterNavigator.xaml</DependentUpon>
     </Compile>
   </ItemGroup>
 

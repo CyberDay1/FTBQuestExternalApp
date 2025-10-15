@@ -93,7 +93,7 @@ public class GridViewViewModelTests
         pack.Chapters.Add(chapter);
 
         var viewModel = new GridViewViewModel();
-        viewModel.LoadQuestPack(pack);
+        viewModel.LoadChapter(chapter);
         return viewModel;
     }
 }
