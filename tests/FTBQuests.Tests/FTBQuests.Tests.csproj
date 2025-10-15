@@ -14,7 +14,7 @@
   <ItemGroup>
     <ProjectReference Include="../../libs/FTBQuests.Codecs/FTBQuests.Codecs.csproj" />
     <ProjectReference Include="../../libs/FTBQuests.IO/FTBQuests.IO.csproj" />
-    <ProjectReference Include="../../libs/FTBQuests.Assets/FTBQuests.Assets.csproj" />
+    <ProjectReference Include="../../libs/FTBQuests.Registry/FTBQuests.Registry.csproj" />
   </ItemGroup>
   <ItemGroup>
     <None Update="Fixtures/**/*">
