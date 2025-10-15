@@ -1,3 +1,7 @@
+// <copyright file="RewardSerializationTests.cs" company="CyberDay1">
+// Copyright (c) CyberDay1. All rights reserved.
+// </copyright>
+
 using System;
 using System.Linq;
 using FTBQuestExternalApp.Codecs.Enums;

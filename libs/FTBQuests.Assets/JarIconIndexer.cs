@@ -1,3 +1,7 @@
+// <copyright file="JarIconIndexer.cs" company="CyberDay1">
+// Copyright (c) CyberDay1. All rights reserved.
+// </copyright>
+
 using System.Text.Json;
 using ICSharpCode.SharpZipLib.Zip;
 

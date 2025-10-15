@@ -1,3 +1,7 @@
+// <copyright file="KnownTasks.cs" company="CyberDay1">
+// Copyright (c) CyberDay1. All rights reserved.
+// </copyright>
+
 namespace FTBQuestExternalApp.Codecs.Model;
 
 public sealed class ItemTask : TaskBase

@@ -1,3 +1,7 @@
+// <copyright file="ChapterNavigator.xaml.cs" company="CyberDay1">
+// Copyright (c) CyberDay1. All rights reserved.
+// </copyright>
+
 using System;
 using System.Collections.Specialized;
 using System.ComponentModel;

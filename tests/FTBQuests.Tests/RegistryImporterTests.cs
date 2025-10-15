@@ -1,3 +1,7 @@
+// <copyright file="RegistryImporterTests.cs" company="CyberDay1">
+// Copyright (c) CyberDay1. All rights reserved.
+// </copyright>
+
 using FTBQuests.Registry;
 using FTBQuests.Registry.Model;
 using Xunit;

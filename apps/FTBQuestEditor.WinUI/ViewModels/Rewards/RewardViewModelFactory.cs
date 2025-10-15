@@ -1,3 +1,7 @@
+// <copyright file="RewardViewModelFactory.cs" company="CyberDay1">
+// Copyright (c) CyberDay1. All rights reserved.
+// </copyright>
+
 using FTBQuestEditor.WinUI.ViewModels.Rewards;
 using FTBQuestExternalApp.Codecs.Model;
 

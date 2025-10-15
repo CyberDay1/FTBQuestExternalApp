@@ -1,3 +1,7 @@
+// <copyright file="PresetsDialog.xaml.cs" company="CyberDay1">
+// Copyright (c) CyberDay1. All rights reserved.
+// </copyright>
+
 using System.Threading.Tasks;
 using FTBQuestEditor.WinUI.ViewModels;
 using Microsoft.UI.Xaml;

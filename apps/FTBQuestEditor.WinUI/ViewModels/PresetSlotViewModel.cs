@@ -1,3 +1,7 @@
+// <copyright file="PresetSlotViewModel.cs" company="CyberDay1">
+// Copyright (c) CyberDay1. All rights reserved.
+// </copyright>
+
 using System.Globalization;
 using CommunityToolkit.Mvvm.ComponentModel;
 
