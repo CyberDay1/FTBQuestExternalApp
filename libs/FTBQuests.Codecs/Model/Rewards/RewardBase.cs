@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using FTBQuestExternalApp.Codecs.Enums;
 
 namespace FTBQuestExternalApp.Codecs.Model;
 
@@ -7,9 +8,10 @@ public abstract class RewardBase : IReward
 {
     private readonly List<string> propertyOrder = new();
     private readonly string canonicalTypeId;
+    private readonly RewardType rewardType;
     private string? customTypeId;
 
-    protected RewardBase(string typeId)
+    protected RewardBase(string typeId, RewardType rewardType)
     {
         if (string.IsNullOrWhiteSpace(typeId))
         {
@@ -17,7 +19,10 @@ public abstract class RewardBase : IReward
         }
 
         canonicalTypeId = typeId;
+        this.rewardType = rewardType;
     }
+
+    public RewardType RewardType => rewardType;
 
     public string TypeId => customTypeId ?? canonicalTypeId;
 

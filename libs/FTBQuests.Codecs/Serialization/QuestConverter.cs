@@ -25,7 +25,17 @@ public class QuestConverter : JsonConverter<Quest>
 
     private static readonly string[] DefaultTaskPropertyOrder = { "type" };
 
-    private static readonly string[] DefaultRewardPropertyOrder = { "type" };
+    private static readonly string[] DefaultRewardPropertyOrder =
+    {
+        "type",
+        "item",
+        "count",
+        "nbt",
+        "table",
+        "amount",
+        "levels",
+        "command",
+    };
 
     private static readonly IReadOnlyDictionary<string, Func<TaskBase>> TaskFactories =
         new Dictionary<string, Func<TaskBase>>(StringComparer.OrdinalIgnoreCase)
@@ -410,6 +420,11 @@ public class QuestConverter : JsonConverter<Quest>
                 continue;
             }
 
+            if (TryAssignKnownRewardProperty(reward, property))
+            {
+                continue;
+            }
+
             reward.Extra.Add(property.Name, property.Value.DeepClone());
         }
 
@@ -517,6 +532,8 @@ public class QuestConverter : JsonConverter<Quest>
             ["type"] = JToken.FromObject(rewardBase.TypeId, serializer),
         };
 
+        AddKnownRewardTokens(serializer, rewardBase, knownTokens);
+
         var orderedKeys = rewardBase.PropertyOrder.Count > 0 ? rewardBase.PropertyOrder : DefaultRewardPropertyOrder;
         var written = new HashSet<string>(StringComparer.Ordinal);
         var jobject = new JObject();
@@ -568,5 +585,176 @@ public class QuestConverter : JsonConverter<Quest>
         }
 
         return jobject;
+    }
+
+    private static bool TryAssignKnownRewardProperty(RewardBase reward, JProperty property)
+    {
+        switch (reward)
+        {
+            case ItemReward itemReward:
+                if (string.Equals(property.Name, "item", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (property.Value.Type == JTokenType.Null)
+                    {
+                        itemReward.ItemId = default;
+                    }
+                    else
+                    {
+                        var itemValue = property.Value.Value<string>();
+                        if (!string.IsNullOrWhiteSpace(itemValue))
+                        {
+                            itemReward.ItemId = new Identifier(itemValue);
+                        }
+                    }
+
+                    return true;
+                }
+
+                if (string.Equals(property.Name, "count", StringComparison.OrdinalIgnoreCase))
+                {
+                    itemReward.Count = property.Value.Type == JTokenType.Null
+                        ? 0
+                        : property.Value.Value<int>();
+                    return true;
+                }
+
+                if (string.Equals(property.Name, "nbt", StringComparison.OrdinalIgnoreCase))
+                {
+                    itemReward.Nbt = property.Value.Type == JTokenType.Null
+                        ? null
+                        : property.Value.Value<string>();
+                    return true;
+                }
+
+                break;
+            case LootReward lootReward:
+                if (string.Equals(property.Name, "table", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (property.Value.Type == JTokenType.Null)
+                    {
+                        lootReward.LootTable = default;
+                    }
+                    else
+                    {
+                        var tableValue = property.Value.Value<string>();
+                        if (!string.IsNullOrWhiteSpace(tableValue))
+                        {
+                            lootReward.LootTable = new Identifier(tableValue);
+                        }
+                    }
+
+                    return true;
+                }
+
+                break;
+            case XpReward xpReward:
+                if (string.Equals(property.Name, "amount", StringComparison.OrdinalIgnoreCase))
+                {
+                    xpReward.Amount = property.Value.Type == JTokenType.Null
+                        ? 0
+                        : property.Value.Value<int>();
+                    return true;
+                }
+
+                if (string.Equals(property.Name, "levels", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (property.Value.Type == JTokenType.Null)
+                    {
+                        xpReward.Levels = false;
+                    }
+                    else if (property.Value.Type == JTokenType.Integer)
+                    {
+                        xpReward.Levels = property.Value.Value<int>() != 0;
+                    }
+                    else
+                    {
+                        xpReward.Levels = property.Value.Value<bool>();
+                    }
+
+                    return true;
+                }
+
+                break;
+            case CommandReward commandReward:
+                if (string.Equals(property.Name, "command", StringComparison.OrdinalIgnoreCase))
+                {
+                    commandReward.Command = property.Value.Type == JTokenType.Null
+                        ? string.Empty
+                        : property.Value.Value<string>() ?? string.Empty;
+                    return true;
+                }
+
+                break;
+        }
+
+        return false;
+    }
+
+    private static void AddKnownRewardTokens(JsonSerializer serializer, RewardBase rewardBase, IDictionary<string, JToken> knownTokens)
+    {
+        switch (rewardBase)
+        {
+            case ItemReward itemReward:
+                AddIdentifierToken(serializer, knownTokens, rewardBase.PropertyOrder, "item", itemReward.ItemId);
+
+                if (rewardBase.PropertyOrder.Contains("count") || itemReward.Count != 1)
+                {
+                    knownTokens["count"] = JToken.FromObject(itemReward.Count, serializer);
+                }
+
+                if (rewardBase.PropertyOrder.Contains("nbt") || itemReward.Nbt is not null)
+                {
+                    knownTokens["nbt"] = itemReward.Nbt is null
+                        ? JValue.CreateNull()
+                        : JToken.FromObject(itemReward.Nbt, serializer);
+                }
+
+                break;
+            case LootReward lootReward:
+                AddIdentifierToken(serializer, knownTokens, rewardBase.PropertyOrder, "table", lootReward.LootTable);
+                break;
+            case XpReward xpReward:
+                if (rewardBase.PropertyOrder.Contains("amount") || xpReward.Amount != 0)
+                {
+                    knownTokens["amount"] = JToken.FromObject(xpReward.Amount, serializer);
+                }
+
+                if (rewardBase.PropertyOrder.Contains("levels") || xpReward.Levels)
+                {
+                    knownTokens["levels"] = JToken.FromObject(xpReward.Levels, serializer);
+                }
+
+                break;
+            case CommandReward commandReward:
+                if (!string.IsNullOrEmpty(commandReward.Command))
+                {
+                    knownTokens["command"] = JToken.FromObject(commandReward.Command, serializer);
+                }
+                else if (rewardBase.PropertyOrder.Contains("command"))
+                {
+                    knownTokens["command"] = JValue.CreateNull();
+                }
+
+                break;
+        }
+    }
+
+    private static void AddIdentifierToken(
+        JsonSerializer serializer,
+        IDictionary<string, JToken> knownTokens,
+        IList<string> propertyOrder,
+        string key,
+        Identifier identifier)
+    {
+        var identifierValue = identifier.Value;
+
+        if (!string.IsNullOrEmpty(identifierValue))
+        {
+            knownTokens[key] = JToken.FromObject(identifier, serializer);
+        }
+        else if (propertyOrder.Contains(key))
+        {
+            knownTokens[key] = JValue.CreateNull();
+        }
     }
 }
