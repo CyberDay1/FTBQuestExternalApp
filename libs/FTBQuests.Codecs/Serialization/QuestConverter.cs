@@ -64,9 +64,9 @@ public class QuestConverter : JsonConverter<Quest>
         var properties = jobject.Properties().ToList();
 
         quest.SetPropertyOrder(properties.Select(p => p.Name));
-        quest.Tasks.Clear();
-        quest.Rewards.Clear();
-        quest.Dependencies.Clear();
+        quest.ClearTasks();
+        quest.ClearRewards();
+        quest.ClearDependencies();
         quest.Extra.Extra.Clear();
         quest.Title = string.Empty;
         quest.Subtitle = null;
@@ -122,22 +122,19 @@ public class QuestConverter : JsonConverter<Quest>
                         : property.Value.Value<int>();
                     break;
                 case "dependencies":
-                    quest.Dependencies.Clear();
+                    quest.ClearDependencies();
 
-                    if (property.Value.Type != JTokenType.Null)
+                    if (property.Value.Type != JTokenType.Null && property.Value is JArray dependencyArray)
                     {
-                        if (property.Value is JArray dependencyArray)
+                        foreach (var element in dependencyArray)
                         {
-                            foreach (var element in dependencyArray)
-                            {
-                                quest.Dependencies.Add(ConvertToLong(element, serializer));
-                            }
+                            quest.AddDependency(ConvertToLong(element, serializer));
                         }
                     }
 
                     break;
                 case "tasks":
-                    quest.Tasks.Clear();
+                    quest.ClearTasks();
 
                     if (property.Value.Type != JTokenType.Null)
                     {
@@ -146,14 +143,14 @@ public class QuestConverter : JsonConverter<Quest>
                             var task = DeserializeTask(taskToken, serializer);
                             if (task is not null)
                             {
-                                quest.Tasks.Add(task);
+                                quest.AddTask(task);
                             }
                         }
                     }
 
                     break;
                 case "rewards":
-                    quest.Rewards.Clear();
+                    quest.ClearRewards();
 
                     if (property.Value.Type != JTokenType.Null)
                     {
@@ -162,7 +159,7 @@ public class QuestConverter : JsonConverter<Quest>
                             var reward = DeserializeReward(rewardToken, serializer);
                             if (reward is not null)
                             {
-                                quest.Rewards.Add(reward);
+                                quest.AddReward(reward);
                             }
                         }
                     }

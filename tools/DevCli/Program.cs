@@ -188,7 +188,7 @@ internal static class DevCliApp
         var result = new QuestPack();
         foreach (var chapter in ioPack.Chapters)
         {
-            result.Chapters.Add(chapter);
+            result.AddChapter(chapter);
         }
 
         return result;

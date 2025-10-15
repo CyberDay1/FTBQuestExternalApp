@@ -22,17 +22,18 @@ public class BrokenReferenceValidatorTests
             Title = "Needs Friend",
         };
 
-        questWithMissingDependency.Dependencies.Add(303);
-        questWithMissingDependency.Dependencies.Add(0);
+        questWithMissingDependency.AddDependency(303);
+        questWithMissingDependency.AddDependency(0);
 
         var chapter = new Chapter
         {
             Title = "Chapter",
-            Quests = { targetQuest, questWithMissingDependency },
         };
+        chapter.AddQuest(targetQuest);
+        chapter.AddQuest(questWithMissingDependency);
 
         var pack = new QuestPack();
-        pack.Chapters.Add(chapter);
+        pack.AddChapter(chapter);
 
         var validator = new BrokenReferenceValidator();
         var issues = validator.Validate(pack).OrderBy(i => i.Path).ToList();
@@ -66,16 +67,17 @@ public class BrokenReferenceValidatorTests
             Title = "Quest B",
         };
 
-        questB.Dependencies.Add(questA.Id);
+        questB.AddDependency(questA.Id);
 
         var chapter = new Chapter
         {
             Title = "Chapter",
-            Quests = { questA, questB },
         };
+        chapter.AddQuest(questA);
+        chapter.AddQuest(questB);
 
         var pack = new QuestPack();
-        pack.Chapters.Add(chapter);
+        pack.AddChapter(chapter);
 
         var validator = new BrokenReferenceValidator();
         var issues = validator.Validate(pack);
