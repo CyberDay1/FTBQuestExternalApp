@@ -29,7 +29,7 @@ public sealed class RequiredFieldsValidator : IValidator
                 continue;
             }
 
-            if (chapter.Id == Guid.Empty)
+            if (chapter.Id == 0)
             {
                 issues.Add(new ValidationIssue(
                     ValidationSeverity.Error,
@@ -70,7 +70,7 @@ public sealed class RequiredFieldsValidator : IValidator
                     continue;
                 }
 
-                if (quest.Id == Guid.Empty)
+                if (quest.Id == 0)
                 {
                     issues.Add(new ValidationIssue(
                         ValidationSeverity.Error,

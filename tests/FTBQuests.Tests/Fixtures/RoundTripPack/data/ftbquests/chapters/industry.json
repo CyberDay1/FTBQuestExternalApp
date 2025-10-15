@@ -1,12 +1,12 @@
 {
-  "id": "11111111-1111-1111-1111-111111111002",
+  "id": 4,
   "title": "Industry",
   "icon": "minecraft:furnace",
   "weight": 25,
   "background": "textures/gui/automation.png",
   "quests": [
     {
-      "id": "41111111-1111-1111-1111-111111111001",
+      "id": 5,
       "title": "Build a Furnace",
       "subtitle": "Smelt iron automatically.",
       "icon": "minecraft:blast_furnace",
@@ -14,7 +14,7 @@
       "y": 5,
       "page": 0,
       "dependencies": [
-        "31111111-1111-1111-1111-111111111002"
+        3
       ],
       "tasks": [
         {

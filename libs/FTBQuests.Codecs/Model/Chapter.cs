@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 
 namespace FTBQuestExternalApp.Codecs.Model;
@@ -7,7 +6,7 @@ public class Chapter : IExtraAware
 {
     private readonly List<string> propertyOrder = new();
 
-    public Guid Id { get; set; }
+    public long Id { get; set; }
 
     public string Title { get; set; } = string.Empty;
 

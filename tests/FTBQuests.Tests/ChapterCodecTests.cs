@@ -1,4 +1,3 @@
-using System;
 using System.Linq;
 using FTBQuestExternalApp.Codecs.Model;
 using FTBQuestExternalApp.Codecs.Serialization;
@@ -10,7 +9,7 @@ namespace FTBQuests.Tests;
 
 public class ChapterCodecTests
 {
-    private const string GoldenJson = "{\n  \"title\": \"First Steps\",\n  \"id\": \"11111111-1111-1111-1111-111111111111\",\n  \"customNumber\": 42,\n  \"description\": \"Learn the basics.\",\n  \"icon\": \"minecraft:book\",\n  \"quests\": [\n    {\n      \"id\": \"22222222-2222-2222-2222-222222222222\"\n    }\n  ],\n  \"metadata\": {\n    \"difficulty\": \"easy\"\n  }\n}";
+    private const string GoldenJson = "{\n  \"title\": \"First Steps\",\n  \"id\": 1111,\n  \"customNumber\": 42,\n  \"description\": \"Learn the basics.\",\n  \"icon\": \"minecraft:book\",\n  \"quests\": [\n    {\n      \"id\": 2222\n    }\n  ],\n  \"metadata\": {\n    \"difficulty\": \"easy\"\n  }\n}";
 
     private static readonly JsonSerializerSettings Settings = new()
     {
@@ -22,7 +21,7 @@ public class ChapterCodecTests
     {
         var chapter = JsonConvert.DeserializeObject<Chapter>(GoldenJson, Settings)!;
 
-        Assert.Equal(Guid.Parse("11111111-1111-1111-1111-111111111111"), chapter.Id);
+        Assert.Equal(1111, chapter.Id);
         Assert.Equal("First Steps", chapter.Title);
         Assert.Equal("Learn the basics.", chapter.Description);
         Assert.Equal(new Identifier("minecraft:book"), chapter.IconId);
