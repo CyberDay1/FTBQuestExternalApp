@@ -1,16 +1,24 @@
 using System;
+using System.IO;
 using System.Threading.Tasks;
 using FTBQuests.IO;
+using FTBQuests.Loot;
+using FTBQuests.Registry;
+using FTBQuests.Validation.Validators;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Windows.Storage.Pickers;
 using WinRT.Interop;
+using LootViews = FTBQuestEditor.WinUI.Views.Loot;
+using LootViewModels = FTBQuestEditor.WinUI.ViewModels.Loot;
 
 namespace FTBQuestEditor.WinUI;
 
 public sealed partial class MainWindow : Window
 {
     private readonly QuestPackLoader loader = new();
+    private Task<RegistryDatabase>? registryTask;
+    private LootViewModels.LootTableManagerViewModel? lootManager;
 
     public MainWindow()
     {
@@ -39,11 +47,34 @@ public sealed partial class MainWindow : Window
         }
         catch (Exception ex)
         {
-            await ShowImportErrorAsync(ex);
+            await ShowErrorAsync("Import failed", ex.Message);
         }
     }
 
-    private async Task ShowImportErrorAsync(Exception ex)
+    private async void OnLootTablesClicked(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            LootViewModels.LootTableManagerViewModel manager = await EnsureLootManagerAsync();
+            var page = new LootViews.LootTableManager
+            {
+                ViewModel = manager,
+            };
+
+            var window = new Window
+            {
+                Content = page,
+            };
+
+            window.Activate();
+        }
+        catch (Exception ex)
+        {
+            await ShowErrorAsync("Loot table manager error", ex.Message);
+        }
+    }
+
+    private async Task ShowErrorAsync(string title, string message)
     {
         if (Content is not FrameworkElement rootElement)
         {
@@ -52,12 +83,47 @@ public sealed partial class MainWindow : Window
 
         var dialog = new ContentDialog
         {
-            Title = "Import failed",
-            Content = ex.Message,
+            Title = title,
+            Content = message,
             CloseButtonText = "OK",
             XamlRoot = rootElement.XamlRoot,
         };
 
         await dialog.ShowAsync();
+    }
+
+    private async Task<LootViewModels.LootTableManagerViewModel> EnsureLootManagerAsync()
+    {
+        if (lootManager is not null)
+        {
+            return lootManager;
+        }
+
+        RegistryDatabase registry = await GetRegistryAsync();
+        var tableValidator = new LootTableValidator(registry);
+        var groupValidator = new LootTableGroupValidator();
+
+        lootManager = new LootViewModels.LootTableManagerViewModel(registry, tableValidator, groupValidator);
+        lootManager.Load(Array.Empty<LootTable>(), Array.Empty<LootTableGroup>());
+        return lootManager;
+    }
+
+    private Task<RegistryDatabase> GetRegistryAsync()
+    {
+        registryTask ??= LoadRegistryAsync();
+        return registryTask;
+    }
+
+    private async Task<RegistryDatabase> LoadRegistryAsync()
+    {
+        string baseDirectory = AppContext.BaseDirectory;
+        string registryFolder = Path.Combine(baseDirectory, "data", "minecraft_registry");
+        if (!Directory.Exists(registryFolder))
+        {
+            throw new DirectoryNotFoundException($"Registry folder '{registryFolder}' was not found.");
+        }
+
+        var importer = new RegistryImporter();
+        return await importer.LoadFromProbeAsync(registryFolder).ConfigureAwait(false);
     }
 }

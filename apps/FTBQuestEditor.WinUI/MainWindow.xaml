@@ -11,6 +11,7 @@
 
         <CommandBar x:Name="Toolbar" DefaultLabelPosition="Right">
             <AppBarButton Icon="OpenFile" Label="Import" Click="OnImportClicked" />
+            <AppBarButton Icon="AllApps" Label="Loot Tables" Click="OnLootTablesClicked" />
         </CommandBar>
 
         <views:ChapterNavigator x:Name="Navigator" Grid.Row="1" />
