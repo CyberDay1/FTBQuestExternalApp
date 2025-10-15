@@ -6,6 +6,12 @@ public sealed class ItemTask : TaskBase
         : base("item")
     {
     }
+
+    public Identifier ItemId { get; set; }
+
+    public int Count { get; set; }
+
+    public string? Nbt { get; set; }
 }
 
 public sealed class AdvancementTask : TaskBase
@@ -14,6 +20,8 @@ public sealed class AdvancementTask : TaskBase
         : base("advancement")
     {
     }
+
+    public Identifier AdvancementId { get; set; }
 }
 
 public sealed class KillTask : TaskBase
@@ -22,6 +30,10 @@ public sealed class KillTask : TaskBase
         : base("kill")
     {
     }
+
+    public Identifier EntityId { get; set; }
+
+    public int Amount { get; set; }
 }
 
 public sealed class LocationTask : TaskBase
@@ -30,6 +42,16 @@ public sealed class LocationTask : TaskBase
         : base("location")
     {
     }
+
+    public int X { get; set; }
+
+    public int Y { get; set; }
+
+    public int Z { get; set; }
+
+    public string? Dimension { get; set; }
+
+    public int Radius { get; set; }
 }
 
 public sealed class XpTask : TaskBase
@@ -38,6 +60,10 @@ public sealed class XpTask : TaskBase
         : base("xp")
     {
     }
+
+    public int Amount { get; set; }
+
+    public bool Levels { get; set; }
 }
 
 public sealed class NbtTask : TaskBase
@@ -46,6 +72,10 @@ public sealed class NbtTask : TaskBase
         : base("nbt")
     {
     }
+
+    public Identifier TargetId { get; set; }
+
+    public string? RequiredNbt { get; set; }
 }
 
 public sealed class CommandTask : TaskBase
@@ -54,6 +84,8 @@ public sealed class CommandTask : TaskBase
         : base("command")
     {
     }
+
+    public string? Command { get; set; }
 }
 
 public sealed class CustomTask : TaskBase
