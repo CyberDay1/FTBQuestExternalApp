@@ -102,6 +102,38 @@ public sealed partial class LootTableEditorViewModel : ObservableObject
         Entries.Add(entry);
     }
 
+    public bool DeleteRegistryItem(string itemId)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(itemId);
+
+        bool removed = registry.RemoveItem(new Identifier(itemId));
+        if (removed)
+        {
+            ReloadRegistry();
+        }
+
+        return removed;
+    }
+
+    public int DeleteItemsForMod(string modId)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(modId);
+
+        int removed = registry.RemoveItemsByMod(modId);
+        if (removed > 0)
+        {
+            ReloadRegistry();
+        }
+
+        return removed;
+    }
+
+    public int GetRegistryItemCountForMod(string modId)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(modId);
+        return registry.GetItemsByMod(modId).Count;
+    }
+
     public void RemoveEntry(LootEntryViewModel entry)
     {
         ArgumentNullException.ThrowIfNull(entry);

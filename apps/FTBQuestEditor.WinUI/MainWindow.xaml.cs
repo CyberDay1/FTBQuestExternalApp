@@ -1,6 +1,10 @@
 using System;
+using System.IO;
 using System.Threading.Tasks;
 using FTBQuests.IO;
+using FTBQuests.IO.Presets;
+using FTBQuestEditor.WinUI.ViewModels;
+using FTBQuestEditor.WinUI.Views;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Windows.Storage.Pickers;
@@ -41,6 +45,28 @@ public sealed partial class MainWindow : Window
         {
             await ShowImportErrorAsync(ex);
         }
+    }
+
+    private async void OnPresetsClicked(object sender, RoutedEventArgs e)
+    {
+        if (Content is not FrameworkElement rootElement)
+        {
+            return;
+        }
+
+        string presetsDirectory = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+            "FTBQuestEditor",
+            "presets");
+
+        var store = new PresetSlotStore(presetsDirectory);
+        var dialog = new PresetsDialog
+        {
+            XamlRoot = rootElement.XamlRoot,
+            ViewModel = new PresetsDialogViewModel(store),
+        };
+
+        await dialog.ShowAsync();
     }
 
     private async Task ShowImportErrorAsync(Exception ex)

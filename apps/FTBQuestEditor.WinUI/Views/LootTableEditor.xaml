@@ -38,7 +38,15 @@
                     <ListView ItemsSource="{Binding AvailableItems}" AllowDrop="True" CanDrag="True">
                         <ListView.ItemTemplate>
                             <DataTemplate x:DataType="vm:LootTableEditorViewModel.RegistryItemViewModel">
-                                <TextBlock Text="{x:Bind Label}" />
+                                <Grid>
+                                    <Grid.ContextFlyout>
+                                        <MenuFlyout>
+                                            <MenuFlyoutItem Text="Delete Item" Click="OnDeleteRegistryItemClicked" />
+                                            <MenuFlyoutItem Text="Delete Mod Items" Click="OnDeleteModItemsClicked" />
+                                        </MenuFlyout>
+                                    </Grid.ContextFlyout>
+                                    <TextBlock Text="{x:Bind Label}" />
+                                </Grid>
                             </DataTemplate>
                         </ListView.ItemTemplate>
                     </ListView>

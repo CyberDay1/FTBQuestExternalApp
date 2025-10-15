@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using FTBQuestExternalApp.Codecs.Model;
 using FTBQuests.Registry.Model;
 
 namespace FTBQuests.Registry;
@@ -126,6 +127,57 @@ public sealed class RegistryDatabase
         .ToList();
 
     /// <summary>
+    /// Removes the item associated with the supplied identifier when present.
+    /// </summary>
+    /// <param name="id">The fully qualified identifier.</param>
+    /// <returns><see langword="true"/> when an entry was removed.</returns>
+    public bool RemoveItem(Identifier id)
+    {
+        if (string.IsNullOrWhiteSpace(id.Value))
+        {
+            throw new ArgumentException("Identifier cannot be empty.", nameof(id));
+        }
+
+        if (!itemsById.Remove(id.Value, out RegistryItem? item))
+        {
+            return false;
+        }
+
+        RemoveItemInternal(item);
+        return true;
+    }
+
+    /// <summary>
+    /// Removes all items contributed by the specified mod identifier.
+    /// </summary>
+    /// <param name="modId">The source mod identifier.</param>
+    /// <returns>The number of removed items.</returns>
+    public int RemoveItemsByMod(string modId)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(modId);
+
+        if (!itemsBySourceMod.TryGetValue(modId, out List<RegistryItem>? modItems) || modItems.Count == 0)
+        {
+            return 0;
+        }
+
+        var snapshot = modItems.ToArray();
+        int removed = 0;
+        foreach (RegistryItem item in snapshot)
+        {
+            if (!itemsById.Remove(item.Id))
+            {
+                continue;
+            }
+
+            RemoveItemInternal(item);
+            removed++;
+        }
+
+        return removed;
+    }
+
+    /// <summary>
     /// Adds the specified item when it is not already tracked.
     /// </summary>
     /// <param name="item">The item to register.</param>
@@ -159,5 +211,50 @@ public sealed class RegistryDatabase
         }
 
         list.Insert(index, item);
+    }
+
+    private static void RemoveOrdered(List<RegistryItem> list, RegistryItem item)
+    {
+        int index = list.BinarySearch(item, IdentifierComparer);
+        if (index >= 0)
+        {
+            list.RemoveAt(index);
+        }
+    }
+
+    private void RemoveItemInternal(RegistryItem item)
+    {
+        RemoveOrdered(orderedItems, item);
+
+        if (itemsBySourceMod.TryGetValue(item.SourceModId, out List<RegistryItem>? sourceItems))
+        {
+            RemoveOrdered(sourceItems, item);
+            if (sourceItems.Count == 0)
+            {
+                itemsBySourceMod.Remove(item.SourceModId);
+            }
+        }
+
+        foreach (string tag in itemsByTag.Keys.ToList())
+        {
+            RegistryItem[] members = itemsByTag[tag];
+            RegistryItem[] filtered = members
+                .Where(member => !string.Equals(member.Id, item.Id, StringComparison.OrdinalIgnoreCase))
+                .ToArray();
+
+            if (filtered.Length == members.Length)
+            {
+                continue;
+            }
+
+            if (filtered.Length == 0)
+            {
+                itemsByTag.Remove(tag);
+            }
+            else
+            {
+                itemsByTag[tag] = filtered;
+            }
+        }
     }
 }
