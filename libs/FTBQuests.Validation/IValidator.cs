@@ -1,3 +1,7 @@
+// <copyright file="IValidator.cs" company="CyberDay1">
+// Copyright (c) CyberDay1. All rights reserved.
+// </copyright>
+
 using System.Collections.Generic;
 using FTBQuestExternalApp.Codecs.Model;
 

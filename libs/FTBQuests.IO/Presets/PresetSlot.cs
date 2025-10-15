@@ -1,3 +1,7 @@
+// <copyright file="PresetSlot.cs" company="CyberDay1">
+// Copyright (c) CyberDay1. All rights reserved.
+// </copyright>
+
 using System;
 
 namespace FTBQuests.IO.Presets;

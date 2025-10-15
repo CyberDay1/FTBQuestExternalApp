@@ -1,3 +1,7 @@
+// <copyright file="Class1.cs" company="CyberDay1">
+// Copyright (c) CyberDay1. All rights reserved.
+// </copyright>
+
 using FTBQuests.Codecs;
 
 namespace FTBQuests.IO;

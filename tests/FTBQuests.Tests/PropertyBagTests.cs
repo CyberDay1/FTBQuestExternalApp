@@ -1,3 +1,7 @@
+// <copyright file="PropertyBagTests.cs" company="CyberDay1">
+// Copyright (c) CyberDay1. All rights reserved.
+// </copyright>
+
 using FTBQuestExternalApp.Codecs.Model;
 using Newtonsoft.Json.Linq;
 using Xunit;

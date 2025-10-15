@@ -1,3 +1,7 @@
+// <copyright file="GridViewPage.xaml.cs" company="CyberDay1">
+// Copyright (c) CyberDay1. All rights reserved.
+// </copyright>
+
 using FTBQuestEditor.WinUI.ViewModels;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;

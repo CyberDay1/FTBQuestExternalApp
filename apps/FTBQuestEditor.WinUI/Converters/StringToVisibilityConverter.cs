@@ -1,3 +1,7 @@
+// <copyright file="StringToVisibilityConverter.cs" company="CyberDay1">
+// Copyright (c) CyberDay1. All rights reserved.
+// </copyright>
+
 using System;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Data;
