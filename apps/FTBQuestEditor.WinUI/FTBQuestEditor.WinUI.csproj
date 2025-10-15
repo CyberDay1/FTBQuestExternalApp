@@ -1,0 +1,37 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows10.0.19041.0</TargetFramework>
+    <TargetPlatformMinVersion>10.0.17763.0</TargetPlatformMinVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <UseWinUI>true</UseWinUI>
+    <EnableMsixTooling>true</EnableMsixTooling>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Page Include="App.xaml" />
+    <Page Include="MainWindow.xaml" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="Assets\**" />
+    <None Update="app.manifest">
+      <SubType>Designer</SubType>
+    </None>
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.5.240404000" />
+    <PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.22621.756" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../libs/FTBQuests.Codecs/FTBQuests.Codecs.csproj" />
+    <ProjectReference Include="../../libs/FTBQuests.IO/FTBQuests.IO.csproj" />
+    <ProjectReference Include="../../libs/FTBQuests.Validation/FTBQuests.Validation.csproj" />
+    <ProjectReference Include="../../libs/FTBQuests.Assets/FTBQuests.Assets.csproj" />
+  </ItemGroup>
+</Project>
