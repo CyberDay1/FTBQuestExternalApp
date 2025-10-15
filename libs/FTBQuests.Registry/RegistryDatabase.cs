@@ -1,3 +1,6 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
 using FTBQuests.Registry.Model;
 
 namespace FTBQuests.Registry;
@@ -10,8 +13,12 @@ public sealed class RegistryDatabase
     private static readonly RegistryItem[] EmptyItems = Array.Empty<RegistryItem>();
 
     private readonly Dictionary<string, RegistryItem> itemsById;
+    private static readonly IComparer<RegistryItem> IdentifierComparer = Comparer<RegistryItem>.Create(
+        static (left, right) => string.CompareOrdinal(left.Id, right.Id));
+
     private readonly Dictionary<string, RegistryItem[]> itemsByTag;
-    private readonly Dictionary<string, RegistryItem[]> itemsBySourceMod;
+    private readonly Dictionary<string, List<RegistryItem>> itemsBySourceMod;
+    private readonly List<RegistryItem> orderedItems;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="RegistryDatabase"/> class.
@@ -39,13 +46,11 @@ public sealed class RegistryDatabase
             sourceItems.Add(item);
         }
 
-        itemsBySourceMod = new Dictionary<string, RegistryItem[]>(StringComparer.OrdinalIgnoreCase);
+        itemsBySourceMod = new Dictionary<string, List<RegistryItem>>(StringComparer.OrdinalIgnoreCase);
         foreach ((string sourceMod, List<RegistryItem> sourceItems) in bySource)
         {
-            RegistryItem[] ordered = sourceItems
-                .OrderBy(static item => item.Id, StringComparer.Ordinal)
-                .ToArray();
-            itemsBySourceMod[sourceMod] = ordered;
+            sourceItems.Sort(IdentifierComparer);
+            itemsBySourceMod[sourceMod] = sourceItems;
         }
 
         itemsByTag = new Dictionary<string, RegistryItem[]>(StringComparer.OrdinalIgnoreCase);
@@ -62,15 +67,15 @@ public sealed class RegistryDatabase
             itemsByTag[tag] = resolved;
         }
 
-        Items = itemsById.Values
+        orderedItems = itemsById.Values
             .OrderBy(static item => item.Id, StringComparer.Ordinal)
-            .ToArray();
+            .ToList();
     }
 
     /// <summary>
     /// Gets a read-only view of all registry items.
     /// </summary>
-    public IReadOnlyCollection<RegistryItem> Items { get; }
+    public IReadOnlyCollection<RegistryItem> Items => orderedItems;
 
     /// <summary>
     /// Tries to fetch an item by its identifier.
@@ -103,6 +108,42 @@ public sealed class RegistryDatabase
     public IReadOnlyList<RegistryItem> GetBySourceModId(string sourceModId)
     {
         ArgumentException.ThrowIfNullOrEmpty(sourceModId);
-        return itemsBySourceMod.TryGetValue(sourceModId, out RegistryItem[]? items) ? items : EmptyItems;
+        return itemsBySourceMod.TryGetValue(sourceModId, out List<RegistryItem>? sourceItems) ? sourceItems : EmptyItems;
+    }
+
+    /// <summary>
+    /// Adds the specified item when it is not already tracked.
+    /// </summary>
+    /// <param name="item">The item to register.</param>
+    public void AddIfMissing(RegistryItem item)
+    {
+        ArgumentNullException.ThrowIfNull(item);
+
+        if (itemsById.ContainsKey(item.Id))
+        {
+            return;
+        }
+
+        itemsById[item.Id] = item;
+        InsertOrdered(orderedItems, item);
+
+        if (!itemsBySourceMod.TryGetValue(item.SourceModId, out List<RegistryItem>? sourceItems))
+        {
+            sourceItems = new List<RegistryItem>();
+            itemsBySourceMod[item.SourceModId] = sourceItems;
+        }
+
+        InsertOrdered(sourceItems, item);
+    }
+
+    private static void InsertOrdered(List<RegistryItem> list, RegistryItem item)
+    {
+        int index = list.BinarySearch(item, IdentifierComparer);
+        if (index < 0)
+        {
+            index = ~index;
+        }
+
+        list.Insert(index, item);
     }
 }

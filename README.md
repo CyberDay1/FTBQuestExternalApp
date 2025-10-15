@@ -7,3 +7,4 @@ This repository hosts the Windows front-end and shared libraries for an external
 - `apps/FTBQuestEditor.WinUI` – WinUI 3 desktop shell that will host the editor UI.
 - `libs/` – Shared class libraries for codecs, schema definitions, validation, and runtime registries.
 - `tests/FTBQuests.Tests` – xUnit test suite for shared libraries.
+- `data/minecraft_registry/vanilla_items.json` – Seed data exported from the `probe` utility to ensure base Minecraft items are always present in the registry database. Regenerate by running the probe mod against a clean vanilla instance and copying the resulting `vanilla_items.json`.
