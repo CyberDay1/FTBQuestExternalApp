@@ -9,4 +9,11 @@ The editor grid mirrors the in-game quest layout. These constants are sourced fr
 | Spacing         | 4     | Space in pixels between adjacent grid cells. |
 | CellWithSpacing | 36    | Derived size of a quest slot including the inter-cell spacing (CellSize + Spacing). |
 
-The in-game renderer composes quest icons inside 32×32 slots with a slight inset, leaving a 4 px gap around each cell. Icons are drawn at 85% scale to match the default hover/click hitbox size used throughout the quest UI.
+- `GridConstants.CellSize` – Base slot size (`apps/FTBQuestEditor.WinUI/ViewModels/GridConstants.cs`).
+- `GridConstants.IconScale` – Icon render scale relative to the slot.
+- `GridConstants.Spacing` – Gap between adjacent slots.
+- `GridConstants.CellWithSpacing` – Convenience accessor for layout math.
+- `GridConstants.Snap()` – Helper that normalizes coordinates to the grid.
+
+When the in-game layout changes, adjust the constants above and record the new values here alongside the client build that intro
+duced them.
