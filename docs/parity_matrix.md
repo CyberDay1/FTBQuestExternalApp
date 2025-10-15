@@ -1,11 +1,15 @@
 # Quest Grid Parity Matrix
 
-The editor grid mirrors the in-game quest layout. These constants are sourced from the latest parity audit of the Java edition client.
+The WinUI editor mirrors the spacing and icon sizing from the Minecraft quest screen. Update this stub as audits surface new val
+ues that need to stay in lockstep with the game client.
 
-| Constant   | Value | Notes |
-|------------|-------|-------|
-| CellSize   | 32    | Size of a single grid cell in pixels. |
-| IconScale  | 0.85  | Scaling factor applied to quest icons relative to their base texture. |
-| Spacing    | 4     | Space in pixels between adjacent grid cells. |
+## Constants tracked in code
 
-The in-game renderer composes quest icons inside 32×32 slots with a slight inset, leaving a 4 px gap around each cell. Icons are drawn at 85% scale to match the default hover/click hitbox size used throughout the quest UI.
+- `GridConstants.CellSize` – Base slot size (`apps/FTBQuestEditor.WinUI/ViewModels/GridConstants.cs`).
+- `GridConstants.IconScale` – Icon render scale relative to the slot.
+- `GridConstants.Spacing` – Gap between adjacent slots.
+- `GridConstants.CellWithSpacing` – Convenience accessor for layout math.
+- `GridConstants.Snap()` – Helper that normalizes coordinates to the grid.
+
+When the in-game layout changes, adjust the constants above and record the new values here alongside the client build that intro
+duced them.
