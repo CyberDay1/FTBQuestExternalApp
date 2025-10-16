@@ -1,9 +1,19 @@
 namespace FTBQuests.Registry;
 
-public static class CodecRegistry
+/// <summary>
+/// Handles codec registration for quest data serialization.
+/// </summary>
+public sealed class CodecRegistry
 {
-    public static void RegisterAll()
+    public static CodecRegistry Instance { get; } = new();
+
+    private CodecRegistry() { }
+
+    /// <summary>
+    /// Registers all available codecs.
+    /// </summary>
+    public void RegisterAll()
     {
-        // Temporary stub until Codex integration restores full registry logic
+        // Placeholder implementation
     }
 }
