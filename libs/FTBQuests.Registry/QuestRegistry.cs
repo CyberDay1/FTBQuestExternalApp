@@ -1,9 +1,19 @@
 namespace FTBQuests.Registry;
 
-public static class QuestRegistry
+/// <summary>
+/// Provides quest registry management for asset and codec registration.
+/// </summary>
+public sealed class QuestRegistry
 {
-    public static void RegisterAll()
+    public static QuestRegistry Instance { get; } = new();
+
+    private QuestRegistry() { }
+
+    /// <summary>
+    /// Performs quest registry initialization.
+    /// </summary>
+    public void RegisterAll()
     {
-        // Temporary stub until Codex integration restores full registry logic
+        // Placeholder logic; Codex will populate actual registry entries
     }
 }
