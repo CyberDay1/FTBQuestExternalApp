@@ -1,3 +1,5 @@
+using FTBQuests.Validation;
+using FTBQuests.Assets;
 // <copyright file="IValidator.cs" company="CyberDay1">
 // Copyright (c) CyberDay1. All rights reserved.
 // </copyright>
@@ -15,7 +17,7 @@ public interface IValidator
     /// <summary>
     /// Validates the supplied quest pack and returns any discovered issues.
     /// </summary>
-    /// <param name="questPack">The quest pack to inspect.</param>
+    /// <param name="FTBQuests.IO.QuestPack">The quest pack to inspect.</param>
     /// <returns>The sequence of validation issues discovered during the inspection.</returns>
-    IEnumerable<ValidationIssue> Validate(QuestPack questPack);
+    IEnumerable<ValidationIssue> Validate(FTBQuests.IO.QuestPack FTBQuests.IO.QuestPack);
 }

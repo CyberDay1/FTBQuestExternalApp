@@ -1,3 +1,5 @@
+using FTBQuests.Validation;
+using FTBQuests.Assets;
 // <copyright file="MainViewModel.cs" company="CyberDay1">
 // Copyright (c) CyberDay1. All rights reserved.
 // </copyright>
@@ -19,7 +21,7 @@ namespace FTBQuestEditor.WinUI.ViewModels;
 
 public sealed class MainViewModel : ObservableObject
 {
-    private readonly QuestPack questPack;
+    private readonly FTBQuests.IO.QuestPack FTBQuests.IO.QuestPack;
     private readonly Chapter chapter;
     private readonly Quest quest;
     private readonly List<IValidator> validators;
@@ -28,7 +30,7 @@ public sealed class MainViewModel : ObservableObject
 
     public MainViewModel()
     {
-        questPack = new QuestPack();
+        FTBQuests.IO.QuestPack = new FTBQuests.IO.QuestPack();
         chapter = new Chapter
         {
             Id = Guid.NewGuid(),
@@ -57,7 +59,7 @@ public sealed class MainViewModel : ObservableObject
         });
 
         chapter.AddQuest(quest);
-        questPack.AddChapter(chapter);
+        FTBQuests.IO.QuestPack.AddChapter(chapter);
 
         Quest = new QuestPropertiesViewModel(quest, "chapters[0].quests[0]");
 
@@ -172,7 +174,7 @@ public sealed class MainViewModel : ObservableObject
 
         foreach (var validator in validators)
         {
-            foreach (var issue in validator.Validate(questPack))
+            foreach (var issue in validator.Validate(FTBQuests.IO.QuestPack))
             {
                 validationIssues.Add(issue);
             }

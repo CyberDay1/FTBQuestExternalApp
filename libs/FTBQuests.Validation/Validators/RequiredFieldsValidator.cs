@@ -1,3 +1,5 @@
+using FTBQuests.Validation;
+using FTBQuests.Assets;
 // <copyright file="RequiredFieldsValidator.cs" company="CyberDay1">
 // Copyright (c) CyberDay1. All rights reserved.
 // </copyright>
@@ -14,15 +16,15 @@ namespace FTBQuests.Validation.Validators;
 public sealed class RequiredFieldsValidator : IValidator
 {
     /// <inheritdoc />
-    public IEnumerable<ValidationIssue> Validate(QuestPack questPack)
+    public IEnumerable<ValidationIssue> Validate(FTBQuests.IO.QuestPack FTBQuests.IO.QuestPack)
     {
-        ArgumentNullException.ThrowIfNull(questPack);
+        ArgumentNullException.ThrowIfNull(FTBQuests.IO.QuestPack);
 
         var issues = new List<ValidationIssue>();
 
-        for (var chapterIndex = 0; chapterIndex < questPack.Chapters.Count; chapterIndex++)
+        for (var chapterIndex = 0; chapterIndex < FTBQuests.IO.QuestPack.Chapters.Count; chapterIndex++)
         {
-            var chapter = questPack.Chapters[chapterIndex];
+            var chapter = FTBQuests.IO.QuestPack.Chapters[chapterIndex];
             if (chapter is null)
             {
                 issues.Add(new ValidationIssue(

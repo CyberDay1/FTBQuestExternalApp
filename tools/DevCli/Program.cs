@@ -1,3 +1,5 @@
+using FTBQuests.Validation;
+using FTBQuests.Assets;
 // <copyright file="Program.cs" company="CyberDay1">
 // Copyright (c) CyberDay1. All rights reserved.
 // </copyright>
@@ -13,8 +15,8 @@ using FTBQuests.Schema;
 using FTBQuests.Validation;
 using FTBQuests.Validation.Validators;
 
-// Explicit alias to avoid ambiguity between model and IO QuestPack definitions
-using QuestPackModel = FTBQuestExternalApp.Codecs.Model.QuestPack;
+// Explicit alias to avoid ambiguity between model and IO FTBQuests.IO.QuestPack definitions
+using QuestPackModel = FTBQuestExternalApp.Codecs.Model.FTBQuests.IO.QuestPack;
 
 return await DevCliApp.RunAsync(args);
 

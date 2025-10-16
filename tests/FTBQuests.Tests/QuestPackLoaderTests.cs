@@ -1,3 +1,5 @@
+using FTBQuests.Validation;
+using FTBQuests.Assets;
 // <copyright file="QuestPackLoaderTests.cs" company="CyberDay1">
 // Copyright (c) CyberDay1. All rights reserved.
 // </copyright>
@@ -175,14 +177,14 @@ public static class QuestPackLoaderTests
         return normalized.Replace(Path.AltDirectorySeparatorChar, '/');
     }
 
-    private static Quest FindQuest(QuestPack pack, long questId)
+    private static Quest FindQuest(FTBQuests.IO.QuestPack pack, long questId)
     {
         return pack.Chapters
             .SelectMany(chapter => chapter.Quests)
             .First(quest => quest.Id == questId);
     }
 
-    private static QuestPackSnapshot CreateSnapshot(QuestPack pack, JsonSerializer serializer)
+    private static QuestPackSnapshot CreateSnapshot(FTBQuests.IO.QuestPack pack, JsonSerializer serializer)
     {
         var metadata = new Dictionary<string, JToken>(StringComparer.Ordinal);
 

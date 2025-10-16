@@ -1,3 +1,5 @@
+using FTBQuests.Validation;
+using FTBQuests.Assets;
 // <copyright file="GridViewViewModelTests.cs" company="CyberDay1">
 // Copyright (c) CyberDay1. All rights reserved.
 // </copyright>
@@ -70,7 +72,7 @@ public class GridViewViewModelTests
 
     private static GridViewViewModel CreateViewModelWithPack()
     {
-        var pack = new QuestPack();
+        var pack = new FTBQuests.IO.QuestPack();
         var chapter = new Chapter
         {
             Id = 1,

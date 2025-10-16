@@ -1,3 +1,5 @@
+using FTBQuests.Validation;
+using FTBQuests.Assets;
 // <copyright file="MainWindow.xaml.cs" company="CyberDay1">
 // Copyright (c) CyberDay1. All rights reserved.
 // </copyright>
@@ -31,7 +33,7 @@ public sealed partial class MainWindow : Window
     private Task<RegistryDatabase>? registryTask;
     private LootViewModels.LootTableManagerViewModel? lootManager;
     private readonly QuestPackExporter exporter = new();
-    private QuestPack? currentPack;
+    private FTBQuests.IO.QuestPack? currentPack;
 
     public MainWindow()
     {

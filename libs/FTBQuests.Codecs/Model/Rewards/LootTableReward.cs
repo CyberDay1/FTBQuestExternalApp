@@ -1,3 +1,5 @@
+using FTBQuests.Validation;
+using FTBQuests.Assets;
 using FTBQuestExternalApp.Codecs.Enums;
 
 namespace FTBQuestExternalApp.Codecs.Model;

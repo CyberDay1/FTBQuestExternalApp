@@ -1,3 +1,5 @@
+using FTBQuests.Validation;
+using FTBQuests.Assets;
 // <copyright file="ProbeExporter.cs" company="CyberDay1">
 // Copyright (c) CyberDay1. All rights reserved.
 // </copyright>
@@ -24,7 +26,7 @@ public sealed class ProbeExporter
         SkipValidation = false,
     };
 
-    public async Task ExportProbeAsync(QuestPack pack, RegistryDatabase db, string outFolder)
+    public async Task ExportProbeAsync(FTBQuests.IO.QuestPack pack, RegistryDatabase db, string outFolder)
     {
         ArgumentNullException.ThrowIfNull(pack);
         ArgumentNullException.ThrowIfNull(db);
@@ -111,7 +113,7 @@ public sealed class ProbeExporter
         await writer.FlushAsync().ConfigureAwait(false);
     }
 
-    private static async Task WriteLanguageIndexAsync(QuestPack pack, string filePath)
+    private static async Task WriteLanguageIndexAsync(FTBQuests.IO.QuestPack pack, string filePath)
     {
         SortedDictionary<string, SortedDictionary<string, string>> languages = new(StringComparer.Ordinal);
 

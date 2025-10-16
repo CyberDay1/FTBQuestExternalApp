@@ -1,3 +1,5 @@
+using FTBQuests.Validation;
+using FTBQuests.Assets;
 using System;
 using System.Collections.Generic;
 using FTBQuestExternalApp.Codecs.Model;

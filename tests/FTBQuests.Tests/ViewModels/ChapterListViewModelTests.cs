@@ -1,3 +1,5 @@
+using FTBQuests.Validation;
+using FTBQuests.Assets;
 // <copyright file="ChapterListViewModelTests.cs" company="CyberDay1">
 // Copyright (c) CyberDay1. All rights reserved.
 // </copyright>
@@ -114,9 +116,9 @@ public class ChapterListViewModelTests
         Assert.Null(viewModel.SelectedChapter);
     }
 
-    private static QuestPack CreatePack(out Chapter chapterOne, out Chapter chapterTwo, out Chapter chapterThree)
+    private static FTBQuests.IO.QuestPack CreatePack(out Chapter chapterOne, out Chapter chapterTwo, out Chapter chapterThree)
     {
-        var pack = new QuestPack();
+        var pack = new FTBQuests.IO.QuestPack();
 
         chapterOne = new Chapter
         {
@@ -152,7 +154,7 @@ public class ChapterListViewModelTests
             _issues = issues;
         }
 
-        public IEnumerable<ValidationIssue> Validate(QuestPack questPack)
+        public IEnumerable<ValidationIssue> Validate(FTBQuests.IO.QuestPack FTBQuests.IO.QuestPack)
         {
             return _issues;
         }

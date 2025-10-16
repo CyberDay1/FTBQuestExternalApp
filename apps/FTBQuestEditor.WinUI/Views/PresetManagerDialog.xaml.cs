@@ -1,3 +1,5 @@
+using FTBQuests.Validation;
+using FTBQuests.Assets;
 // <copyright file="PresetManagerDialog.xaml.cs" company="CyberDay1">
 // Copyright (c) CyberDay1. All rights reserved.
 // </copyright>
@@ -18,10 +20,10 @@ namespace FTBQuestEditor.WinUI.Views;
 public sealed partial class PresetManagerDialog : ContentDialog
 {
     private readonly PresetStore presetStore;
-    private readonly Func<QuestPack?> currentPackAccessor;
-    private readonly Action<QuestPack> loadCallback;
+    private readonly Func<FTBQuests.IO.QuestPack?> currentPackAccessor;
+    private readonly Action<FTBQuests.IO.QuestPack> loadCallback;
 
-    public PresetManagerDialog(PresetStore presetStore, Func<QuestPack?> currentPackAccessor, Action<QuestPack> loadCallback, FrameworkElement rootElement)
+    public PresetManagerDialog(PresetStore presetStore, Func<FTBQuests.IO.QuestPack?> currentPackAccessor, Action<FTBQuests.IO.QuestPack> loadCallback, FrameworkElement rootElement)
     {
         this.presetStore = presetStore ?? throw new ArgumentNullException(nameof(presetStore));
         this.currentPackAccessor = currentPackAccessor ?? throw new ArgumentNullException(nameof(currentPackAccessor));

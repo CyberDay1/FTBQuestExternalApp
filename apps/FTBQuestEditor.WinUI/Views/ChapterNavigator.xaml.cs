@@ -1,3 +1,5 @@
+using FTBQuests.Validation;
+using FTBQuests.Assets;
 // <copyright file="ChapterNavigator.xaml.cs" company="CyberDay1">
 // Copyright (c) CyberDay1. All rights reserved.
 // </copyright>
@@ -34,7 +36,7 @@ public sealed partial class ChapterNavigator : UserControl
 
     public ChapterViewModel ChapterViewModel { get; }
 
-    public void LoadQuestPack(QuestPack pack)
+    public void LoadQuestPack(FTBQuests.IO.QuestPack pack)
     {
         ChapterViewModel.LoadQuestPack(pack);
         ListViewModel.LoadQuestPack(pack);

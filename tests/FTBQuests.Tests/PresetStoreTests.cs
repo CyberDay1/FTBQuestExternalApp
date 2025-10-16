@@ -1,3 +1,5 @@
+using FTBQuests.Validation;
+using FTBQuests.Assets;
 // <copyright file="PresetStoreTests.cs" company="CyberDay1">
 // Copyright (c) CyberDay1. All rights reserved.
 // </copyright>
@@ -100,9 +102,9 @@ public class PresetStoreTests
         Assert.Contains(slots, tuple => tuple.Slot == 2 && tuple.Name == "Alpha");
     }
 
-    private static QuestPack CreateQuestPack()
+    private static FTBQuests.IO.QuestPack CreateQuestPack()
     {
-        var pack = new QuestPack();
+        var pack = new FTBQuests.IO.QuestPack();
         pack.Metadata.Add("meta.json", JToken.FromObject(new { value = 42 }));
 
         var chapter = pack.CreateChapter();

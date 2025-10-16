@@ -1,3 +1,5 @@
+using FTBQuests.Validation;
+using FTBQuests.Assets;
 // <copyright file="BrokenReferenceValidatorTests.cs" company="CyberDay1">
 // Copyright (c) CyberDay1. All rights reserved.
 // </copyright>
@@ -36,7 +38,7 @@ public class BrokenReferenceValidatorTests
         chapter.AddQuest(targetQuest);
         chapter.AddQuest(questWithMissingDependency);
 
-        var pack = new QuestPack();
+        var pack = new FTBQuests.IO.QuestPack();
         pack.AddChapter(chapter);
 
         var validator = new BrokenReferenceValidator();
@@ -80,7 +82,7 @@ public class BrokenReferenceValidatorTests
         chapter.AddQuest(questA);
         chapter.AddQuest(questB);
 
-        var pack = new QuestPack();
+        var pack = new FTBQuests.IO.QuestPack();
         pack.AddChapter(chapter);
 
         var validator = new BrokenReferenceValidator();

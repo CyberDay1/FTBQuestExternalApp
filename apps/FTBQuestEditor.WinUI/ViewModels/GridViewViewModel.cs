@@ -1,3 +1,5 @@
+using FTBQuests.Validation;
+using FTBQuests.Assets;
 // <copyright file="GridViewViewModel.cs" company="CyberDay1">
 // Copyright (c) CyberDay1. All rights reserved.
 // </copyright>
@@ -165,7 +167,7 @@ public sealed partial class GridViewViewModel : ObservableObject
 
     public IReadOnlyCollection<QuestIconViewModel> SelectedIcons => Icons.Where(icon => icon.IsSelected).ToList();
 
-    public void LoadQuestPack(QuestPack pack)
+    public void LoadQuestPack(FTBQuests.IO.QuestPack pack)
     {
         ArgumentNullException.ThrowIfNull(pack);
 

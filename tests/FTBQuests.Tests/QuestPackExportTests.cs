@@ -1,3 +1,5 @@
+using FTBQuests.Validation;
+using FTBQuests.Assets;
 // <copyright file="QuestPackExportTests.cs" company="CyberDay1">
 // Copyright (c) CyberDay1. All rights reserved.
 // </copyright>
@@ -105,7 +107,7 @@ public static class QuestPackExportTests
         }
     }
 
-    private static QuestPackSnapshot CreateSnapshot(QuestPack pack, JsonSerializer serializer)
+    private static QuestPackSnapshot CreateSnapshot(FTBQuests.IO.QuestPack pack, JsonSerializer serializer)
     {
         var metadata = new Dictionary<string, JToken>(StringComparer.Ordinal);
 

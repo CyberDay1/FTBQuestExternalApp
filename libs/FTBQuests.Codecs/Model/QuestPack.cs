@@ -1,42 +1,26 @@
-// <copyright file="QuestPack.cs" company="CyberDay1">
-// Copyright (c) CyberDay1. All rights reserved.
-// </copyright>
-
 using System.Collections.Generic;
+using System.Text.Json.Serialization;
 
-namespace FTBQuestExternalApp.Codecs.Model;
-
-/// <summary>
-/// Represents the root quest pack containing all chapters and quests.
-/// </summary>
-public class QuestPack : IExtraAware
+namespace FTBQuestExternalApp.Codecs.Model
 {
-    private readonly List<Chapter> chapters = new();
-
-    /// <summary>
-    /// Gets the collection of chapters included in the pack.
-    /// </summary>
-    public IReadOnlyList<Chapter> Chapters => chapters;
-
-    /// <summary>
-    /// Gets the bag of additional metadata preserved during serialization.
-    /// </summary>
-    public PropertyBag Extra { get; } = new();
-
-    /// <summary>
-    /// Adds a chapter to the quest pack.
-    /// </summary>
-    /// <param name="chapter">The chapter to add.</param>
-    public void AddChapter(Chapter chapter)
+    public class QuestPack
     {
-        chapters.Add(chapter);
-    }
+        [JsonPropertyName("chapters")]
+        public List<QuestChapter> Chapters { get; set; } = new();
 
-    /// <summary>
-    /// Removes all chapters from the quest pack.
-    /// </summary>
-    public void ClearChapters()
-    {
-        chapters.Clear();
+        [JsonPropertyName("id")]
+        public string Id { get; set; } = string.Empty;
+
+        [JsonPropertyName("version")]
+        public int Version { get; set; } = 1;
+
+        [JsonPropertyName("author")]
+        public string Author { get; set; } = string.Empty;
+
+        [JsonPropertyName("description")]
+        public string Description { get; set; } = string.Empty;
+
+        [JsonPropertyName("rewards")]
+        public List<QuestReward> Rewards { get; set; } = new();
     }
 }

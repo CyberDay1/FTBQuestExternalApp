@@ -1,3 +1,5 @@
+using FTBQuests.Validation;
+using FTBQuests.Assets;
 // <copyright file="RequiredFieldsValidatorTests.cs" company="CyberDay1">
 // Copyright (c) CyberDay1. All rights reserved.
 // </copyright>
@@ -28,7 +30,7 @@ public class RequiredFieldsValidatorTests
         chapter.AddQuest(questWithoutTitle);
         chapter.AddQuest(questWithMissingId);
 
-        var pack = new QuestPack();
+        var pack = new FTBQuests.IO.QuestPack();
         pack.AddChapter(chapter);
 
         var validator = new RequiredFieldsValidator();

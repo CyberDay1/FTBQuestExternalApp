@@ -1,3 +1,5 @@
+using FTBQuests.Validation;
+using FTBQuests.Assets;
 // <copyright file="ProbeExporterTests.cs" company="CyberDay1">
 // Copyright (c) CyberDay1. All rights reserved.
 // </copyright>
@@ -20,7 +22,7 @@ public sealed class ProbeExporterTests
     [Fact]
     public async Task ExportProbeAsync_WritesProbeCompatibleFiles()
     {
-        var pack = new QuestPack();
+        var pack = new FTBQuests.IO.QuestPack();
         pack.Metadata.Add("lang/en_us/ftbquests/quests.json", JObject.Parse(@"{""ftbquests.quest.example"": ""Example Quest""}"));
         pack.Metadata.Add("lang/de_de.json", JObject.Parse(@"{""ftbquests.quest.example"": ""Beispielauftrag""}"));
 

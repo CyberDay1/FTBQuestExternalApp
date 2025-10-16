@@ -1,3 +1,5 @@
+using FTBQuests.Validation;
+using FTBQuests.Assets;
 // <copyright file="ChapterViewModel.cs" company="CyberDay1">
 // Copyright (c) CyberDay1. All rights reserved.
 // </copyright>
@@ -16,7 +18,7 @@ namespace FTBQuestEditor.WinUI.ViewModels;
 public sealed class ChapterViewModel : ObservableObject
 {
     private readonly GridViewViewModel _gridViewModel;
-    private QuestPack? _pack;
+    private FTBQuests.IO.QuestPack? _pack;
     private Chapter? _currentChapter;
 
     public ChapterViewModel(GridViewViewModel gridViewModel)
@@ -24,7 +26,7 @@ public sealed class ChapterViewModel : ObservableObject
         _gridViewModel = gridViewModel;
     }
 
-    public QuestPack? Pack
+    public FTBQuests.IO.QuestPack? Pack
     {
         get => _pack;
         private set => SetProperty(ref _pack, value);
@@ -38,7 +40,7 @@ public sealed class ChapterViewModel : ObservableObject
 
     public GridViewViewModel Grid => _gridViewModel;
 
-    public void LoadQuestPack(QuestPack pack)
+    public void LoadQuestPack(FTBQuests.IO.QuestPack pack)
     {
         ArgumentNullException.ThrowIfNull(pack);
 

@@ -1,3 +1,5 @@
+using FTBQuests.Validation;
+using FTBQuests.Assets;
 // <copyright file="IdAllocatorTests.cs" company="CyberDay1">
 // Copyright (c) CyberDay1. All rights reserved.
 // </copyright>
@@ -60,7 +62,7 @@ public class IdAllocatorTests
     [Fact]
     public void QuestPackCreationHelpers_AssignUniqueIds()
     {
-        var pack = new QuestPack();
+        var pack = new FTBQuests.IO.QuestPack();
         var chapter = pack.CreateChapter();
         var quest = pack.CreateQuest(chapter);
 

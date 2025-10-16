@@ -1,3 +1,5 @@
+using FTBQuests.Validation;
+using FTBQuests.Assets;
 // <copyright file="ChapterListViewModel.cs" company="CyberDay1">
 // Copyright (c) CyberDay1. All rights reserved.
 // </copyright>
@@ -26,7 +28,7 @@ public sealed class ChapterListViewModel : ObservableObject
     private readonly List<ChapterNode> _allRootNodes = new();
     private readonly Dictionary<long, ChapterNode> _chapterLookup = new();
     private readonly IReadOnlyList<IValidator> _validators;
-    private QuestPack? _currentPack;
+    private FTBQuests.IO.QuestPack? _currentPack;
     private ChapterNode? _selectedNode;
     private Chapter? _selectedChapter;
     private string _filterText = string.Empty;
@@ -78,7 +80,7 @@ public sealed class ChapterListViewModel : ObservableObject
 
     public event EventHandler<Chapter?>? ChapterSelected;
 
-    public void LoadQuestPack(QuestPack pack)
+    public void LoadQuestPack(FTBQuests.IO.QuestPack pack)
     {
         ArgumentNullException.ThrowIfNull(pack);
 
@@ -396,7 +398,7 @@ public sealed class ChapterListViewModel : ObservableObject
         }
     }
 
-    private IEnumerable<ValidationIssue> RunValidators(QuestPack pack)
+    private IEnumerable<ValidationIssue> RunValidators(FTBQuests.IO.QuestPack pack)
     {
         foreach (var validator in _validators)
         {
@@ -438,7 +440,7 @@ public sealed class ChapterListViewModel : ObservableObject
         }
     }
 
-    private static long? ResolveChapterId(string path, QuestPack pack)
+    private static long? ResolveChapterId(string path, FTBQuests.IO.QuestPack pack)
     {
         if (string.IsNullOrEmpty(path))
         {

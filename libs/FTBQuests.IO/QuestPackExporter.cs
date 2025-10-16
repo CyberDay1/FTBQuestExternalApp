@@ -1,3 +1,5 @@
+using FTBQuests.Validation;
+using FTBQuests.Assets;
 // <copyright file="QuestPackExporter.cs" company="CyberDay1">
 // Copyright (c) CyberDay1. All rights reserved.
 // </copyright>
@@ -17,7 +19,7 @@ public sealed class QuestPackExporter
 {
     private readonly QuestPackLoader loader = new();
 
-    public async Task ExportAsync(QuestPack pack, string zipPath, CancellationToken ct = default)
+    public async Task ExportAsync(FTBQuests.IO.QuestPack pack, string zipPath, CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(pack);
         ArgumentNullException.ThrowIfNull(zipPath);

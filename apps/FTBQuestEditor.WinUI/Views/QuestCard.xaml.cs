@@ -1,3 +1,5 @@
+using FTBQuests.Validation;
+using FTBQuests.Assets;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 

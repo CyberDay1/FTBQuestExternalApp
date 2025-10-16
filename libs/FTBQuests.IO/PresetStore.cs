@@ -1,3 +1,5 @@
+using FTBQuests.Validation;
+using FTBQuests.Assets;
 // <copyright file="PresetStore.cs" company="CyberDay1">
 // Copyright (c) CyberDay1. All rights reserved.
 // </copyright>
@@ -36,7 +38,7 @@ public sealed class PresetStore
         serializer = JsonSerializer.Create(JsonSettings.Create());
     }
 
-    public Task SaveAsync(int slot, string name, QuestPack pack)
+    public Task SaveAsync(int slot, string name, FTBQuests.IO.QuestPack pack)
     {
         ValidateSlot(slot);
         ArgumentNullException.ThrowIfNull(pack);
@@ -49,7 +51,7 @@ public sealed class PresetStore
         return SaveInternalAsync(slot, name.Trim(), pack);
     }
 
-    public async Task<(string Name, QuestPack Pack)?> LoadAsync(int slot)
+    public async Task<(string Name, FTBQuests.IO.QuestPack Pack)?> LoadAsync(int slot)
     {
         ValidateSlot(slot);
 
@@ -72,7 +74,7 @@ public sealed class PresetStore
             return null;
         }
 
-        var pack = new QuestPack();
+        var pack = new FTBQuests.IO.QuestPack();
         if (payload.Data.Metadata is not null)
         {
             foreach (var kvp in payload.Data.Metadata)
@@ -177,7 +179,7 @@ public sealed class PresetStore
         return presets;
     }
 
-    private async Task SaveInternalAsync(int slot, string name, QuestPack pack)
+    private async Task SaveInternalAsync(int slot, string name, FTBQuests.IO.QuestPack pack)
     {
         var path = GetSlotPath(slot);
         var payload = new PresetData
@@ -192,7 +194,7 @@ public sealed class PresetStore
         await File.WriteAllTextAsync(path, json).ConfigureAwait(false);
     }
 
-    private PresetSnapshot CreateSnapshot(QuestPack pack)
+    private PresetSnapshot CreateSnapshot(FTBQuests.IO.QuestPack pack)
     {
         var snapshot = new PresetSnapshot
         {

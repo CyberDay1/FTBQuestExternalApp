@@ -1,4 +1,6 @@
-// <copyright file="QuestPack.cs" company="CyberDay1">
+using FTBQuests.Validation;
+using FTBQuests.Assets;
+// <copyright file="FTBQuests.IO.QuestPack.cs" company="CyberDay1">
 // Copyright (c) CyberDay1. All rights reserved.
 // </copyright>
 
@@ -11,7 +13,7 @@ using Newtonsoft.Json.Linq;
 
 namespace FTBQuests.IO;
 
-public class QuestPack
+public class FTBQuests.IO.QuestPack
 {
     private readonly List<Chapter> chapters = new();
     private readonly List<string> metadataOrder = new();

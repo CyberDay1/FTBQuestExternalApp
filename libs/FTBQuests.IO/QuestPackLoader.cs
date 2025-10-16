@@ -1,3 +1,5 @@
+using FTBQuests.Validation;
+using FTBQuests.Assets;
 // <copyright file="QuestPackLoader.cs" company="CyberDay1">
 // Copyright (c) CyberDay1. All rights reserved.
 // </copyright>
@@ -17,19 +19,19 @@ namespace FTBQuests.IO;
 
 public class QuestPackLoader
 {
-    public Task<QuestPack> LoadAsync(string rootPath, CancellationToken ct = default)
+    public Task<FTBQuests.IO.QuestPack> LoadAsync(string rootPath, CancellationToken ct = default)
     {
         return LoadAsync(rootPath, options: null, ct);
     }
 
-    public async Task<QuestPack> LoadAsync(string rootPath, ImportOptions? options, CancellationToken ct = default)
+    public async Task<FTBQuests.IO.QuestPack> LoadAsync(string rootPath, ImportOptions? options, CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(rootPath);
         ct.ThrowIfCancellationRequested();
 
         options ??= new ImportOptions();
 
-        var pack = new QuestPack();
+        var pack = new FTBQuests.IO.QuestPack();
         var ftbRoot = ResolveQuestRoot(rootPath, options);
 
         var serializer = JsonSerializer.Create(JsonSettings.Create());
@@ -75,7 +77,7 @@ public class QuestPackLoader
         return pack;
     }
 
-    public async Task SaveAsync(QuestPack pack, string rootPath, CancellationToken ct = default)
+    public async Task SaveAsync(FTBQuests.IO.QuestPack pack, string rootPath, CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(pack);
         ArgumentNullException.ThrowIfNull(rootPath);
@@ -85,7 +87,7 @@ public class QuestPackLoader
         await WriteAsync(pack, ftbRoot, ct).ConfigureAwait(false);
     }
 
-    internal async Task WriteAsync(QuestPack pack, string ftbRoot, CancellationToken ct)
+    internal async Task WriteAsync(FTBQuests.IO.QuestPack pack, string ftbRoot, CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(pack);
         ArgumentNullException.ThrowIfNull(ftbRoot);
