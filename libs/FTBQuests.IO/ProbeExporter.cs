@@ -122,7 +122,7 @@ public sealed class ProbeExporter
                 continue;
             }
 
-            string normalizedKey = key.Replace('\', '/');
+            string normalizedKey = key.Replace('\\', '/');
             if (!normalizedKey.StartsWith("lang/", StringComparison.OrdinalIgnoreCase) || !normalizedKey.EndsWith(".json", StringComparison.OrdinalIgnoreCase))
             {
                 continue;
