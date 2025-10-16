@@ -4,9 +4,10 @@
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="StyleCop.Analyzers" Version="1.2.0-beta.556" PrivateAssets="all" />
+    <ProjectReference Include="..\FTBQuests.Codecs\FTBQuests.Codecs.csproj" />
+    <ProjectReference Include="..\FTBQuests.Core\FTBQuests.Core.csproj" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\FTBQuests.Codecs\FTBQuests.Codecs.csproj" />
+    <PackageReference Include="SharpZipLib" Version="1.4.2" />
   </ItemGroup>
 </Project>

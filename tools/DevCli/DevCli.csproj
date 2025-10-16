@@ -12,4 +12,7 @@
     <ProjectReference Include="../../libs/FTBQuests.IO/FTBQuests.IO.csproj" />
     <ProjectReference Include="../../libs/FTBQuests.Codecs/FTBQuests.Codecs.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="SharpZipLib" Version="1.4.2" />
+  </ItemGroup>
 </Project>
