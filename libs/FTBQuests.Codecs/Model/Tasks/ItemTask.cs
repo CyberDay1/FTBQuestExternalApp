@@ -1,6 +1,6 @@
-using FTBQuests.Validation;
+﻿using FTBQuests.Validation;
 using FTBQuests.Assets;
-namespace FTBQuestExternalApp.Codecs.Model;
+namespace FTBQuests.Codecs.Model;
 
 public sealed class ItemTask : TaskBase
 {
@@ -15,3 +15,4 @@ public sealed class ItemTask : TaskBase
 
     public string? Nbt { get; set; }
 }
+

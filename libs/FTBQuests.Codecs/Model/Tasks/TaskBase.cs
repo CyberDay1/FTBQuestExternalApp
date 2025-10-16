@@ -1,4 +1,4 @@
-using FTBQuests.Validation;
+﻿using FTBQuests.Validation;
 using FTBQuests.Assets;
 // <copyright file="TaskBase.cs" company="CyberDay1">
 // Copyright (c) CyberDay1. All rights reserved.
@@ -7,7 +7,7 @@ using FTBQuests.Assets;
 using System;
 using System.Collections.Generic;
 
-namespace FTBQuestExternalApp.Codecs.Model;
+namespace FTBQuests.Codecs.Model;
 
 public abstract class TaskBase : ITask
 {
@@ -65,3 +65,4 @@ public abstract class TaskBase : ITask
         return knownProperties.Contains(propertyName);
     }
 }
+

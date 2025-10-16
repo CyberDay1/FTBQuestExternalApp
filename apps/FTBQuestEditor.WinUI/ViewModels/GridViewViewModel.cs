@@ -1,4 +1,4 @@
-using FTBQuests.Validation;
+﻿using FTBQuests.Validation;
 using FTBQuests.Assets;
 // <copyright file="GridViewViewModel.cs" company="CyberDay1">
 // Copyright (c) CyberDay1. All rights reserved.
@@ -10,7 +10,7 @@ using System.Collections.ObjectModel;
 using System.Globalization;
 using System.Linq;
 using CommunityToolkit.Mvvm.ComponentModel;
-using FTBQuestExternalApp.Codecs.Model;
+using FTBQuests.Codecs.Model;
 using FTBQuests.IO;
 
 namespace FTBQuestEditor.WinUI.ViewModels;
@@ -479,3 +479,4 @@ public sealed partial class GridViewViewModel : ObservableObject
         }
     }
 }
+

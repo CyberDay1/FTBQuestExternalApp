@@ -1,8 +1,8 @@
-using FTBQuests.Validation;
+﻿using FTBQuests.Validation;
 using FTBQuests.Assets;
 using System;
 using System.Collections.Generic;
-using FTBQuestExternalApp.Codecs.Model;
+using FTBQuests.Codecs.Model;
 
 namespace FTBQuestEditor.WinUI.ViewModels;
 
@@ -112,3 +112,4 @@ public sealed class QuestNodeViewModel : ObservableObject
         return Quest.Title;
     }
 }
+

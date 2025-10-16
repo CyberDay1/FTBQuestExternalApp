@@ -1,4 +1,4 @@
-using FTBQuests.Validation;
+﻿using FTBQuests.Validation;
 using FTBQuests.Assets;
 // <copyright file="RewardSerializationTests.cs" company="CyberDay1">
 // Copyright (c) CyberDay1. All rights reserved.
@@ -6,9 +6,9 @@ using FTBQuests.Assets;
 
 using System;
 using System.Linq;
-using FTBQuestExternalApp.Codecs.Enums;
-using FTBQuestExternalApp.Codecs.Model;
-using FTBQuestExternalApp.Codecs.Serialization;
+using FTBQuests.Codecs.Enums;
+using FTBQuests.Codecs.Model;
+using FTBQuests.Codecs.Serialization;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Xunit;
@@ -162,3 +162,4 @@ public class RewardSerializationTests
         Assert.Equal(expectedType, RewardDiscriminator.GetType(rewardType));
     }
 }
+

@@ -1,4 +1,4 @@
-using FTBQuests.Validation;
+﻿using FTBQuests.Validation;
 using FTBQuests.Assets;
 // <copyright file="SchemaEmitter.cs" company="CyberDay1">
 // Copyright (c) CyberDay1. All rights reserved.
@@ -10,8 +10,8 @@ using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
-using FTBQuestExternalApp.Codecs.Enums;
-using FTBQuestExternalApp.Codecs.Model;
+using FTBQuests.Codecs.Enums;
+using FTBQuests.Codecs.Model;
 
 namespace FTBQuests.Schema;
 
@@ -228,3 +228,4 @@ public sealed class SchemaEmitter
         return "^[a-z0-9_.-]+:[a-z0-9_./-]+$";
     }
 }
+

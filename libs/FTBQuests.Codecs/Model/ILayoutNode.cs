@@ -1,10 +1,10 @@
-using FTBQuests.Validation;
+﻿using FTBQuests.Validation;
 using FTBQuests.Assets;
 // <copyright file="ILayoutNode.cs" company="CyberDay1">
 // Copyright (c) CyberDay1. All rights reserved.
 // </copyright>
 
-namespace FTBQuestExternalApp.Codecs.Model;
+namespace FTBQuests.Codecs.Model;
 
 public interface ILayoutNode
 {
@@ -16,3 +16,4 @@ public interface ILayoutNode
 
     Identifier IconId { get; }
 }
+

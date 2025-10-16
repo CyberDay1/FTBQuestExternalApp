@@ -1,4 +1,4 @@
-using FTBQuests.Validation;
+﻿using FTBQuests.Validation;
 using FTBQuests.Assets;
 // <copyright file="QuestConverter.cs" company="CyberDay1">
 // Copyright (c) CyberDay1. All rights reserved.
@@ -8,11 +8,11 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
-using FTBQuestExternalApp.Codecs.Model;
+using FTBQuests.Codecs.Model;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
-namespace FTBQuestExternalApp.Codecs.Serialization;
+namespace FTBQuests.Codecs.Serialization;
 
 public class QuestConverter : JsonConverter<Quest>
 {
@@ -1247,3 +1247,4 @@ public class QuestConverter : JsonConverter<Quest>
         return ResolveKeyIgnoreCase(reward.KnownProperties, candidates) is not null;
     }
 }
+

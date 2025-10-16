@@ -1,4 +1,4 @@
-using FTBQuests.Validation;
+﻿using FTBQuests.Validation;
 using FTBQuests.Assets;
 // <copyright file="LootTableBuilder.cs" company="CyberDay1">
 // Copyright (c) CyberDay1. All rights reserved.
@@ -9,7 +9,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
-using FTBQuestExternalApp.Codecs.Model;
+using FTBQuests.Codecs.Model;
 using Newtonsoft.Json;
 
 namespace FTBQuests.Loot;
@@ -161,3 +161,4 @@ public sealed class LootTableBuilder
         public string? Conditions { get; set; }
     }
 }
+

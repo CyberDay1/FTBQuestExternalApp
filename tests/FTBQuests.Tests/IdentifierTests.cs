@@ -1,11 +1,11 @@
-using FTBQuests.Validation;
+﻿using FTBQuests.Validation;
 using FTBQuests.Assets;
 // <copyright file="IdentifierTests.cs" company="CyberDay1">
 // Copyright (c) CyberDay1. All rights reserved.
 // </copyright>
 
 using System;
-using FTBQuestExternalApp.Codecs.Model;
+using FTBQuests.Codecs.Model;
 using Xunit;
 
 namespace FTBQuests.Tests;
@@ -70,3 +70,4 @@ public class IdentifierTests
         Assert.Equal(expected, Identifier.IsValid(value));
     }
 }
+

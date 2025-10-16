@@ -1,4 +1,4 @@
-using FTBQuests.Validation;
+﻿using FTBQuests.Validation;
 using FTBQuests.Assets;
 // <copyright file="IdAllocatorTests.cs" company="CyberDay1">
 // Copyright (c) CyberDay1. All rights reserved.
@@ -8,7 +8,7 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using FTBQuestExternalApp.Codecs;
+using FTBQuests.Codecs;
 using FTBQuests.IO;
 using Xunit;
 
@@ -76,3 +76,4 @@ public class IdAllocatorTests
         return Path.GetFullPath(Path.Combine(baseDirectory, "Fixtures", name));
     }
 }
+

@@ -1,4 +1,4 @@
-using FTBQuests.Validation;
+﻿using FTBQuests.Validation;
 using FTBQuests.Assets;
 // <copyright file="QuestPropertiesViewModel.cs" company="CyberDay1">
 // Copyright (c) CyberDay1. All rights reserved.
@@ -10,7 +10,7 @@ using FTBQuestEditor.WinUI.ViewModels;
 using FTBQuestEditor.WinUI.ViewModels.Infrastructure;
 using FTBQuestEditor.WinUI.ViewModels.Rewards;
 using FTBQuestEditor.WinUI.ViewModels.Tasks;
-using FTBQuestExternalApp.Codecs.Model;
+using FTBQuests.Codecs.Model;
 
 namespace FTBQuestEditor.WinUI.ViewModels.Quests;
 
@@ -318,3 +318,4 @@ public sealed class QuestPropertiesViewModel : ValidationAwareViewModel
         PageIssue = CombineMessages(pageLocalError, pageValidationError);
     }
 }
+

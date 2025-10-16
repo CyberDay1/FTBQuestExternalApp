@@ -1,4 +1,4 @@
-using FTBQuests.Validation;
+﻿using FTBQuests.Validation;
 using FTBQuests.Assets;
 // <copyright file="Identifier.cs" company="CyberDay1">
 // Copyright (c) CyberDay1. All rights reserved.
@@ -7,7 +7,7 @@ using FTBQuests.Assets;
 using System;
 using System.Text.RegularExpressions;
 
-namespace FTBQuestExternalApp.Codecs.Model;
+namespace FTBQuests.Codecs.Model;
 
 public readonly struct Identifier : IEquatable<Identifier>
 {
@@ -47,3 +47,4 @@ public readonly struct Identifier : IEquatable<Identifier>
 
     public static implicit operator string(Identifier identifier) => identifier.Value;
 }
+

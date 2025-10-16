@@ -1,4 +1,4 @@
-using FTBQuests.Validation;
+﻿using FTBQuests.Validation;
 using FTBQuests.Assets;
 // <copyright file="RewardDiscriminator.cs" company="CyberDay1">
 // Copyright (c) CyberDay1. All rights reserved.
@@ -6,10 +6,10 @@ using FTBQuests.Assets;
 
 using System;
 using System.Collections.Generic;
-using FTBQuestExternalApp.Codecs.Enums;
-using FTBQuestExternalApp.Codecs.Model;
+using FTBQuests.Codecs.Enums;
+using FTBQuests.Codecs.Model;
 
-namespace FTBQuestExternalApp.Codecs.Serialization;
+namespace FTBQuests.Codecs.Serialization;
 
 public static class RewardDiscriminator
 {
@@ -39,3 +39,4 @@ public static class RewardDiscriminator
         throw new ArgumentOutOfRangeException(nameof(rewardType), rewardType, "Unknown reward type.");
     }
 }
+

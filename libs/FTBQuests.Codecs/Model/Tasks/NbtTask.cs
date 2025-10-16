@@ -1,6 +1,6 @@
-using FTBQuests.Validation;
+﻿using FTBQuests.Validation;
 using FTBQuests.Assets;
-namespace FTBQuestExternalApp.Codecs.Model;
+namespace FTBQuests.Codecs.Model;
 
 public sealed class NbtTask : TaskBase
 {
@@ -13,3 +13,4 @@ public sealed class NbtTask : TaskBase
 
     public string? RequiredNbt { get; set; }
 }
+

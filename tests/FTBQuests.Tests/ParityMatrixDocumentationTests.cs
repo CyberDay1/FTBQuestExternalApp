@@ -1,4 +1,4 @@
-using FTBQuests.Validation;
+﻿using FTBQuests.Validation;
 using FTBQuests.Assets;
 // <copyright file="ParityMatrixDocumentationTests.cs" company="CyberDay1">
 // Copyright (c) CyberDay1. All rights reserved.
@@ -40,7 +40,7 @@ public static class ParityMatrixDocumentationTests
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);
 
-        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "FTBQuestExternalApp.sln")))
+        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "FTBQuests.sln")))
         {
             directory = directory.Parent;
         }
@@ -92,3 +92,4 @@ public static class ParityMatrixDocumentationTests
         return result;
     }
 }
+

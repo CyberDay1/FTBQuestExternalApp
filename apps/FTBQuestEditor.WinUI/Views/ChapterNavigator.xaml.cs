@@ -1,4 +1,4 @@
-using FTBQuests.Validation;
+﻿using FTBQuests.Validation;
 using FTBQuests.Assets;
 // <copyright file="ChapterNavigator.xaml.cs" company="CyberDay1">
 // Copyright (c) CyberDay1. All rights reserved.
@@ -51,7 +51,7 @@ public sealed partial class ChapterNavigator : UserControl
         ChapterTree.SelectedNodes.Clear();
     }
 
-    private void OnChapterSelected(object? sender, FTBQuestExternalApp.Codecs.Model.Chapter? chapter)
+    private void OnChapterSelected(object? sender, FTBQuests.Codecs.Model.Chapter? chapter)
     {
         ChapterViewModel.SetActiveChapter(chapter);
         EnsureSelectionAsync();
@@ -213,3 +213,4 @@ public sealed partial class ChapterNavigator : UserControl
         }
     }
 }
+

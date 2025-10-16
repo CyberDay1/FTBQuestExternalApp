@@ -1,4 +1,4 @@
-using FTBQuests.Validation;
+﻿using FTBQuests.Validation;
 using FTBQuests.Assets;
 // <copyright file="PropertyBag.cs" company="CyberDay1">
 // Copyright (c) CyberDay1. All rights reserved.
@@ -7,7 +7,7 @@ using FTBQuests.Assets;
 using System.Collections.Generic;
 using Newtonsoft.Json.Linq;
 
-namespace FTBQuestExternalApp.Codecs.Model;
+namespace FTBQuests.Codecs.Model;
 
 public class PropertyBag
 {
@@ -20,3 +20,4 @@ public class PropertyBag
 
     public bool TryGetValue(string key, out JToken? value) => Extra.TryGetValue(key, out value);
 }
+

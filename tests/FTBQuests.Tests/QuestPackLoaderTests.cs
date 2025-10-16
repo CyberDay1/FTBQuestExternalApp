@@ -1,4 +1,4 @@
-using FTBQuests.Validation;
+﻿using FTBQuests.Validation;
 using FTBQuests.Assets;
 // <copyright file="QuestPackLoaderTests.cs" company="CyberDay1">
 // Copyright (c) CyberDay1. All rights reserved.
@@ -10,7 +10,7 @@ using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using FTBQuestExternalApp.Codecs.Model;
+using FTBQuests.Codecs.Model;
 using FTBQuests.IO;
 using FTBQuests.Codecs;
 using Newtonsoft.Json;
@@ -232,3 +232,4 @@ public static class QuestPackLoaderTests
         IReadOnlyDictionary<string, JToken> Metadata,
         IReadOnlyList<JToken> Chapters);
 }
+

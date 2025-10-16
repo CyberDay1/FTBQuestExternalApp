@@ -1,4 +1,4 @@
-using FTBQuests.Validation;
+﻿using FTBQuests.Validation;
 using FTBQuests.Assets;
 // <copyright file="ProbeExporter.cs" company="CyberDay1">
 // Copyright (c) CyberDay1. All rights reserved.
@@ -11,7 +11,7 @@ using System.IO;
 using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
-using FTBQuestExternalApp.Codecs.Model;
+using FTBQuests.Codecs.Model;
 using FTBQuests.Registry;
 using FTBQuests.Registry.Model;
 using Newtonsoft.Json.Linq;
@@ -199,3 +199,4 @@ public sealed class ProbeExporter
         await writer.FlushAsync().ConfigureAwait(false);
     }
 }
+

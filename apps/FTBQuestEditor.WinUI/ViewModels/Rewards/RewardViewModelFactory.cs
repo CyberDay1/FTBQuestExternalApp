@@ -1,11 +1,11 @@
-using FTBQuests.Validation;
+﻿using FTBQuests.Validation;
 using FTBQuests.Assets;
 // <copyright file="RewardViewModelFactory.cs" company="CyberDay1">
 // Copyright (c) CyberDay1. All rights reserved.
 // </copyright>
 
 using FTBQuestEditor.WinUI.ViewModels.Rewards;
-using FTBQuestExternalApp.Codecs.Model;
+using FTBQuests.Codecs.Model;
 
 namespace FTBQuestEditor.WinUI.ViewModels.Rewards;
 
@@ -25,3 +25,4 @@ internal static class RewardViewModelFactory
         };
     }
 }
+

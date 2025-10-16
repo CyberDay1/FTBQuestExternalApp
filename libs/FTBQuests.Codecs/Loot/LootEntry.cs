@@ -1,10 +1,10 @@
-using FTBQuests.Validation;
+﻿using FTBQuests.Validation;
 using FTBQuests.Assets;
 // <copyright file="LootEntry.cs" company="CyberDay1">
 // Copyright (c) CyberDay1. All rights reserved.
 // </copyright>
 
-using FTBQuestExternalApp.Codecs.Model;
+using FTBQuests.Codecs.Model;
 
 namespace FTBQuests.Loot;
 
@@ -22,3 +22,4 @@ public sealed record LootEntry(
     int CountMin,
     int CountMax,
     string? Conditions = null);
+

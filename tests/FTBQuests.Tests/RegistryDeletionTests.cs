@@ -1,4 +1,4 @@
-using FTBQuests.Validation;
+﻿using FTBQuests.Validation;
 using FTBQuests.Assets;
 // <copyright file="RegistryDeletionTests.cs" company="CyberDay1">
 // Copyright (c) CyberDay1. All rights reserved.
@@ -6,7 +6,7 @@ using FTBQuests.Assets;
 
 using System;
 using System.Collections.Generic;
-using FTBQuestExternalApp.Codecs.Model;
+using FTBQuests.Codecs.Model;
 using FTBQuests.Registry;
 using FTBQuests.Registry.Model;
 using Xunit;
@@ -73,3 +73,4 @@ public sealed class RegistryDeletionTests
         Assert.Equal("mod", Assert.Single(database.GetModIdentifiers()));
     }
 }
+

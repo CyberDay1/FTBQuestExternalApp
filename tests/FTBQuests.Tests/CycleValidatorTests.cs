@@ -1,4 +1,4 @@
-using FTBQuests.Validation;
+﻿using FTBQuests.Validation;
 using FTBQuests.Assets;
 // <copyright file="CycleValidatorTests.cs" company="CyberDay1">
 // Copyright (c) CyberDay1. All rights reserved.
@@ -6,7 +6,7 @@ using FTBQuests.Assets;
 
 using System.Collections.Generic;
 using System.Linq;
-using FTBQuestExternalApp.Codecs.Model;
+using FTBQuests.Codecs.Model;
 using FTBQuests.Validation.Validators;
 using Xunit;
 
@@ -128,3 +128,4 @@ public class CycleValidatorTests
             result.Select(r => r.Path.Select(n => n.QuestId).ToArray()));
     }
 }
+

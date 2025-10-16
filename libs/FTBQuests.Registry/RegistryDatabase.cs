@@ -1,4 +1,4 @@
-using FTBQuests.Validation;
+﻿using FTBQuests.Validation;
 using FTBQuests.Assets;
 // <copyright file="RegistryDatabase.cs" company="CyberDay1">
 // Copyright (c) CyberDay1. All rights reserved.
@@ -8,7 +8,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
-using FTBQuestExternalApp.Codecs.Model;
+using FTBQuests.Codecs.Model;
 using FTBQuests.Registry.Model;
 
 namespace FTBQuests.Registry;
@@ -291,3 +291,4 @@ public sealed class RegistryDatabase
         }
     }
 }
+

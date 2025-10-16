@@ -1,10 +1,10 @@
-using FTBQuests.Validation;
+﻿using FTBQuests.Validation;
 using FTBQuests.Assets;
 // <copyright file="JsonSettings.cs" company="CyberDay1">
 // Copyright (c) CyberDay1. All rights reserved.
 // </copyright>
 
-using FTBQuestExternalApp.Codecs.Serialization;
+using FTBQuests.Codecs.Serialization;
 using Newtonsoft.Json;
 
 namespace FTBQuests.Codecs;
@@ -19,3 +19,4 @@ public static class JsonSettings
         return settings;
     }
 }
+

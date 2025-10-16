@@ -1,4 +1,4 @@
-using FTBQuests.Validation;
+﻿using FTBQuests.Validation;
 using FTBQuests.Assets;
 // <copyright file="Program.cs" company="CyberDay1">
 // Copyright (c) CyberDay1. All rights reserved.
@@ -8,7 +8,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using FTBQuestExternalApp.Codecs.Model;
+using FTBQuests.Codecs.Model;
 using FTBQuests.IO;
 using FTBQuests.Registry;
 using FTBQuests.Schema;
@@ -16,7 +16,7 @@ using FTBQuests.Validation;
 using FTBQuests.Validation.Validators;
 
 // Explicit alias to avoid ambiguity between model and IO FTBQuests.IO.QuestPack definitions
-using QuestPackModel = FTBQuestExternalApp.Codecs.Model.FTBQuests.IO.QuestPack;
+using QuestPackModel = FTBQuests.Codecs.Model.FTBQuests.IO.QuestPack;
 
 return await DevCliApp.RunAsync(args);
 
@@ -287,3 +287,4 @@ internal static class DevCliApp
         }
     }
 }
+

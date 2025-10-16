@@ -1,4 +1,4 @@
-using FTBQuests.Validation;
+﻿using FTBQuests.Validation;
 using FTBQuests.Assets;
 // <copyright file="ItemTaskPropertiesViewModel.cs" company="CyberDay1">
 // Copyright (c) CyberDay1. All rights reserved.
@@ -6,7 +6,7 @@ using FTBQuests.Assets;
 
 using FTBQuestEditor.WinUI.ViewModels;
 using FTBQuestEditor.WinUI.ViewModels.Infrastructure;
-using FTBQuestExternalApp.Codecs.Model;
+using FTBQuests.Codecs.Model;
 
 namespace FTBQuestEditor.WinUI.ViewModels.Tasks;
 
@@ -136,3 +136,4 @@ public sealed class ItemTaskPropertiesViewModel : TaskPropertiesViewModel
         NbtIssue = CombineMessages(null, nbtValidationError);
     }
 }
+

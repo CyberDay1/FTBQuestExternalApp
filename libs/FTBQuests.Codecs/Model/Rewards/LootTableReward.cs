@@ -1,8 +1,8 @@
-using FTBQuests.Validation;
+﻿using FTBQuests.Validation;
 using FTBQuests.Assets;
-using FTBQuestExternalApp.Codecs.Enums;
+using FTBQuests.Codecs.Enums;
 
-namespace FTBQuestExternalApp.Codecs.Model;
+namespace FTBQuests.Codecs.Model;
 
 public sealed class LootTableReward : RewardBase
 {
@@ -13,3 +13,4 @@ public sealed class LootTableReward : RewardBase
 
     public string TableName { get; set; } = string.Empty;
 }
+

@@ -1,8 +1,8 @@
-using FTBQuests.Validation;
+﻿using FTBQuests.Validation;
 using FTBQuests.Assets;
-using FTBQuestExternalApp.Codecs.Enums;
+using FTBQuests.Codecs.Enums;
 
-namespace FTBQuestExternalApp.Codecs.Model;
+namespace FTBQuests.Codecs.Model;
 
 public sealed class CustomReward : RewardBase
 {
@@ -11,3 +11,4 @@ public sealed class CustomReward : RewardBase
     {
     }
 }
+

@@ -1,7 +1,7 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Text.Json.Serialization;
 
-namespace FTBQuestExternalApp.Codecs.Model
+namespace FTBQuests.Codecs.Model
 {
     public class QuestPack
     {
@@ -24,3 +24,4 @@ namespace FTBQuestExternalApp.Codecs.Model
         public List<QuestReward> Rewards { get; set; } = new();
     }
 }
+

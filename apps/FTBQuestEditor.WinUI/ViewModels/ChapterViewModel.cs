@@ -1,4 +1,4 @@
-using FTBQuests.Validation;
+﻿using FTBQuests.Validation;
 using FTBQuests.Assets;
 // <copyright file="ChapterViewModel.cs" company="CyberDay1">
 // Copyright (c) CyberDay1. All rights reserved.
@@ -7,7 +7,7 @@ using FTBQuests.Assets;
 using System;
 using System.Linq;
 using CommunityToolkit.Mvvm.ComponentModel;
-using FTBQuestExternalApp.Codecs.Model;
+using FTBQuests.Codecs.Model;
 using FTBQuests.IO;
 
 namespace FTBQuestEditor.WinUI.ViewModels;
@@ -61,3 +61,4 @@ public sealed class ChapterViewModel : ObservableObject
         _gridViewModel.LoadChapter(chapter);
     }
 }
+

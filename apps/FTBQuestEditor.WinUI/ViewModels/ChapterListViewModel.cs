@@ -1,4 +1,4 @@
-using FTBQuests.Validation;
+﻿using FTBQuests.Validation;
 using FTBQuests.Assets;
 // <copyright file="ChapterListViewModel.cs" company="CyberDay1">
 // Copyright (c) CyberDay1. All rights reserved.
@@ -12,7 +12,7 @@ using System.Linq;
 using System.Windows.Input;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using FTBQuestExternalApp.Codecs.Model;
+using FTBQuests.Codecs.Model;
 using FTBQuests.IO;
 using FTBQuests.Validation;
 using Newtonsoft.Json.Linq;
@@ -498,3 +498,4 @@ public sealed class ChapterListViewModel : ObservableObject
         public List<ChapterGroupDefinition> Groups { get; } = new();
     }
 }
+

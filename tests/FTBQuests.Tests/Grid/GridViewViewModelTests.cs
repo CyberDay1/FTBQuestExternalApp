@@ -1,4 +1,4 @@
-using FTBQuests.Validation;
+﻿using FTBQuests.Validation;
 using FTBQuests.Assets;
 // <copyright file="GridViewViewModelTests.cs" company="CyberDay1">
 // Copyright (c) CyberDay1. All rights reserved.
@@ -7,7 +7,7 @@ using FTBQuests.Assets;
 using System.Collections.Generic;
 using System.Linq;
 using FTBQuestEditor.WinUI.ViewModels;
-using FTBQuestExternalApp.Codecs.Model;
+using FTBQuests.Codecs.Model;
 using FTBQuests.IO;
 using Xunit;
 
@@ -102,3 +102,4 @@ public class GridViewViewModelTests
         return viewModel;
     }
 }
+

@@ -1,4 +1,4 @@
-using FTBQuests.Validation;
+﻿using FTBQuests.Validation;
 using FTBQuests.Assets;
 // <copyright file="SchemaGenerationTests.cs" company="CyberDay1">
 // Copyright (c) CyberDay1. All rights reserved.
@@ -7,7 +7,7 @@ using FTBQuests.Assets;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
-using FTBQuestExternalApp.Codecs.Enums;
+using FTBQuests.Codecs.Enums;
 using Xunit;
 
 namespace FTBQuests.Tests;
@@ -69,7 +69,7 @@ public class SchemaGenerationTests
         {
             var segments = Enumerable.Repeat("..", i + 1).Prepend(directory).ToArray();
             var potential = Path.GetFullPath(Path.Combine(segments));
-            if (File.Exists(Path.Combine(potential, "FTBQuestExternalApp.sln")))
+            if (File.Exists(Path.Combine(potential, "FTBQuests.sln")))
             {
                 return potential;
             }
@@ -78,3 +78,4 @@ public class SchemaGenerationTests
         throw new InvalidOperationException("Unable to locate repository root.");
     }
 }
+

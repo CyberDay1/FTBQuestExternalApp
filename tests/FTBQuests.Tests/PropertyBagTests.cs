@@ -1,10 +1,10 @@
-using FTBQuests.Validation;
+﻿using FTBQuests.Validation;
 using FTBQuests.Assets;
 // <copyright file="PropertyBagTests.cs" company="CyberDay1">
 // Copyright (c) CyberDay1. All rights reserved.
 // </copyright>
 
-using FTBQuestExternalApp.Codecs.Model;
+using FTBQuests.Codecs.Model;
 using Newtonsoft.Json.Linq;
 using Xunit;
 
@@ -33,3 +33,4 @@ public class PropertyBagTests
         Assert.Equal(token, value);
     }
 }
+

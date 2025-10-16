@@ -1,4 +1,4 @@
-using FTBQuests.Validation;
+﻿using FTBQuests.Validation;
 using FTBQuests.Assets;
 // <copyright file="Quest.cs" company="CyberDay1">
 // Copyright (c) CyberDay1. All rights reserved.
@@ -6,7 +6,7 @@ using FTBQuests.Assets;
 
 using System.Collections.Generic;
 
-namespace FTBQuestExternalApp.Codecs.Model;
+namespace FTBQuests.Codecs.Model;
 
 public class Quest : IExtraAware
 {
@@ -90,3 +90,4 @@ public class Quest : IExtraAware
         propertyOrder.AddRange(order);
     }
 }
+

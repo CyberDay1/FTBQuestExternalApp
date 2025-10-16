@@ -1,4 +1,4 @@
-using FTBQuests.Validation;
+﻿using FTBQuests.Validation;
 using FTBQuests.Assets;
 // <copyright file="BrokenReferenceValidator.cs" company="CyberDay1">
 // Copyright (c) CyberDay1. All rights reserved.
@@ -6,7 +6,7 @@ using FTBQuests.Assets;
 
 using System;
 using System.Collections.Generic;
-using FTBQuestExternalApp.Codecs.Model;
+using FTBQuests.Codecs.Model;
 
 namespace FTBQuests.Validation.Validators;
 
@@ -90,3 +90,4 @@ public sealed class BrokenReferenceValidator : IValidator
         return issues;
     }
 }
+

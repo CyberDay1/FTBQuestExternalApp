@@ -1,4 +1,4 @@
-using FTBQuests.Validation;
+﻿using FTBQuests.Validation;
 using FTBQuests.Assets;
 // <copyright file="PresetStore.cs" company="CyberDay1">
 // Copyright (c) CyberDay1. All rights reserved.
@@ -9,7 +9,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using FTBQuestExternalApp.Codecs.Model;
+using FTBQuests.Codecs.Model;
 using FTBQuests.Codecs;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -276,3 +276,4 @@ public sealed class PresetStore
         public DateTimeOffset SavedAtUtc { get; set; }
     }
 }
+

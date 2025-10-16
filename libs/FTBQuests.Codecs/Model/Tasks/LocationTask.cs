@@ -1,6 +1,6 @@
-using FTBQuests.Validation;
+﻿using FTBQuests.Validation;
 using FTBQuests.Assets;
-namespace FTBQuestExternalApp.Codecs.Model;
+namespace FTBQuests.Codecs.Model;
 
 public sealed class LocationTask : TaskBase
 {
@@ -19,3 +19,4 @@ public sealed class LocationTask : TaskBase
 
     public int Radius { get; set; }
 }
+

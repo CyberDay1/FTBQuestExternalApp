@@ -1,10 +1,10 @@
-using FTBQuests.Validation;
+﻿using FTBQuests.Validation;
 using FTBQuests.Assets;
 // <copyright file="TaskType.cs" company="CyberDay1">
 // Copyright (c) CyberDay1. All rights reserved.
 // </copyright>
 
-namespace FTBQuestExternalApp.Codecs.Enums;
+namespace FTBQuests.Codecs.Enums;
 
 public enum TaskType
 {
@@ -17,3 +17,4 @@ public enum TaskType
     Command,
     Custom,
 }
+

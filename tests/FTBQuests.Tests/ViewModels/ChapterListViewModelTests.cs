@@ -1,4 +1,4 @@
-using FTBQuests.Validation;
+﻿using FTBQuests.Validation;
 using FTBQuests.Assets;
 // <copyright file="ChapterListViewModelTests.cs" company="CyberDay1">
 // Copyright (c) CyberDay1. All rights reserved.
@@ -8,7 +8,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using FTBQuestEditor.WinUI.ViewModels;
-using FTBQuestExternalApp.Codecs.Model;
+using FTBQuests.Codecs.Model;
 using FTBQuests.IO;
 using FTBQuests.Validation;
 using Newtonsoft.Json.Linq;
@@ -160,3 +160,4 @@ public class ChapterListViewModelTests
         }
     }
 }
+

@@ -1,11 +1,11 @@
-using FTBQuests.Validation;
+﻿using FTBQuests.Validation;
 using FTBQuests.Assets;
 // <copyright file="XpRewardPropertiesViewModel.cs" company="CyberDay1">
 // Copyright (c) CyberDay1. All rights reserved.
 // </copyright>
 
 using FTBQuestEditor.WinUI.ViewModels.Infrastructure;
-using FTBQuestExternalApp.Codecs.Model;
+using FTBQuests.Codecs.Model;
 
 namespace FTBQuestEditor.WinUI.ViewModels.Rewards;
 
@@ -94,3 +94,4 @@ public sealed class XpRewardPropertiesViewModel : RewardPropertiesViewModel
         LevelsIssue = CombineMessages(null, levelsValidationError);
     }
 }
+

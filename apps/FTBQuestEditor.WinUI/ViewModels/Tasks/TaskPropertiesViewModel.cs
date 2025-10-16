@@ -1,11 +1,11 @@
-using FTBQuests.Validation;
+﻿using FTBQuests.Validation;
 using FTBQuests.Assets;
 // <copyright file="TaskPropertiesViewModel.cs" company="CyberDay1">
 // Copyright (c) CyberDay1. All rights reserved.
 // </copyright>
 
 using FTBQuestEditor.WinUI.ViewModels.Infrastructure;
-using FTBQuestExternalApp.Codecs.Model;
+using FTBQuests.Codecs.Model;
 
 namespace FTBQuestEditor.WinUI.ViewModels.Tasks;
 
@@ -24,3 +24,4 @@ public abstract class TaskPropertiesViewModel : ValidationAwareViewModel
 
     public string TypeId => Task.TypeId;
 }
+

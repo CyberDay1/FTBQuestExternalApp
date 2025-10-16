@@ -1,6 +1,6 @@
-using FTBQuests.Validation;
+﻿using FTBQuests.Validation;
 using FTBQuests.Assets;
-namespace FTBQuestExternalApp.Codecs.Model;
+namespace FTBQuests.Codecs.Model;
 
 public sealed class UnknownTask : TaskBase
 {
@@ -9,3 +9,4 @@ public sealed class UnknownTask : TaskBase
     {
     }
 }
+

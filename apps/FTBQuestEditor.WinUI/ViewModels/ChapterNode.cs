@@ -1,4 +1,4 @@
-using FTBQuests.Validation;
+﻿using FTBQuests.Validation;
 using FTBQuests.Assets;
 // <copyright file="ChapterNode.cs" company="CyberDay1">
 // Copyright (c) CyberDay1. All rights reserved.
@@ -9,7 +9,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using CommunityToolkit.Mvvm.ComponentModel;
-using FTBQuestExternalApp.Codecs.Model;
+using FTBQuests.Codecs.Model;
 using FTBQuests.Validation;
 
 namespace FTBQuestEditor.WinUI.ViewModels;
@@ -170,3 +170,4 @@ public enum ChapterValidationState
     Warning,
     Error,
 }
+

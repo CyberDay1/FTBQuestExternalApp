@@ -1,12 +1,12 @@
-using FTBQuests.Validation;
+﻿using FTBQuests.Validation;
 using FTBQuests.Assets;
 // <copyright file="IReward.cs" company="CyberDay1">
 // Copyright (c) CyberDay1. All rights reserved.
 // </copyright>
 
-using FTBQuestExternalApp.Codecs.Enums;
+using FTBQuests.Codecs.Enums;
 
-namespace FTBQuestExternalApp.Codecs.Model;
+namespace FTBQuests.Codecs.Model;
 
 public interface IReward : IExtraAware
 {
@@ -14,3 +14,4 @@ public interface IReward : IExtraAware
 
     string TypeId { get; }
 }
+

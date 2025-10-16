@@ -1,4 +1,4 @@
-using FTBQuests.Validation;
+﻿using FTBQuests.Validation;
 using FTBQuests.Assets;
 // <copyright file="ChapterConverter.cs" company="CyberDay1">
 // Copyright (c) CyberDay1. All rights reserved.
@@ -7,11 +7,11 @@ using FTBQuests.Assets;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
-using FTBQuestExternalApp.Codecs.Model;
+using FTBQuests.Codecs.Model;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
-namespace FTBQuestExternalApp.Codecs.Serialization;
+namespace FTBQuests.Codecs.Serialization;
 
 public class ChapterConverter : JsonConverter<Chapter>
 {
@@ -204,3 +204,4 @@ public class ChapterConverter : JsonConverter<Chapter>
         }
     }
 }
+

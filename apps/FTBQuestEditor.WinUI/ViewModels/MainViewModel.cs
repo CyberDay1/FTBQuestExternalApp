@@ -1,4 +1,4 @@
-using FTBQuests.Validation;
+﻿using FTBQuests.Validation;
 using FTBQuests.Assets;
 // <copyright file="MainViewModel.cs" company="CyberDay1">
 // Copyright (c) CyberDay1. All rights reserved.
@@ -13,7 +13,7 @@ using FTBQuestEditor.WinUI.ViewModels.Infrastructure;
 using FTBQuestEditor.WinUI.ViewModels.Quests;
 using FTBQuestEditor.WinUI.ViewModels.Rewards;
 using FTBQuestEditor.WinUI.ViewModels.Tasks;
-using FTBQuestExternalApp.Codecs.Model;
+using FTBQuests.Codecs.Model;
 using FTBQuests.Validation;
 using FTBQuests.Validation.Validators;
 
@@ -183,3 +183,4 @@ public sealed class MainViewModel : ObservableObject
         Quest.UpdateValidationIssues(validationIssues);
     }
 }
+

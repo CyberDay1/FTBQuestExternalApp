@@ -1,8 +1,8 @@
-using FTBQuests.Validation;
+﻿using FTBQuests.Validation;
 using FTBQuests.Assets;
-using FTBQuestExternalApp.Codecs.Enums;
+using FTBQuests.Codecs.Enums;
 
-namespace FTBQuestExternalApp.Codecs.Model;
+namespace FTBQuests.Codecs.Model;
 
 public sealed class CommandReward : RewardBase
 {
@@ -13,3 +13,4 @@ public sealed class CommandReward : RewardBase
 
     public string Command { get; set; } = string.Empty;
 }
+

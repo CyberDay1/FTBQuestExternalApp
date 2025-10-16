@@ -1,12 +1,12 @@
-using FTBQuests.Validation;
+﻿using FTBQuests.Validation;
 using FTBQuests.Assets;
 // <copyright file="QuestCodecTests.cs" company="CyberDay1">
 // Copyright (c) CyberDay1. All rights reserved.
 // </copyright>
 
 using System.Linq;
-using FTBQuestExternalApp.Codecs.Model;
-using FTBQuestExternalApp.Codecs.Serialization;
+using FTBQuests.Codecs.Model;
+using FTBQuests.Codecs.Serialization;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Xunit;
@@ -117,3 +117,4 @@ public class QuestCodecTests
         Assert.Equal(new Identifier("minecraft:chests/simple_dungeon"), roundTrippedLoot.LootTable);
     }
 }
+

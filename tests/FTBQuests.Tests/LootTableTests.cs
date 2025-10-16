@@ -1,4 +1,4 @@
-using FTBQuests.Validation;
+﻿using FTBQuests.Validation;
 using FTBQuests.Assets;
 // <copyright file="LootTableTests.cs" company="CyberDay1">
 // Copyright (c) CyberDay1. All rights reserved.
@@ -10,7 +10,7 @@ using System.IO;
 using System.Linq;
 using FTBQuestEditor.WinUI.ViewModels;
 using FTBQuestEditor.WinUI.ViewModels.Loot;
-using FTBQuestExternalApp.Codecs.Model;
+using FTBQuests.Codecs.Model;
 using FTBQuests.Loot;
 using FTBQuests.Registry;
 using FTBQuests.Registry.Model;
@@ -200,3 +200,4 @@ public class LootTableTests
         return path;
     }
 }
+
