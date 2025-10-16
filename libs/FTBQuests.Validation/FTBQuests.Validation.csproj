@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
@@ -7,8 +7,6 @@
     <PackageReference Include="StyleCop.Analyzers" Version="1.2.0-beta.556" PrivateAssets="all" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="../FTBQuests.Codecs/FTBQuests.Codecs.csproj" />
-    <ProjectReference Include="../FTBQuests.IO/FTBQuests.IO.csproj" />
-    <ProjectReference Include="../FTBQuests.Registry/FTBQuests.Registry.csproj" />
+    <ProjectReference Include="..\FTBQuests.Codecs\FTBQuests.Codecs.csproj" />
   </ItemGroup>
 </Project>

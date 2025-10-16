@@ -16,7 +16,7 @@ namespace FTBQuests.Validation.Validators;
 public sealed class RequiredFieldsValidator : IValidator
 {
     /// <inheritdoc />
-    public IEnumerable<ValidationIssue> Validate(FTBQuests.IO.QuestPack FTBQuests.IO.QuestPack)
+    public IEnumerable<ValidationIssue> Validate(FTBQuests.IO.QuestPack questPack)
     {
         ArgumentNullException.ThrowIfNull(FTBQuests.IO.QuestPack);
 

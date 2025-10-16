@@ -1,15 +1,12 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="StyleCop.Analyzers" Version="1.2.0-beta.556" PrivateAssets="all" />
-    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
-    <ProjectReference Include="..\FTBQuests.Registry\FTBQuests.Registry.csproj" />
-    <ProjectReference Include="..\FTBQuests.Codecs\FTBQuests.Codecs.csproj" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="../FTBQuests.Codecs/FTBQuests.Codecs.csproj" />
+    <ProjectReference Include="..\FTBQuests.Assets\FTBQuests.Assets.csproj" />
   </ItemGroup>
 </Project>

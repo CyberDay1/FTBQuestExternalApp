@@ -11,129 +11,95 @@ using FTBQuestExternalApp.Codecs;
 using FTBQuestExternalApp.Codecs.Model;
 using Newtonsoft.Json.Linq;
 
-namespace FTBQuests.IO;
-
-public class FTBQuests.IO.QuestPack
+namespace FTBQuests.IO
 {
-    private readonly List<Chapter> chapters = new();
-    private readonly List<string> metadataOrder = new();
-    private readonly Dictionary<Chapter, string> chapterPaths = new(ReferenceEqualityComparer.Instance);
-    private readonly IdAllocator idAllocator = new();
-
-    public IList<Chapter> Chapters => chapters;
-
-    public PropertyBag Metadata { get; } = new();
-
-    internal IReadOnlyDictionary<Chapter, string> ChapterPaths => new ReadOnlyDictionary<Chapter, string>(chapterPaths);
-
-    internal IReadOnlyList<string> MetadataOrder => metadataOrder.AsReadOnly();
-
-    public Chapter CreateChapter()
+    public class QuestPack
     {
-        var chapter = new Chapter
+        private readonly List<Chapter> chapters = new();
+        private readonly List<string> metadataOrder = new();
+        private readonly Dictionary<Chapter, string> chapterPaths = new(ReferenceEqualityComparer.Instance);
+        private readonly IdAllocator idAllocator = new();
+
+        public IList<Chapter> Chapters => chapters;
+        public PropertyBag Metadata { get; } = new();
+        internal IReadOnlyDictionary<Chapter, string> ChapterPaths => new ReadOnlyDictionary<Chapter, string>(chapterPaths);
+        internal IReadOnlyList<string> MetadataOrder => metadataOrder.AsReadOnly();
+
+        public Chapter CreateChapter()
         {
-            Id = GetNextId(),
-        };
-
-        chapters.Add(chapter);
-        return chapter;
-    }
-
-    public Quest CreateQuest(Chapter chapter)
-    {
-        ArgumentNullException.ThrowIfNull(chapter);
-
-        if (!chapters.Contains(chapter))
-        {
-            throw new ArgumentException("Chapter must belong to this quest pack.", nameof(chapter));
+            var chapter = new Chapter { Id = GetNextId() };
+            chapters.Add(chapter);
+            return chapter;
         }
 
-        var quest = new Quest
+        public Quest CreateQuest(Chapter chapter)
         {
-            Id = GetNextId(),
-        };
+            ArgumentNullException.ThrowIfNull(chapter);
 
-        chapter.AddQuest(quest);
-        return quest;
-    }
+            if (!chapters.Contains(chapter))
+                throw new ArgumentException("Chapter must belong to this quest pack.", nameof(chapter));
 
-    internal void AddChapter(Chapter chapter, string relativePath)
-    {
-        chapters.Add(chapter);
-        chapterPaths[chapter] = relativePath;
-        RegisterChapterHierarchy(chapter);
-    }
-
-    internal void SetChapterPath(Chapter chapter, string relativePath)
-    {
-        chapterPaths[chapter] = relativePath;
-    }
-
-    internal string? GetChapterPath(Chapter chapter)
-    {
-        return chapterPaths.TryGetValue(chapter, out var path) ? path : null;
-    }
-
-    internal void SetMetadata(string key, JToken value)
-    {
-        Metadata.Add(key, value);
-        if (!metadataOrder.Contains(key))
-        {
-            metadataOrder.Add(key);
+            var quest = new Quest { Id = GetNextId() };
+            chapter.AddQuest(quest);
+            return quest;
         }
-    }
 
-    internal void SetMetadataOrder(IEnumerable<string> order)
-    {
-        metadataOrder.Clear();
-        metadataOrder.AddRange(order);
-    }
-
-    internal IEnumerable<string> EnumerateMetadataKeysInOrder()
-    {
-        var seen = new HashSet<string>(metadataOrder.Count, StringComparer.Ordinal);
-
-        foreach (var key in metadataOrder)
+        internal void AddChapter(Chapter chapter, string relativePath)
         {
-            if (Metadata.Extra.ContainsKey(key) && seen.Add(key))
+            chapters.Add(chapter);
+            chapterPaths[chapter] = relativePath;
+            RegisterChapterHierarchy(chapter);
+        }
+
+        internal void SetChapterPath(Chapter chapter, string relativePath) => chapterPaths[chapter] = relativePath;
+
+        internal string? GetChapterPath(Chapter chapter) =>
+            chapterPaths.TryGetValue(chapter, out var path) ? path : null;
+
+        internal void SetMetadata(string key, JToken value)
+        {
+            Metadata.Add(key, value);
+            if (!metadataOrder.Contains(key))
+                metadataOrder.Add(key);
+        }
+
+        internal void SetMetadataOrder(IEnumerable<string> order)
+        {
+            metadataOrder.Clear();
+            metadataOrder.AddRange(order);
+        }
+
+        internal IEnumerable<string> EnumerateMetadataKeysInOrder()
+        {
+            var seen = new HashSet<string>(metadataOrder.Count, StringComparer.Ordinal);
+
+            foreach (var key in metadataOrder)
             {
-                yield return key;
+                if (Metadata.Extra.ContainsKey(key) && seen.Add(key))
+                    yield return key;
+            }
+
+            foreach (var key in Metadata.Extra.Keys)
+            {
+                if (seen.Add(key))
+                    yield return key;
             }
         }
 
-        foreach (var key in Metadata.Extra.Keys)
+        public long GetNextId() => idAllocator.NextId();
+
+        private void RegisterChapterHierarchy(Chapter chapter)
         {
-            if (seen.Add(key))
+            if (chapter is null) return;
+
+            if (chapter.Id != 0)
+                idAllocator.Register(chapter.Id);
+
+            foreach (var quest in chapter.Quests)
             {
-                yield return key;
-            }
-        }
-    }
-
-    public long GetNextId() => idAllocator.NextId();
-
-    private void RegisterChapterHierarchy(Chapter chapter)
-    {
-        if (chapter is null)
-        {
-            return;
-        }
-
-        if (chapter.Id != 0)
-        {
-            idAllocator.Register(chapter.Id);
-        }
-
-        foreach (var quest in chapter.Quests)
-        {
-            if (quest is null)
-            {
-                continue;
-            }
-
-            if (quest.Id != 0)
-            {
-                idAllocator.Register(quest.Id);
+                if (quest is null) continue;
+                if (quest.Id != 0)
+                    idAllocator.Register(quest.Id);
             }
         }
     }

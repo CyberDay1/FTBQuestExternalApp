@@ -1,17 +1,13 @@
-<Project Sdk="Microsoft.NET.Sdk">
-
+﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
-    <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
-
   <ItemGroup>
-    <ProjectReference Include="..\FTBQuests.Validation\FTBQuests.Validation.csproj" />
-    <ProjectReference Include="..\FTBQuests.Assets\FTBQuests.Assets.csproj" />
+    <PackageReference Include="StyleCop.Analyzers" Version="1.2.0-beta.556" PrivateAssets="all" />
+  </ItemGroup>
+  <ItemGroup>
     <ProjectReference Include="..\FTBQuests.IO\FTBQuests.IO.csproj" />
-    <ProjectReference Include="..\FTBQuests.Registry\FTBQuests.Registry.csproj" />
     <ProjectReference Include="..\FTBQuests.Schema\FTBQuests.Schema.csproj" />
   </ItemGroup>
-
 </Project>

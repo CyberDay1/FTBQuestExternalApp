@@ -1,15 +1,17 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
+
   <ItemGroup>
     <PackageReference Include="StyleCop.Analyzers" Version="1.2.0-beta.556" PrivateAssets="all" />
-    <PackageReference Include="SharpZipLib" Version="1.4.2" />
-    <ProjectReference Include="..\FTBQuests.Registry\FTBQuests.Registry.csproj" />
-     <ProjectReference Include="..\FTBQuests.Codecs\FTBQuests.Codecs.csproj" />
+    <PackageReference Include="ICSharpCode.SharpZipLib" Version="1.4.2" />
   </ItemGroup>
+
   <ItemGroup>
-    <ProjectReference Include="../FTBQuests.Registry/FTBQuests.Registry.csproj" />
+    <ProjectReference Include="..\FTBQuests.Core\FTBQuests.Core.csproj" />
+    <ProjectReference Include="..\FTBQuests.Registry\FTBQuests.Registry.csproj" />
+    <ProjectReference Include="..\FTBQuests.Validation\FTBQuests.Validation.csproj" />
   </ItemGroup>
 </Project>

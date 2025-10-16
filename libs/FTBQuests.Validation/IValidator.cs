@@ -19,5 +19,5 @@ public interface IValidator
     /// </summary>
     /// <param name="FTBQuests.IO.QuestPack">The quest pack to inspect.</param>
     /// <returns>The sequence of validation issues discovered during the inspection.</returns>
-    IEnumerable<ValidationIssue> Validate(FTBQuests.IO.QuestPack FTBQuests.IO.QuestPack);
+    IEnumerable<ValidationIssue> Validate(FTBQuests.IO.QuestPack questPack);
 }
