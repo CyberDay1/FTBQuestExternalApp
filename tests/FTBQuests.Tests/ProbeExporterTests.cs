@@ -21,8 +21,8 @@ public sealed class ProbeExporterTests
     public async Task ExportProbeAsync_WritesProbeCompatibleFiles()
     {
         var pack = new QuestPack();
-        pack.Metadata.Add("lang/en_us/ftbquests/quests.json", JObject.Parse("{""ftbquests.quest.example"": ""Example Quest""}"));
-        pack.Metadata.Add("lang/de_de.json", JObject.Parse("{""ftbquests.quest.example"": ""Beispielauftrag""}"));
+        pack.Metadata.Add("lang/en_us/ftbquests/quests.json", JObject.Parse(@"{""ftbquests.quest.example"": ""Example Quest""}"));
+        pack.Metadata.Add("lang/de_de.json", JObject.Parse(@"{""ftbquests.quest.example"": ""Beispielauftrag""}"));
 
         var items = new List<RegistryItem>
         {

@@ -129,13 +129,15 @@ internal static class DevCliApp
         }
 
         var loader = new QuestPackLoader();
-        QuestPackModel pack = await loader.LoadAsync(fullPackPath).ConfigureAwait(false);
+        FTBQuests.IO.QuestPack pack = await loader.LoadAsync(fullPackPath).ConfigureAwait(false);
 
         var importer = new RegistryImporter();
         RegistryDatabase registry = await importer.LoadFromProbeAsync(resolvedRegistryPath).ConfigureAwait(false);
 
         var exporter = new ProbeExporter();
-        await exporter.ExportProbeAsync(pack, registry, outputPath).ConfigureAwait(false);
+        var ioPack = await loader.LoadAsync(fullPackPath).ConfigureAwait(false);
+        var modelPack = ConvertToModelPack(ioPack);
+        await exporter.ExportProbeAsync(modelPack, registry, outputPath).ConfigureAwait(false);
 
         Console.WriteLine($"Probe export written to {outputPath}.");
         return 0;
