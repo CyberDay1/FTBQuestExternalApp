@@ -65,8 +65,8 @@ public sealed class PresetStore
             return null;
         }
 
-        var token = JObject.Parse(json);
-        var payload = token.ToObject<PresetData>(serializer);
+        var rootToken = JObject.Parse(json);
+        var payload = rootToken.ToObject<PresetData>(serializer);
         if (payload is null || payload.Data is null)
         {
             return null;
@@ -77,8 +77,8 @@ public sealed class PresetStore
         {
             foreach (var kvp in payload.Data.Metadata)
             {
-                var token = kvp.Value is null ? JValue.CreateNull() : kvp.Value.DeepClone();
-                pack.SetMetadata(kvp.Key, token);
+                var metaToken = kvp.Value is null ? JValue.CreateNull() : kvp.Value.DeepClone();
+                pack.SetMetadata(kvp.Key, metaToken);
             }
         }
 
@@ -157,7 +157,7 @@ public sealed class PresetStore
                 continue;
             }
 
-            var savedAt = header.SavedAtUtc == default ? null : header.SavedAtUtc;
+            DateTimeOffset? savedAt = header.SavedAtUtc == default ? null : header.SavedAtUtc;
             results.Add(new PresetSlotInfo(slot, header.Name, savedAt));
         }
 
@@ -203,8 +203,8 @@ public sealed class PresetStore
 
         foreach (var kvp in pack.Metadata.Extra)
         {
-            var token = kvp.Value is null ? JValue.CreateNull() : kvp.Value.DeepClone();
-            snapshot.Metadata[kvp.Key] = token;
+            var metaToken = kvp.Value is null ? JValue.CreateNull() : kvp.Value.DeepClone();
+            snapshot.Metadata[kvp.Key] = metaToken;
         }
 
         foreach (var chapter in pack.Chapters)

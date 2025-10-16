@@ -13,6 +13,9 @@ using FTBQuests.Schema;
 using FTBQuests.Validation;
 using FTBQuests.Validation.Validators;
 
+// Explicit alias to avoid ambiguity between model and IO QuestPack definitions
+using QuestPackModel = FTBQuestExternalApp.Codecs.Model.QuestPack;
+
 return await DevCliApp.RunAsync(args);
 
 internal static class DevCliApp
@@ -126,7 +129,7 @@ internal static class DevCliApp
         }
 
         var loader = new QuestPackLoader();
-        QuestPack pack = await loader.LoadAsync(fullPackPath).ConfigureAwait(false);
+        QuestPackModel pack = await loader.LoadAsync(fullPackPath).ConfigureAwait(false);
 
         var importer = new RegistryImporter();
         RegistryDatabase registry = await importer.LoadFromProbeAsync(resolvedRegistryPath).ConfigureAwait(false);
@@ -185,11 +188,11 @@ internal static class DevCliApp
         return 1;
     }
 
-    private static QuestPack ConvertToModelPack(FTBQuests.IO.QuestPack ioPack)
+    private static QuestPackModel ConvertToModelPack(FTBQuests.IO.QuestPack ioPack)
     {
         ArgumentNullException.ThrowIfNull(ioPack);
 
-        var result = new QuestPack();
+        var result = new QuestPackModel();
         foreach (var chapter in ioPack.Chapters)
         {
             result.AddChapter(chapter);
