@@ -6,185 +6,169 @@ using FTBQuests.Codecs.Model;
 using FTBQuests.Registry.Model;
 using FTBQuests.Core.Model;
 
-namespace FTBQuests.Registry;
-
-/// <summary>
-/// Provides in-memory lookups over registry entries imported from the probe output.
-/// </summary>
-public sealed class RegistryDatabase
+namespace FTBQuests.Registry
 {
-    private static readonly RegistryItem[] EmptyItems = Array.Empty<RegistryItem>();
-
-    private readonly Dictionary<string, RegistryItem> itemsById;
-    private static readonly IComparer<RegistryItem> IdentifierComparer =
-        Comparer<RegistryItem>.Create((left, right) => string.CompareOrdinal(left.ToString(), right.ToString()));
-
-    private readonly Dictionary<string, RegistryItem[]> itemsByTag;
-    private readonly IReadOnlyDictionary<string, IReadOnlyCollection<string>> tagMembership;
-    private readonly Dictionary<string, List<RegistryItem>> itemsBySourceMod;
-    private readonly List<RegistryItem> orderedItems;
-
-    public RegistryDatabase(IEnumerable<RegistryItem> items, IReadOnlyDictionary<string, IReadOnlyCollection<string>> tagMembership)
+    /// <summary>
+    /// Provides in-memory lookups over registry entries imported from the probe output.
+    /// </summary>
+    public sealed class RegistryDatabase
     {
-        ArgumentNullException.ThrowIfNull(items);
-        ArgumentNullException.ThrowIfNull(tagMembership);
+        private static readonly RegistryItem[] EmptyItems = Array.Empty<RegistryItem>();
 
-        itemsById = new Dictionary<string, RegistryItem>(StringComparer.OrdinalIgnoreCase);
-        var bySource = new Dictionary<string, List<RegistryItem>>(StringComparer.OrdinalIgnoreCase);
+        private readonly Dictionary<string, RegistryItem> itemsById;
+        private static readonly IComparer<RegistryItem> IdentifierComparer =
+            Comparer<RegistryItem>.Create((left, right) => string.CompareOrdinal(left.ToString(), right.ToString()));
 
-        foreach (RegistryItem item in items)
+        private readonly Dictionary<string, RegistryItem[]> itemsByTag = new(StringComparer.OrdinalIgnoreCase);
+        private readonly IReadOnlyDictionary<string, IReadOnlyCollection<string>> tagMembership;
+        private readonly Dictionary<string, List<RegistryItem>> itemsBySourceMod;
+        private readonly List<RegistryItem> orderedItems;
+
+        public RegistryDatabase(IEnumerable<RegistryItem> items, IReadOnlyDictionary<string, IReadOnlyCollection<string>> tagMembership)
         {
-            itemsById[item.ToString()] = item;
+            ArgumentNullException.ThrowIfNull(items);
+            ArgumentNullException.ThrowIfNull(tagMembership);
 
-            if (!bySource.TryGetValue(item.SourceModId, out List<RegistryItem>? sourceItems))
+            this.tagMembership = tagMembership;
+            itemsById = new Dictionary<string, RegistryItem>(StringComparer.OrdinalIgnoreCase);
+            var bySource = new Dictionary<string, List<RegistryItem>>(StringComparer.OrdinalIgnoreCase);
+            orderedItems = new List<RegistryItem>();
+
+            // Index by ID and mod source
+            foreach (RegistryItem item in items)
             {
-                sourceItems = new List<RegistryItem>();
-                bySource[item.SourceModId] = sourceItems;
+                itemsById[item.ToString()] = item;
+                orderedItems.Add(item);
+
+                if (!bySource.TryGetValue(item.SourceModId, out List<RegistryItem>? sourceItems))
+                {
+                    sourceItems = new List<RegistryItem>();
+                    bySource[item.SourceModId] = sourceItems;
+                }
+
+                sourceItems.Add(item);
             }
 
-            sourceItems.Add(item);
-        }
-
-        itemsBySourceMod = new Dictionary<string, List<RegistryItem>>(StringComparer.OrdinalIgnoreCase);
-        foreach (var kvp in bySource)
-        {
-            var sourceMod = kvp.Key;
-            var sourceItems = kvp.Value;
-            sourceItems.Sort(IdentifierComparer);
-            itemsBySourceMod[sourceMod] = sourceItems;
-        }
-        foreach (RegistryItem item in items)
-        {
-            itemsById[item.ToString()] = item;
-
-            if (!bySource.TryGetValue(item.SourceModId, out List<RegistryItem>? sourceItems))
+            itemsBySourceMod = new Dictionary<string, List<RegistryItem>>(StringComparer.OrdinalIgnoreCase);
+            foreach (var kvp in bySource)
             {
-                sourceItems = new List<RegistryItem>();
-                bySource[item.SourceModId] = sourceItems;
+                var sourceMod = kvp.Key;
+                var sourceItems = kvp.Value;
+                sourceItems.Sort(IdentifierComparer);
+                itemsBySourceMod[sourceMod] = sourceItems;
             }
 
-            sourceItems.Add(item);
+            orderedItems.Sort(IdentifierComparer);
         }
 
-        itemsBySourceMod = new Dictionary<string, List<RegistryItem>>(StringComparer.OrdinalIgnoreCase);
-        foreach (var kvp in bySource)
+        public IReadOnlyList<RegistryItem> GetBySourceModId(string sourceModId)
         {
-            var sourceMod = kvp.Key;
-            var sourceItems = kvp.Value;
-            sourceItems.Sort(IdentifierComparer);
-            itemsBySourceMod[sourceMod] = sourceItems;
+            ArgumentException.ThrowIfNullOrEmpty(sourceModId);
+            return itemsBySourceMod.TryGetValue(sourceModId, out List<RegistryItem>? sourceItems)
+                ? sourceItems
+                : EmptyItems;
         }
 
+        public IReadOnlyList<RegistryItem> GetItemsByMod(string modId) => GetBySourceModId(modId);
 
-    public IReadOnlyList<RegistryItem> GetBySourceModId(string sourceModId)
-    {
-        ArgumentException.ThrowIfNullOrEmpty(sourceModId);
-        return itemsBySourceMod.TryGetValue(sourceModId, out List<RegistryItem>? sourceItems)
-            ? sourceItems
-            : EmptyItems;
-    }
+        public IReadOnlyCollection<string> GetModIdentifiers() =>
+            itemsBySourceMod.Keys.OrderBy(id => id, StringComparer.OrdinalIgnoreCase).ToList();
 
-    public IReadOnlyList<RegistryItem> GetItemsByMod(string modId) => GetBySourceModId(modId);
-
-    public IReadOnlyCollection<string> GetModIdentifiers() =>
-        itemsBySourceMod.Keys.OrderBy(id => id, StringComparer.OrdinalIgnoreCase).ToList();
-
-    public bool RemoveItem(FTBQuests.Core.Model.FTBQuests.Core.Model.FTBQuests.Core.Model.Identifier id)
-    {
-        if (string.IsNullOrWhiteSpace(id.ToString()))
-            throw new ArgumentException("FTBQuests.Core.Model.FTBQuests.Core.Model.Identifier cannot be empty.", nameof(id));
-
-        if (!itemsById.Remove(id.ToString(), out RegistryItem? item))
-            return false;
-
-        RemoveItemInternal(item);
-        return true;
-    }
-
-    public int RemoveItemsByMod(string modId)
-    {
-        ArgumentException.ThrowIfNullOrEmpty(modId);
-
-        if (!itemsBySourceMod.TryGetValue(modId, out List<RegistryItem>? modItems) || modItems.Count == 0)
-            return 0;
-
-        var snapshot = modItems.ToArray();
-        int removed = 0;
-        foreach (RegistryItem item in snapshot)
+        public bool RemoveItem(FTBQuests.Core.Model.Identifier id)
         {
-            if (!itemsById.Remove(item.ToString()))
-                continue;
+            if (string.IsNullOrWhiteSpace(id.ToString()))
+                throw new ArgumentException("Identifier cannot be empty.", nameof(id));
+
+            if (!itemsById.Remove(id.ToString(), out RegistryItem? item))
+                return false;
 
             RemoveItemInternal(item);
-            removed++;
+            return true;
         }
 
-        return removed;
-    }
-
-    public IReadOnlyDictionary<string, IReadOnlyCollection<string>> TagMembership => this.tagMembership;
-
-    public void AddIfMissing(RegistryItem item)
-    {
-        ArgumentNullException.ThrowIfNull(item);
-
-        if (itemsById.ContainsKey(item.ToString()))
-            return;
-
-        itemsById[item.ToString()] = item;
-        InsertOrdered(orderedItems, item);
-
-        if (!itemsBySourceMod.TryGetValue(item.SourceModId, out List<RegistryItem>? sourceItems))
+        public int RemoveItemsByMod(string modId)
         {
-            sourceItems = new List<RegistryItem>();
-            itemsBySourceMod[item.SourceModId] = sourceItems;
+            ArgumentException.ThrowIfNullOrEmpty(modId);
+
+            if (!itemsBySourceMod.TryGetValue(modId, out List<RegistryItem>? modItems) || modItems.Count == 0)
+                return 0;
+
+            var snapshot = modItems.ToArray();
+            int removed = 0;
+            foreach (RegistryItem item in snapshot)
+            {
+                if (!itemsById.Remove(item.ToString()))
+                    continue;
+
+                RemoveItemInternal(item);
+                removed++;
+            }
+
+            return removed;
         }
 
-        InsertOrdered(sourceItems, item);
-    }
+        public IReadOnlyDictionary<string, IReadOnlyCollection<string>> TagMembership => this.tagMembership;
 
-    private static void InsertOrdered(List<RegistryItem> list, RegistryItem item)
-    {
-        int index = list.BinarySearch(item, IdentifierComparer);
-        if (index < 0)
-            index = ~index;
-        list.Insert(index, item);
-    }
-
-    private static void RemoveOrdered(List<RegistryItem> list, RegistryItem item)
-    {
-        int index = list.BinarySearch(item, IdentifierComparer);
-        if (index >= 0)
-            list.RemoveAt(index);
-    }
-
-    private void RemoveItemInternal(RegistryItem item)
-    {
-        RemoveOrdered(orderedItems, item);
-
-        if (itemsBySourceMod.TryGetValue(item.SourceModId, out List<RegistryItem>? sourceItems))
+        public void AddIfMissing(RegistryItem item)
         {
-            RemoveOrdered(sourceItems, item);
-            if (sourceItems.Count == 0)
-                itemsBySourceMod.Remove(item.SourceModId);
+            ArgumentNullException.ThrowIfNull(item);
+
+            if (itemsById.ContainsKey(item.ToString()))
+                return;
+
+            itemsById[item.ToString()] = item;
+            InsertOrdered(orderedItems, item);
+
+            if (!itemsBySourceMod.TryGetValue(item.SourceModId, out List<RegistryItem>? sourceItems))
+            {
+                sourceItems = new List<RegistryItem>();
+                itemsBySourceMod[item.SourceModId] = sourceItems;
+            }
+
+            InsertOrdered(sourceItems, item);
         }
 
-        foreach (string tag in itemsByTag.Keys.ToList())
+        private static void InsertOrdered(List<RegistryItem> list, RegistryItem item)
         {
-            RegistryItem[] members = itemsByTag[tag];
-            RegistryItem[] filtered = members
-                .Where(member => !string.Equals(member.ToString(), item.ToString(), StringComparison.OrdinalIgnoreCase))
-                .ToArray();
+            int index = list.BinarySearch(item, IdentifierComparer);
+            if (index < 0)
+                index = ~index;
+            list.Insert(index, item);
+        }
 
-            if (filtered.Length == members.Length)
-                continue;
+        private static void RemoveOrdered(List<RegistryItem> list, RegistryItem item)
+        {
+            int index = list.BinarySearch(item, IdentifierComparer);
+            if (index >= 0)
+                list.RemoveAt(index);
+        }
 
-            if (filtered.Length == 0)
-                itemsByTag.Remove(tag);
-            else
-                itemsByTag[tag] = filtered;
+        private void RemoveItemInternal(RegistryItem item)
+        {
+            RemoveOrdered(orderedItems, item);
+
+            if (itemsBySourceMod.TryGetValue(item.SourceModId, out List<RegistryItem>? sourceItems))
+            {
+                RemoveOrdered(sourceItems, item);
+                if (sourceItems.Count == 0)
+                    itemsBySourceMod.Remove(item.SourceModId);
+            }
+
+            foreach (string tag in itemsByTag.Keys.ToList())
+            {
+                RegistryItem[] members = itemsByTag[tag];
+                RegistryItem[] filtered = members
+                    .Where(member => !string.Equals(member.ToString(), item.ToString(), StringComparison.OrdinalIgnoreCase))
+                    .ToArray();
+
+                if (filtered.Length == members.Length)
+                    continue;
+
+                if (filtered.Length == 0)
+                    itemsByTag.Remove(tag);
+                else
+                    itemsByTag[tag] = filtered;
+            }
         }
     }
 }
-
-
