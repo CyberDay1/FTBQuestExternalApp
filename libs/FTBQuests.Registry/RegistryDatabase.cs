@@ -53,63 +53,28 @@ public sealed class RegistryDatabase
             sourceItems.Sort(IdentifierComparer);
             itemsBySourceMod[sourceMod] = sourceItems;
         }
-
-        var normalizedMembership = new Dictionary<string, IReadOnlyCollection<string>>(StringComparer.OrdinalIgnoreCase);
-        foreach (var kvp in tagMembership)
+        foreach (RegistryItem item in items)
         {
-            string tag = kvp.Key;
-            IReadOnlyCollection<string> identifiers = kvp.Value;
+            itemsById[item.ToString()] = item;
 
-            if (string.IsNullOrWhiteSpace(tag))
-                continue;
+            if (!bySource.TryGetValue(item.SourceModId, out List<RegistryItem>? sourceItems))
+            {
+                sourceItems = new List<RegistryItem>();
+                bySource[item.SourceModId] = sourceItems;
+            }
 
-            string normalizedTag = tag.Trim();
-            string[] normalizedIdentifiers = identifiers
-                .Where(identifier => !string.IsNullOrWhiteSpace(identifier))
-                .Select(identifier => identifier.Trim())
-                .ToArray();
-
-            normalizedMembership[normalizedTag] =
-                normalizedIdentifiers.Length == 0 ? Array.Empty<string>() : normalizedIdentifiers;
+            sourceItems.Add(item);
         }
 
-        this.tagMembership = new ReadOnlyDictionary<string, IReadOnlyCollection<string>>(normalizedMembership);
-
-        itemsByTag = new Dictionary<string, RegistryItem[]>(StringComparer.OrdinalIgnoreCase);
-        foreach (var kvp in normalizedMembership)
+        itemsBySourceMod = new Dictionary<string, List<RegistryItem>>(StringComparer.OrdinalIgnoreCase);
+        foreach (var kvp in bySource)
         {
-            string tag = kvp.Key;
-            IReadOnlyCollection<string> identifiers = kvp.Value;
-
-            RegistryItem[] resolved = identifiers
-                .Select(identifier => TryGetByIdentifier(identifier, out RegistryItem? match) ? match : null)
-                .Where(item => item is not null)
-                .Select(item => item!)
-                .Distinct()
-                .OrderBy(item => item.ToString(), StringComparer.Ordinal)
-                .ToArray();
-
-            itemsByTag[tag] = resolved;
+            var sourceMod = kvp.Key;
+            var sourceItems = kvp.Value;
+            sourceItems.Sort(IdentifierComparer);
+            itemsBySourceMod[sourceMod] = sourceItems;
         }
 
-        orderedItems = itemsById.Values
-            .OrderBy(item => item.ToString(), StringComparer.Ordinal)
-            .ToList();
-    }
-
-    public IReadOnlyCollection<RegistryItem> Items => orderedItems;
-
-    public bool TryGetByIdentifier(string identifier, out RegistryItem? item)
-    {
-        ArgumentException.ThrowIfNullOrEmpty(identifier);
-        return itemsById.TryGetValue(identifier, out item);
-    }
-
-    public IReadOnlyList<RegistryItem> GetByTag(string tag)
-    {
-        ArgumentException.ThrowIfNullOrEmpty(tag);
-        return itemsByTag.TryGetValue(tag, out RegistryItem[]? items) ? items : EmptyItems;
-    }
 
     public IReadOnlyList<RegistryItem> GetBySourceModId(string sourceModId)
     {
@@ -124,10 +89,10 @@ public sealed class RegistryDatabase
     public IReadOnlyCollection<string> GetModIdentifiers() =>
         itemsBySourceMod.Keys.OrderBy(id => id, StringComparer.OrdinalIgnoreCase).ToList();
 
-    public bool RemoveItem(FTBQuests.Core.Model.Identifier id)
+    public bool RemoveItem(FTBQuests.Core.Model.FTBQuests.Core.Model.FTBQuests.Core.Model.Identifier id)
     {
         if (string.IsNullOrWhiteSpace(id.ToString()))
-            throw new ArgumentException("Identifier cannot be empty.", nameof(id));
+            throw new ArgumentException("FTBQuests.Core.Model.FTBQuests.Core.Model.Identifier cannot be empty.", nameof(id));
 
         if (!itemsById.Remove(id.ToString(), out RegistryItem? item))
             return false;
@@ -221,3 +186,5 @@ public sealed class RegistryDatabase
         }
     }
 }
+
+
