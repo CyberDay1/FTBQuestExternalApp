@@ -6,8 +6,9 @@ namespace FTBQuests.Codecs.Model.Rewards
     {
         public string? CustomId { get; set; }
 
-        public CustomReward(string id) : base(id, RewardType.Custom.ToString()) { }
+        public CustomReward(string id) : base(id, FTBQuests.Core.Model.RewardType.Custom.ToString()) { }
     }
 }
+
 
 

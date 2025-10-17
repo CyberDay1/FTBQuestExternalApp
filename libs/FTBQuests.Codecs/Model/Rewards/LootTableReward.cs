@@ -6,8 +6,9 @@ namespace FTBQuests.Codecs.Model.Rewards
     {
         public string? TableId { get; set; }
 
-        public LootTableReward(string id) : base(id, RewardType.LootTable.ToString()) { }
+        public LootTableReward(string id) : base(id, FTBQuests.Core.Model.RewardType.LootTable.ToString()) { }
     }
 }
+
 
 

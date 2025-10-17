@@ -4,6 +4,7 @@ namespace FTBQuests.Codecs.Model.Rewards
 {
     public interface IReward
     {
-        RewardType Type { get; }
+        FTBQuests.Core.Model.RewardType Type { get; }
     }
 }
+

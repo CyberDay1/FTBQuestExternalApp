@@ -7,8 +7,9 @@ namespace FTBQuests.Codecs.Model.Rewards
         public string? ItemId { get; set; }
         public int Count { get; set; }
 
-        public ItemReward(string id) : base(id, RewardType.Item.ToString()) { }
+        public ItemReward(string id) : base(id, FTBQuests.Core.Model.RewardType.Item.ToString()) { }
     }
 }
+
 
 

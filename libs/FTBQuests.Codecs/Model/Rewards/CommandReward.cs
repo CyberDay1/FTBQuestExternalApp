@@ -6,8 +6,9 @@ namespace FTBQuests.Codecs.Model.Rewards
     {
         public string? Command { get; set; }
 
-        public CommandReward(string id) : base(id, RewardType.Command.ToString()) { }
+        public CommandReward(string id) : base(id, FTBQuests.Core.Model.RewardType.Command.ToString()) { }
     }
 }
+
 
 
