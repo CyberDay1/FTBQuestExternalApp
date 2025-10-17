@@ -55,7 +55,7 @@ public sealed class RegistryDatabase
         }
 
         itemsBySourceMod = new Dictionary<string, List<RegistryItem>>(StringComparer.OrdinalIgnoreCase);
-        foreach (var (sourceMod, sourceItems) in bySource)
+        
         {
             sourceItems.Sort(IdentifierComparer);
             itemsBySourceMod[sourceMod] = sourceItems;
@@ -225,4 +225,5 @@ public sealed class RegistryDatabase
         }
     }
 }
+
 
