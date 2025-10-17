@@ -1,4 +1,4 @@
-// <copyright file="PresetStore.cs" company="CyberDay1">
+﻿// <copyright file="PresetStore.cs" company="CyberDay1">
 // Copyright (c) CyberDay1. All rights reserved.
 // </copyright>
 using System;
@@ -145,3 +145,4 @@ public sealed class PresetStore
         public JObject? Chapter { get; set; }
     private sealed class PresetHeader
 }
+

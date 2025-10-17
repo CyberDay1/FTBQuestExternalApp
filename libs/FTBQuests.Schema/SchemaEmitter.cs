@@ -1,4 +1,4 @@
-// <copyright file="SchemaEmitter.cs" company="CyberDay1">
+﻿// <copyright file="SchemaEmitter.cs" company="CyberDay1">
 // Copyright (c) CyberDay1. All rights reserved.
 // </copyright>
 using System.IO;
@@ -221,7 +221,7 @@ public sealed class SchemaEmitter
 
     private static string GetIdentifierPattern()
     {
-        var patternField = typeof(Identifier).GetField("Pattern", BindingFlags.Static | BindingFlags.NonPublic);
+        var patternField = typeof(FTBQuests.Core.Model.Identifier).GetField("Pattern", BindingFlags.Static | BindingFlags.NonPublic);
         if (patternField?.GetValue(null) is Regex regex)
         {
             return regex.ToString();
@@ -230,3 +230,4 @@ public sealed class SchemaEmitter
         return "^[a-z0-9_.-]+:[a-z0-9_./-]+$";
     }
 }
+

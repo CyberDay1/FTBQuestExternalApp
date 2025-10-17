@@ -1,4 +1,4 @@
-// <copyright file="ProbeExporter.cs" company="CyberDay1">
+﻿// <copyright file="ProbeExporter.cs" company="CyberDay1">
 // Copyright (c) CyberDay1. All rights reserved.
 // </copyright>
 using System;
@@ -68,9 +68,9 @@ public sealed class ProbeExporter
         foreach ((string tag, IReadOnlyCollection<string> identifiers) in membership.OrderBy(static pair => pair.Key, StringComparer.Ordinal))
             writer.WritePropertyName(tag);
             writer.WriteStartArray();
-            IEnumerable<string> orderedIdentifiers = identifiers.OrderBy(static identifier => identifier, StringComparer.Ordinal);
+            IEnumerable<string> orderedIdentifiers = identifiers.OrderBy(static FTBQuests.Core.Model.Identifier => FTBQuests.Core.Model.Identifier, StringComparer.Ordinal);
             foreach (string identifier in orderedIdentifiers)
-                writer.WriteStringValue(identifier);
+                writer.WriteStringValue(FTBQuests.Core.Model.Identifier);
             writer.WriteEndArray();
         writer.WriteEndObject();
         writer.WritePropertyName("block");
@@ -110,3 +110,4 @@ public sealed class ProbeExporter
             foreach ((string translationKey, string translationValue) in translations)
                 writer.WriteString(translationKey, translationValue);
 }
+

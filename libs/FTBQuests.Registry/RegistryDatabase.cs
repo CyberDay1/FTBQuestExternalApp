@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
@@ -102,10 +102,10 @@ public sealed class RegistryDatabase
     public IReadOnlyCollection<RegistryItem> Items => orderedItems;
     public IReadOnlyDictionary<string, IReadOnlyCollection<string>> TagMembership => tagMembership;
 
-    public bool TryGetByIdentifier(string identifier, out RegistryItem? item)
+    public bool TryGetByIdentifier(string FTBQuests.Core.Model.Identifier, out RegistryItem? item)
     {
-        ArgumentException.ThrowIfNullOrEmpty(identifier);
-        return itemsById.TryGetValue(identifier, out item);
+        ArgumentException.ThrowIfNullOrEmpty(FTBQuests.Core.Model.Identifier);
+        return itemsById.TryGetValue(FTBQuests.Core.Model.Identifier, out item);
     }
 
     public IReadOnlyList<RegistryItem> GetByTag(string tag)
@@ -225,3 +225,4 @@ public sealed class RegistryDatabase
         }
     }
 }
+
