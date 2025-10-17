@@ -22,7 +22,7 @@ public sealed class RegistryDatabase
 
     private readonly Dictionary<string, RegistryItem> itemsById;
     private static readonly IComparer<RegistryItem> IdentifierComparer = Comparer<RegistryItem>.Create(
-        static (left, right) => string.CompareOrdinal(left.ToString(), right.ToString()));
+        static (left, right) => string.CompareOrdinal(left.ToString(), right.ToString());
 
     private readonly Dictionary<string, RegistryItem[]> itemsByTag;
     private readonly IReadOnlyDictionary<string, IReadOnlyCollection<string>> tagMembership;
@@ -34,20 +34,17 @@ public sealed class RegistryDatabase
     /// </summary>
     /// <param name="items">The registry items to index.</param>
     /// <param name="tagMembership">The mapping between tag identifiers and registry item identifiers.</param>
-    public RegistryDatabase(IEnumerable<RegistryItem> items, IReadOnlyDictionary<string, IReadOnlyCollection<string>> tagMembership)
-    {
+    public RegistryDatabase(IEnumerable<RegistryItem> items, IReadOnlyDictionary<string, IReadOnlyCollection<string>> tagMembership) {
         ArgumentNullException.ThrowIfNull(items);
         ArgumentNullException.ThrowIfNull(tagMembership);
 
         itemsById = new Dictionary<string, RegistryItem>(StringComparer.OrdinalIgnoreCase);
         var bySource = new Dictionary<string, List<RegistryItem>>(StringComparer.OrdinalIgnoreCase);
 
-        foreach (RegistryItem item in items)
-        {
+        foreach (RegistryItem item in items) {
             itemsById[item.ToString()] = item;
 
-            if (!bySource.TryGetValue(item.SourceModId, out List<RegistryItem>? sourceItems))
-            {
+            if (!bySource.TryGetValue(item.SourceModId, out var sourceItems)) {
                 sourceItems = new List<RegistryItem>();
                 bySource[item.SourceModId] = sourceItems;
             }
@@ -56,24 +53,21 @@ public sealed class RegistryDatabase
         }
 
         itemsBySourceMod = new Dictionary<string, List<RegistryItem>>(StringComparer.OrdinalIgnoreCase);
-        foreach ((string sourceMod, List<RegistryItem> sourceItems) in bySource)
-        {
+        foreach (var (var (string sourceMod, List<RegistryItem> sourceItems) in bySource) {
             sourceItems.Sort(IdentifierComparer);
             itemsBySourceMod[sourceMod] = sourceItems;
         }
 
         var normalizedMembership = new Dictionary<string, IReadOnlyCollection<string>>(StringComparer.OrdinalIgnoreCase);
-        foreach ((string tag, IReadOnlyCollection<string> identifiers) in tagMembership)
-        {
-            if (string.IsNullOrWhiteSpace(tag))
-            {
+        foreach (var (var (string tag, IReadOnlyCollection<string> identifiers) in tagMembership) {
+            if (string.IsNullOrWhiteSpace(tag) {
                 continue;
             }
 
             string normalizedTag = tag.Trim();
             IEnumerable<string> source = identifiers ?? Array.Empty<string>();
             string[] normalizedIdentifiers = source
-                .Where(static identifier => !string.IsNullOrWhiteSpace(identifier))
+                .Where(static identifier => !string.IsNullOrWhiteSpace(identifier)
                 .Select(static identifier => identifier.Trim())
                 .ToArray();
 
@@ -85,8 +79,7 @@ public sealed class RegistryDatabase
         this.tagMembership = new ReadOnlyDictionary<string, IReadOnlyCollection<string>>(normalizedMembership);
 
         itemsByTag = new Dictionary<string, RegistryItem[]>(StringComparer.OrdinalIgnoreCase);
-        foreach ((string tag, IReadOnlyCollection<string> identifiers) in normalizedMembership)
-        {
+        foreach (var (var (string tag, IReadOnlyCollection<string> identifiers) in normalizedMembership) {
             RegistryItem[] resolved = identifiers
                 .Select(identifier => TryGetByIdentifier(identifier, out RegistryItem? match) ? match : null)
                 .Where(static item => item is not null)
@@ -114,8 +107,7 @@ public sealed class RegistryDatabase
     /// <param name="identifier">The fully qualified identifier.</param>
     /// <param name="item">The located item, when found.</param>
     /// <returns><see langword="true"/> when the item is present.</returns>
-    public bool TryGetByIdentifier(string identifier, out RegistryItem? item)
-    {
+    public bool TryGetByIdentifier(string identifier, out RegistryItem? item) {
         ArgumentException.ThrowIfNullOrEmpty(identifier);
         return itemsById.TryGetValue(identifier, out item);
     }
@@ -125,8 +117,7 @@ public sealed class RegistryDatabase
     /// </summary>
     /// <param name="tag">The tag identifier.</param>
     /// <returns>A read-only list of registry items.</returns>
-    public IReadOnlyList<RegistryItem> GetByTag(string tag)
-    {
+    public IReadOnlyList<RegistryItem> GetByTag(string tag) {
         ArgumentException.ThrowIfNullOrEmpty(tag);
         return itemsByTag.TryGetValue(tag, out RegistryItem[]? items) ? items : EmptyItems;
     }
@@ -136,8 +127,7 @@ public sealed class RegistryDatabase
     /// </summary>
     /// <param name="sourceModId">The mod identifier.</param>
     /// <returns>A read-only list of registry items.</returns>
-    public IReadOnlyList<RegistryItem> GetBySourceModId(string sourceModId)
-    {
+    public IReadOnlyList<RegistryItem> GetBySourceModId(string sourceModId) {
         ArgumentException.ThrowIfNullOrEmpty(sourceModId);
         return itemsBySourceMod.TryGetValue(sourceModId, out List<RegistryItem>? sourceItems) ? sourceItems : EmptyItems;
     }
@@ -161,15 +151,12 @@ public sealed class RegistryDatabase
     /// </summary>
     /// <param name="id">The fully qualified identifier.</param>
     /// <returns><see langword="true"/> when an entry was removed.</returns>
-    public bool RemoveItem(Identifier id)
-    {
-        if (string.IsNullOrWhiteSpace(id.ToString()))
-        {
-            throw new ArgumentException("Identifier cannot be empty.", nameof(id));
+    public bool RemoveItem(Identifier id) {
+        if (string.IsNullOrWhiteSpace(id.ToString()) {
+            throw new ArgumentException("Identifier cannot be empty.", nameof(id);
         }
 
-        if (!itemsById.Remove(id.ToString(), out RegistryItem? item))
-        {
+        if (!itemsById.Remove(id.ToString(), out RegistryItem? item) {
             return false;
         }
 
@@ -182,21 +169,17 @@ public sealed class RegistryDatabase
     /// </summary>
     /// <param name="modId">The source mod identifier.</param>
     /// <returns>The number of removed items.</returns>
-    public int RemoveItemsByMod(string modId)
-    {
+    public int RemoveItemsByMod(string modId) {
         ArgumentException.ThrowIfNullOrEmpty(modId);
 
-        if (!itemsBySourceMod.TryGetValue(modId, out List<RegistryItem>? modItems) || modItems.Count == 0)
-        {
+        if (!itemsBySourceMod.TryGetValue(modId, out List<RegistryItem>? modItems) || modItems.Count == 0) {
             return 0;
         }
 
         var snapshot = modItems.ToArray();
         int removed = 0;
-        foreach (RegistryItem item in snapshot)
-        {
-            if (!itemsById.Remove(item.ToString()))
-            {
+        foreach (RegistryItem item in snapshot) {
+            if (!itemsById.Remove(item.ToString()) {
                 continue;
             }
 
@@ -214,20 +197,17 @@ public sealed class RegistryDatabase
     /// Adds the specified item when it is not already tracked.
     /// </summary>
     /// <param name="item">The item to register.</param>
-    public void AddIfMissing(RegistryItem item)
-    {
+    public void AddIfMissing(RegistryItem item) {
         ArgumentNullException.ThrowIfNull(item);
 
-        if (itemsById.ContainsKey(item.ToString()))
-        {
+        if (itemsById.ContainsKey(item.ToString()) {
             return;
         }
 
         itemsById[item.ToString()] = item;
         InsertOrdered(orderedItems, item);
 
-        if (!itemsBySourceMod.TryGetValue(item.SourceModId, out List<RegistryItem>? sourceItems))
-        {
+        if (!itemsBySourceMod.TryGetValue(item.SourceModId, out List<RegistryItem>? sourceItems) {
             sourceItems = new List<RegistryItem>();
             itemsBySourceMod[item.SourceModId] = sourceItems;
         }
@@ -235,53 +215,43 @@ public sealed class RegistryDatabase
         InsertOrdered(sourceItems, item);
     }
 
-    private static void InsertOrdered(List<RegistryItem> list, RegistryItem item)
-    {
+    private static void InsertOrdered(List<RegistryItem> list, RegistryItem item) {
         int index = list.BinarySearch(item, IdentifierComparer);
-        if (index < 0)
-        {
+        if (index < 0) {
             index = ~index;
         }
 
         list.Insert(index, item);
     }
 
-    private static void RemoveOrdered(List<RegistryItem> list, RegistryItem item)
-    {
+    private static void RemoveOrdered(List<RegistryItem> list, RegistryItem item) {
         int index = list.BinarySearch(item, IdentifierComparer);
-        if (index >= 0)
-        {
+        if (index >= 0) {
             list.RemoveAt(index);
         }
     }
 
-    private void RemoveItemInternal(RegistryItem item)
-    {
+    private void RemoveItemInternal(RegistryItem item) {
         RemoveOrdered(orderedItems, item);
 
-        if (itemsBySourceMod.TryGetValue(item.SourceModId, out List<RegistryItem>? sourceItems))
-        {
+        if (itemsBySourceMod.TryGetValue(item.SourceModId, out List<RegistryItem>? sourceItems) {
             RemoveOrdered(sourceItems, item);
-            if (sourceItems.Count == 0)
-            {
+            if (sourceItems.Count == 0) {
                 itemsBySourceMod.Remove(item.SourceModId);
             }
         }
 
-        foreach (string tag in itemsByTag.Keys.ToList())
-        {
+        foreach (string tag in itemsByTag.Keys.ToList() {
             RegistryItem[] members = itemsByTag[tag];
             RegistryItem[] filtered = members
-                .Where(member => !string.Equals(member.ToString(), item.ToString(), StringComparison.OrdinalIgnoreCase))
+                .Where(member => !string.Equals(member.ToString(), item.ToString(), StringComparison.OrdinalIgnoreCase)
                 .ToArray();
 
-            if (filtered.Length == members.Length)
-            {
+            if (filtered.Length == members.Length) {
                 continue;
             }
 
-            if (filtered.Length == 0)
-            {
+            if (filtered.Length == 0) {
                 itemsByTag.Remove(tag);
             }
             else
@@ -291,6 +261,9 @@ public sealed class RegistryDatabase
         }
     }
 }
+
+
+
 
 
 
