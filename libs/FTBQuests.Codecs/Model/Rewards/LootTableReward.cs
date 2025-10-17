@@ -1,4 +1,5 @@
 ﻿using FTBQuests.Core.Model;
+using FTBQuests.Core.Enums;
 
 namespace FTBQuests.Codecs.Model.Rewards
 {
@@ -6,9 +7,11 @@ namespace FTBQuests.Codecs.Model.Rewards
     {
         public string? TableId { get; set; }
 
-        public LootTableReward(string id) : base(id, FTBQuests.Core.Model.RewardType.LootTable.ToString()) { }
+        public LootTableReward(string id) : base(id, FTBQuests.Core.Enums.RewardType.LootTable.ToString()) { }
     }
 }
+
+
 
 
 

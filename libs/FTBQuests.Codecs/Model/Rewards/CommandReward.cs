@@ -1,4 +1,5 @@
 ﻿using FTBQuests.Core.Model;
+using FTBQuests.Core.Enums;
 
 namespace FTBQuests.Codecs.Model.Rewards
 {
@@ -6,9 +7,11 @@ namespace FTBQuests.Codecs.Model.Rewards
     {
         public string? Command { get; set; }
 
-        public CommandReward(string id) : base(id, FTBQuests.Core.Model.RewardType.Command.ToString()) { }
+        public CommandReward(string id) : base(id, FTBQuests.Core.Enums.RewardType.Command.ToString()) { }
     }
 }
+
+
 
 
 
