@@ -124,7 +124,7 @@ public sealed class RegistryDatabase
     public IReadOnlyCollection<string> GetModIdentifiers() =>
         itemsBySourceMod.Keys.OrderBy(id => id, StringComparer.OrdinalIgnoreCase).ToList();
 
-    public bool RemoveItem(Identifier id)
+    public bool RemoveItem(FTBQuests.Core.Model.Identifier id)
     {
         if (string.IsNullOrWhiteSpace(id.ToString()))
             throw new ArgumentException("Identifier cannot be empty.", nameof(id));
