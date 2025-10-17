@@ -1,4 +1,4 @@
-using FTBQuests.Validation;
+﻿using FTBQuests.Core.Model;
 using FTBQuests.Assets;
 namespace FTBQuests.Registry;
 
@@ -19,3 +19,4 @@ public sealed class CodecRegistry
         // Placeholder implementation
     }
 }
+

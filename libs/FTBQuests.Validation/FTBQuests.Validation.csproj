@@ -7,6 +7,9 @@
   <ItemGroup>
     <ProjectReference Include="..\FTBQuests.Core\FTBQuests.Core.csproj" />
     <ProjectReference Include="..\FTBQuests.Assets\FTBQuests.Assets.csproj" />
+    <ProjectReference Include="..\FTBQuests.Codecs\FTBQuests.Codecs.csproj" />
+    <ProjectReference Include="..\FTBQuests.IO\FTBQuests.IO.csproj" />
+    <ProjectReference Include="..\FTBQuests.Registry\FTBQuests.Registry.csproj" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="SharpZipLib" Version="1.4.2" />

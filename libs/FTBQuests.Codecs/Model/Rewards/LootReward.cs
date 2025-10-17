@@ -1,16 +1,1 @@
-﻿using FTBQuests.Validation;
-using FTBQuests.Assets;
-using FTBQuests.Codecs.Enums;
-
-namespace FTBQuests.Codecs.Model;
-
-public sealed class LootReward : RewardBase
-{
-    public LootReward()
-        : base("loot", RewardType.Loot)
-    {
-    }
-
-    public Identifier LootTable { get; set; }
-}
-
+﻿using FTBQuests.Core.Model;using FTBQuests.Assets;using FTBQuests.Codecs.Enums;namespace FTBQuests.Codecs.Model;public sealed class LootReward : RewardBase{    public LootReward()        : base("loot", RewardType.Loot)    {    }    public Identifier LootTable { get; set; }}

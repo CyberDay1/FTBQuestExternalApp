@@ -1,4 +1,4 @@
-using FTBQuests.Validation;
+﻿using FTBQuests.Core.Model;
 using FTBQuests.Assets;
 // <copyright file="VanillaRegistrySeeder.cs" company="CyberDay1">
 // Copyright (c) CyberDay1. All rights reserved.
@@ -31,3 +31,4 @@ public static class VanillaRegistrySeeder
         }
     }
 }
+

@@ -1,11 +1,10 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\FTBQuests.Core\FTBQuests.Core.csproj" />
-    <ProjectReference Include="..\FTBQuests.Validation\FTBQuests.Validation.csproj" />
     <ProjectReference Include="..\FTBQuests.Assets\FTBQuests.Assets.csproj" />
   </ItemGroup>
   <ItemGroup>
