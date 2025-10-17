@@ -1,4 +1,12 @@
-﻿using FTBQuests.Validation;
+﻿using FTBQuests.Core.Validation;
+using FTBQuests.Codecs;
+using FTBQuests.Core.Model;
+
+using FTBQuests.Codecs;
+using FTBQuests.Core.Model;
+
+
+
 using FTBQuests.Assets;
 // <copyright file="QuestPackLoader.cs" company="CyberDay1">
 // Copyright (c) CyberDay1. All rights reserved.
@@ -11,7 +19,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using FTBQuests.Codecs.Model;
-using FTBQuests.Codecs;
+
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
@@ -316,4 +324,7 @@ public class QuestPackLoader
         }
     }
 }
+
+
+
 

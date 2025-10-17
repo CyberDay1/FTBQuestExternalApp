@@ -1,4 +1,12 @@
-﻿using FTBQuests.Validation;
+﻿using FTBQuests.Core.Validation;
+using FTBQuests.Codecs;
+using FTBQuests.Core.Model;
+
+using FTBQuests.Codecs;
+using FTBQuests.Core.Model;
+
+
+
 using FTBQuests.Assets;
 // <copyright file="FTBQuests.IO.QuestPack.cs" company="CyberDay1">
 // Copyright (c) CyberDay1. All rights reserved.
@@ -7,7 +15,7 @@ using FTBQuests.Assets;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using FTBQuests.Codecs;
+
 using FTBQuests.Codecs.Model;
 using Newtonsoft.Json.Linq;
 
@@ -104,4 +112,7 @@ namespace FTBQuests.IO
         }
     }
 }
+
+
+
 

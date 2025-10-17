@@ -1,10 +1,18 @@
-using FTBQuests.Validation;
+﻿using FTBQuests.Core.Validation;
+using FTBQuests.Codecs;
+using FTBQuests.Core.Model;
+
+using FTBQuests.Codecs;
+using FTBQuests.Core.Model;
+
+
+
 using FTBQuests.Assets;
 // <copyright file="Class1.cs" company="CyberDay1">
 // Copyright (c) CyberDay1. All rights reserved.
 // </copyright>
 
-using FTBQuests.Codecs;
+
 
 namespace FTBQuests.IO;
 
@@ -27,3 +35,6 @@ public sealed class QuestDataIo
     /// </summary>
     public CodecRegistry Registry { get; }
 }
+
+
+
