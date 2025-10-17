@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
-using FTBQuests.Codecs.Model;
+// Remove the Codecs model import, since Identifier from Core is the one we use
 using FTBQuests.Registry.Model;
 using FTBQuests.Core.Model;
 
@@ -34,7 +34,6 @@ namespace FTBQuests.Registry
             var bySource = new Dictionary<string, List<RegistryItem>>(StringComparer.OrdinalIgnoreCase);
             orderedItems = new List<RegistryItem>();
 
-            // Index by ID and mod source
             foreach (RegistryItem item in items)
             {
                 itemsById[item.ToString()] = item;
@@ -74,7 +73,7 @@ namespace FTBQuests.Registry
         public IReadOnlyCollection<string> GetModIdentifiers() =>
             itemsBySourceMod.Keys.OrderBy(id => id, StringComparer.OrdinalIgnoreCase).ToList();
 
-        public bool RemoveItem(FTBQuests.Core.Model.Identifier id)
+        public bool RemoveItem(Identifier id)
         {
             if (string.IsNullOrWhiteSpace(id.ToString()))
                 throw new ArgumentException("Identifier cannot be empty.", nameof(id));
