@@ -22,7 +22,7 @@ public sealed class RegistryDatabase
 
     private readonly Dictionary<string, RegistryItem> itemsById;
     private static readonly IComparer<RegistryItem> IdentifierComparer = Comparer<RegistryItem>.Create(
-        static (left, right) => string.CompareOrdinal(left.Id, right.Id));
+        static (left, right) => string.CompareOrdinal(left.ToString(), right.ToString()));
 
     private readonly Dictionary<string, RegistryItem[]> itemsByTag;
     private readonly IReadOnlyDictionary<string, IReadOnlyCollection<string>> tagMembership;
@@ -44,7 +44,7 @@ public sealed class RegistryDatabase
 
         foreach (RegistryItem item in items)
         {
-            itemsById[item.Id] = item;
+            itemsById[item.ToString()] = item;
 
             if (!bySource.TryGetValue(item.SourceModId, out List<RegistryItem>? sourceItems))
             {
@@ -92,14 +92,14 @@ public sealed class RegistryDatabase
                 .Where(static item => item is not null)
                 .Select(static item => item!)
                 .Distinct()
-                .OrderBy(static item => item.Id, StringComparer.Ordinal)
+                .OrderBy(static item => item.ToString(), StringComparer.Ordinal)
                 .ToArray();
 
             itemsByTag[tag] = resolved;
         }
 
-        orderedItems = itemsById.Values
-            .OrderBy(static item => item.Id, StringComparer.Ordinal)
+        orderedItems = itemsById.Keys
+            .OrderBy(static item => item.ToString(), StringComparer.Ordinal)
             .ToList();
     }
 
@@ -163,12 +163,12 @@ public sealed class RegistryDatabase
     /// <returns><see langword="true"/> when an entry was removed.</returns>
     public bool RemoveItem(Identifier id)
     {
-        if (string.IsNullOrWhiteSpace(id.Value))
+        if (string.IsNullOrWhiteSpace(id.ToString()))
         {
             throw new ArgumentException("Identifier cannot be empty.", nameof(id));
         }
 
-        if (!itemsById.Remove(id.Value, out RegistryItem? item))
+        if (!itemsById.Remove(id.ToString(), out RegistryItem? item))
         {
             return false;
         }
@@ -195,7 +195,7 @@ public sealed class RegistryDatabase
         int removed = 0;
         foreach (RegistryItem item in snapshot)
         {
-            if (!itemsById.Remove(item.Id))
+            if (!itemsById.Remove(item.ToString()))
             {
                 continue;
             }
@@ -218,12 +218,12 @@ public sealed class RegistryDatabase
     {
         ArgumentNullException.ThrowIfNull(item);
 
-        if (itemsById.ContainsKey(item.Id))
+        if (itemsById.ContainsKey(item.ToString()))
         {
             return;
         }
 
-        itemsById[item.Id] = item;
+        itemsById[item.ToString()] = item;
         InsertOrdered(orderedItems, item);
 
         if (!itemsBySourceMod.TryGetValue(item.SourceModId, out List<RegistryItem>? sourceItems))
@@ -272,7 +272,7 @@ public sealed class RegistryDatabase
         {
             RegistryItem[] members = itemsByTag[tag];
             RegistryItem[] filtered = members
-                .Where(member => !string.Equals(member.Id, item.Id, StringComparison.OrdinalIgnoreCase))
+                .Where(member => !string.Equals(member.ToString(), item.ToString(), StringComparison.OrdinalIgnoreCase))
                 .ToArray();
 
             if (filtered.Length == members.Length)
@@ -291,5 +291,8 @@ public sealed class RegistryDatabase
         }
     }
 }
+
+
+
 
 

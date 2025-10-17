@@ -8,6 +8,7 @@
         Loot,
         LootTable,
         Unknown,
-        XP
+        Xp
     }
 }
+
