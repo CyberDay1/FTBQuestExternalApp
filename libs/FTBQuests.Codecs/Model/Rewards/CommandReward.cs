@@ -1,12 +1,13 @@
-using FTBQuests.Core.Enums;
-using FTBQuests.Core.Model;
+using FTBQuests.Codecs.Enums;
 
-namespace FTBQuests.Codecs.Model.Rewards
+namespace FTBQuests.Codecs.Model;
+
+public sealed class CommandReward : RewardBase
 {
-    public class CommandReward : RewardBase
+    public CommandReward()
+        : base("command", RewardType.Command)
     {
-        public string? Command { get; set; }
-
-        public CommandReward(string id) : base(id, FTBQuests.Core.Enums.RewardType.Command.ToString()) { }
     }
+
+    public string Command { get; set; } = string.Empty;
 }

@@ -1,8 +1,11 @@
-using FTBQuests.Core.Model;
+namespace FTBQuests.Codecs.Model;
 
-namespace FTBQuests.Codecs.Model.Tasks;
-
-public class AdvancementTask : TaskBase
+public sealed class AdvancementTask : TaskBase
 {
-    public override bool CheckCompletion(object context) => false;
+    public AdvancementTask()
+        : base("advancement")
+    {
+    }
+
+    public Identifier AdvancementId { get; set; }
 }

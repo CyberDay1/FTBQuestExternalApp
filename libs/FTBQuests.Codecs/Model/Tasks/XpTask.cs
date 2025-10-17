@@ -1,8 +1,13 @@
-using FTBQuests.Core.Model;
+namespace FTBQuests.Codecs.Model;
 
-namespace FTBQuests.Codecs.Model.Tasks;
-
-public class XpTask : TaskBase
+public sealed class XpTask : TaskBase
 {
-    public override bool CheckCompletion(object context) => false;
+    public XpTask()
+        : base("xp")
+    {
+    }
+
+    public int Amount { get; set; }
+
+    public bool Levels { get; set; }
 }

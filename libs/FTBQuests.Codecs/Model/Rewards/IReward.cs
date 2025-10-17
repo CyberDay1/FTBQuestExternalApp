@@ -1,10 +1,10 @@
-using FTBQuests.Core.Enums;
-using FTBQuests.Core.Model;
+using FTBQuests.Codecs.Enums;
 
-namespace FTBQuests.Codecs.Model.Rewards
+namespace FTBQuests.Codecs.Model;
+
+public interface IReward : IExtraAware
 {
-    public interface IReward
-    {
-        FTBQuests.Core.Enums.RewardType Type { get; }
-    }
+    RewardType RewardType { get; }
+
+    string TypeId { get; }
 }

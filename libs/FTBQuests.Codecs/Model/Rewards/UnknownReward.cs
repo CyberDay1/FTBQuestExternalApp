@@ -1,10 +1,11 @@
-using FTBQuests.Core.Enums;
-using FTBQuests.Core.Model;
+using FTBQuests.Codecs.Enums;
 
-namespace FTBQuests.Codecs.Model.Rewards
+namespace FTBQuests.Codecs.Model;
+
+public sealed class UnknownReward : RewardBase
 {
-    public class UnknownReward : RewardBase
+    public UnknownReward(string typeId)
+        : base(string.IsNullOrWhiteSpace(typeId) ? "custom" : typeId, RewardType.Custom)
     {
-        public UnknownReward(string id) : base(id, FTBQuests.Core.Enums.RewardType.Unknown.ToString()) { }
     }
 }

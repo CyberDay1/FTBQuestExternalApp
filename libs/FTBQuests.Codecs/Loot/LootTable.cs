@@ -1,7 +1,30 @@
-// <copyright file="LootTable.cs" company="CyberDay1">// Copyright (c) CyberDay1. All rights reserved.// </copyright>using System;using System.Collections.Generic;
-using FTBQuests.Core.Model;
+namespace FTBQuests.Loot;
 
-using FTBQuests.Assets;
+using System;
+using System.Collections.Generic;
 
-namespace FTBQuests.Codecs.Loot;
-/// <summary>/// Represents a named loot table comprised of loot entries./// </summary>public sealed class LootTable{    /// <summary>    /// Initializes a new instance of the <see cref="LootTable"/> class.    /// </summary>    /// <param name="name">The unique loot table name.</param>    public LootTable(string name)    {        ArgumentException.ThrowIfNullOrEmpty(name);        Name = name;    }    /// <summary>    /// Gets the loot table identifier (file name without extension).    /// </summary>    public string Name { get; }    /// <summary>    /// Gets the collection of entries that make up the loot table.    /// </summary>    public List<LootEntry> Entries { get; } = new();}
+/// <summary>
+/// Represents a named loot table comprised of loot entries.
+/// </summary>
+public sealed class LootTable
+{
+    /// <summary>
+    /// Initializes a new instance of the <see cref="LootTable"/> class.
+    /// </summary>
+    /// <param name="name">The unique loot table name.</param>
+    public LootTable(string name)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(name);
+        Name = name;
+    }
+
+    /// <summary>
+    /// Gets the loot table identifier (file name without extension).
+    /// </summary>
+    public string Name { get; }
+
+    /// <summary>
+    /// Gets the collection of entries that make up the loot table.
+    /// </summary>
+    public List<LootEntry> Entries { get; } = new();
+}

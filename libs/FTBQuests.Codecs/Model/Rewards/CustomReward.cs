@@ -1,12 +1,11 @@
-using FTBQuests.Core.Enums;
-using FTBQuests.Core.Model;
+using FTBQuests.Codecs.Enums;
 
-namespace FTBQuests.Codecs.Model.Rewards
+namespace FTBQuests.Codecs.Model;
+
+public sealed class CustomReward : RewardBase
 {
-    public class CustomReward : RewardBase
+    public CustomReward()
+        : base("custom", RewardType.Custom)
     {
-        public string? CustomId { get; set; }
-
-        public CustomReward(string id) : base(id, FTBQuests.Core.Enums.RewardType.Custom.ToString()) { }
     }
 }

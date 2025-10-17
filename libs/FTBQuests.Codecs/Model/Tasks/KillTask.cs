@@ -1,8 +1,13 @@
-using FTBQuests.Core.Model;
+namespace FTBQuests.Codecs.Model;
 
-namespace FTBQuests.Codecs.Model.Tasks;
-
-public class KillTask : TaskBase
+public sealed class KillTask : TaskBase
 {
-    public override bool CheckCompletion(object context) => false;
+    public KillTask()
+        : base("kill")
+    {
+    }
+
+    public Identifier EntityId { get; set; }
+
+    public int Amount { get; set; }
 }

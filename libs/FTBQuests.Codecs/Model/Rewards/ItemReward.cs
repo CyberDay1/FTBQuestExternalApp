@@ -1,13 +1,17 @@
-using FTBQuests.Core.Enums;
-using FTBQuests.Core.Model;
+using FTBQuests.Codecs.Enums;
 
-namespace FTBQuests.Codecs.Model.Rewards
+namespace FTBQuests.Codecs.Model;
+
+public sealed class ItemReward : RewardBase
 {
-    public class ItemReward : RewardBase
+    public ItemReward()
+        : base("item", RewardType.Item)
     {
-        public string? ItemId { get; set; }
-        public int Count { get; set; }
-
-        public ItemReward(string id) : base(id, FTBQuests.Core.Enums.RewardType.Item.ToString()) { }
     }
+
+    public Identifier ItemId { get; set; }
+
+    public int Count { get; set; } = 1;
+
+    public string? Nbt { get; set; }
 }
