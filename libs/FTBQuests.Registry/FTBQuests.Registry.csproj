@@ -1,12 +1,13 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
+    <OutputType>Library</OutputType>
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
   <ItemGroup>
-    <ProjectReference Include="..\FTBQuests.Core\FTBQuests.Core.csproj" />
-    <ProjectReference Include="..\FTBQuests.Assets\FTBQuests.Assets.csproj" />
-    <ProjectReference Include="..\FTBQuests.Codecs\FTBQuests.Codecs.csproj" />
+    <ProjectReference Include="../FTBQuests.Assets/FTBQuests.Assets.csproj" />
+    <ProjectReference Include="../FTBQuests.Codecs/FTBQuests.Codecs.csproj" />
+    <ProjectReference Include="../FTBQuests.Core/FTBQuests.Core.csproj" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="SharpZipLib" Version="1.4.2" />
