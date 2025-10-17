@@ -1,29 +1,18 @@
-using FTBQuests.Validation;
-using FTBQuests.Assets;
-// <copyright file="Class1.cs" company="CyberDay1">
-// Copyright (c) CyberDay1. All rights reserved.
-// </copyright>
+﻿using System;
 
-using FTBQuests.Registry;
-
-namespace FTBQuests.Assets;
-
-/// <summary>
-/// Provides access to quest-related assets that are backed by the registry.
-/// </summary>
-public sealed class QuestAssetProvider
+namespace FTBQuests.Assets
 {
     /// <summary>
-    /// Initializes a new instance of the <see cref="QuestAssetProvider"/> class.
+    /// Provides access to quest-related assets. Registry is held as an opaque dependency
+    /// to avoid cross-project cycles.
     /// </summary>
-    /// <param name="registry">The registry used to resolve assets.</param>
-    public QuestAssetProvider(QuestRegistry registry)
+    public sealed class QuestAssetProvider
     {
-        Registry = registry ?? throw new ArgumentNullException(nameof(registry));
-    }
+        public QuestAssetProvider(object registry)
+        {
+            Registry = registry ?? throw new ArgumentNullException(nameof(registry));
+        }
 
-    /// <summary>
-    /// Gets the registry used by the provider.
-    /// </summary>
-    public QuestRegistry Registry { get; }
+        public object Registry { get; }
+    }
 }

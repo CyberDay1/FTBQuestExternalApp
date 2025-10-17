@@ -1,3 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>Exe</OutputType>
@@ -8,9 +9,7 @@
   <ItemGroup>
     <ProjectReference Include="../../libs/FTBQuests.Registry/FTBQuests.Registry.csproj" />
     <ProjectReference Include="../../libs/FTBQuests.Schema/FTBQuests.Schema.csproj" />
-    <ProjectReference Include="../../libs/FTBQuests.Validation/FTBQuests.Validation.csproj" />
     <ProjectReference Include="../../libs/FTBQuests.IO/FTBQuests.IO.csproj" />
-    <ProjectReference Include="../../libs/FTBQuests.Codecs/FTBQuests.Codecs.csproj" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="SharpZipLib" Version="1.4.2" />
