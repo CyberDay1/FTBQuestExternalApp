@@ -1,8 +1,11 @@
-using FTBQuests.Core.Model;
+namespace FTBQuests.Codecs.Model;
 
-namespace FTBQuests.Codecs.Model.Tasks;
-
-public class CommandTask : TaskBase
+public sealed class CommandTask : TaskBase
 {
-    public override bool CheckCompletion(object context) => false;
+    public CommandTask()
+        : base("command")
+    {
+    }
+
+    public string? Command { get; set; }
 }

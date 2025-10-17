@@ -1,8 +1,15 @@
-using FTBQuests.Core.Model;
+namespace FTBQuests.Codecs.Model;
 
-namespace FTBQuests.Codecs.Model.Tasks;
-
-public class ItemTask : TaskBase
+public sealed class ItemTask : TaskBase
 {
-    public override bool CheckCompletion(object context) => false;
+    public ItemTask()
+        : base("item")
+    {
+    }
+
+    public Identifier ItemId { get; set; }
+
+    public int Count { get; set; }
+
+    public string? Nbt { get; set; }
 }

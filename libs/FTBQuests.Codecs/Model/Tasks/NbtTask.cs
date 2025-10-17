@@ -1,8 +1,13 @@
-using FTBQuests.Core.Model;
+namespace FTBQuests.Codecs.Model;
 
-namespace FTBQuests.Codecs.Model.Tasks;
-
-public class NbtTask : TaskBase
+public sealed class NbtTask : TaskBase
 {
-    public override bool CheckCompletion(object context) => false;
+    public NbtTask()
+        : base("nbt")
+    {
+    }
+
+    public Identifier TargetId { get; set; }
+
+    public string? RequiredNbt { get; set; }
 }

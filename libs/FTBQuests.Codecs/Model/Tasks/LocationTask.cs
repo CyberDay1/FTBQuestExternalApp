@@ -1,8 +1,19 @@
-using FTBQuests.Core.Model;
+namespace FTBQuests.Codecs.Model;
 
-namespace FTBQuests.Codecs.Model.Tasks;
-
-public class LocationTask : TaskBase
+public sealed class LocationTask : TaskBase
 {
-    public override bool CheckCompletion(object context) => false;
+    public LocationTask()
+        : base("location")
+    {
+    }
+
+    public int X { get; set; }
+
+    public int Y { get; set; }
+
+    public int Z { get; set; }
+
+    public string? Dimension { get; set; }
+
+    public int Radius { get; set; }
 }

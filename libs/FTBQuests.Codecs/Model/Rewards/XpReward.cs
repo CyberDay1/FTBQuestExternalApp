@@ -1,12 +1,15 @@
-using FTBQuests.Core.Enums;
-using FTBQuests.Core.Model;
+using FTBQuests.Codecs.Enums;
 
-namespace FTBQuests.Codecs.Model.Rewards
+namespace FTBQuests.Codecs.Model;
+
+public sealed class XpReward : RewardBase
 {
-    public class XpReward : RewardBase
+    public XpReward()
+        : base("xp", RewardType.Xp)
     {
-        public int Amount { get; set; }
-
-        public XpReward(string id) : base(id, FTBQuests.Core.Enums.RewardType.Xp.ToString()) { }
     }
+
+    public int Amount { get; set; }
+
+    public bool Levels { get; set; }
 }
