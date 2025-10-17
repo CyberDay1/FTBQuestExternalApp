@@ -10,5 +10,6 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\FTBQuests.Assets\FTBQuests.Assets.csproj" />
+    <ProjectReference Include="..\FTBQuests.Codecs\FTBQuests.Codecs.csproj" />
   </ItemGroup>
 </Project>

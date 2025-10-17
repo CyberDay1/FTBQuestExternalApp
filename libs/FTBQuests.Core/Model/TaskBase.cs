@@ -1,1 +1,12 @@
-﻿using FTBQuests.Assets;// <copyright file="TaskBase.cs" company="CyberDay1">// Copyright (c) CyberDay1. All rights reserved.// </copyright>using System;using System.Collections.Generic;namespace FTBQuests.Core.Model
+﻿namespace FTBQuests.Core.Model;
+
+public abstract class TaskBase
+{
+    public string Id { get; set; } = string.Empty;
+    public string Description { get; set; } = string.Empty;
+    public bool Completed { get; protected set; }
+
+    public abstract bool CheckCompletion(object context);
+
+    public virtual void Reset() => Completed = false;
+}

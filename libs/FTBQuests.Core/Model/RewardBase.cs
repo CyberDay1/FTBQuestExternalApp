@@ -1,1 +1,12 @@
-﻿using FTBQuests.Assets;// <copyright file="RewardBase.cs" company="CyberDay1">// Copyright (c) CyberDay1. All rights reserved.// </copyright>using System;using System.Collections.Generic;using FTBQuests.Codecs.Enums;namespace FTBQuests.Core.Model
+﻿namespace FTBQuests.Core.Model;
+
+public abstract class RewardBase
+{
+    public string Id { get; set; } = string.Empty;
+    public string Title { get; set; } = string.Empty;
+
+    public virtual void Grant()
+    {
+        // Implemented by subclasses in higher layers
+    }
+}
