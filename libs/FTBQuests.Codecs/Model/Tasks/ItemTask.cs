@@ -1,4 +1,6 @@
-﻿using FTBQuests.Core.Model;using FTBQuests.Assets;namespace FTBQuests.Codecs.Model;public sealed class ItemTask : TaskBase{    public ItemTask()        : base("item")    {    }    public Identifier ItemId { get; set; }    public int Count { get; set; }    public string? Nbt {
-    public override bool CheckCompletion(object context) => false;
- get; set; }}
+﻿namespace FTBQuests.Codecs.Model.Tasks;
 
+public class ItemTask : TaskBase
+{
+    public override bool CheckCompletion(object context) => false;
+}
