@@ -2,14 +2,9 @@
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
-
-using FTBQuests.Core.Model;
-
 using FTBQuests.Codecs.Model;
-
-using FTBQuests.Assets;
-
 using FTBQuests.Registry.Model;
+using FTBQuests.Core.Model;
 
 namespace FTBQuests.Registry;
 
@@ -21,19 +16,15 @@ public sealed class RegistryDatabase
     private static readonly RegistryItem[] EmptyItems = Array.Empty<RegistryItem>();
 
     private readonly Dictionary<string, RegistryItem> itemsById;
+    private static readonly IComparer<RegistryItem> IdentifierComparer =
+        Comparer<RegistryItem>.Create((left, right) => string.CompareOrdinal(left.ToString(), right.ToString()));
+
     private readonly Dictionary<string, RegistryItem[]> itemsByTag;
+    private readonly IReadOnlyDictionary<string, IReadOnlyCollection<string>> tagMembership;
     private readonly Dictionary<string, List<RegistryItem>> itemsBySourceMod;
     private readonly List<RegistryItem> orderedItems;
-    private readonly IReadOnlyDictionary<string, IReadOnlyCollection<string>> tagMembership;
 
-    private static readonly IComparer<RegistryItem> IdentifierComparer =
-        Comparer<RegistryItem>.Create(
-            static (left, right) => string.CompareOrdinal(left.ToString(), right.ToString())
-        );
-
-    public RegistryDatabase(
-        IEnumerable<RegistryItem> items,
-        IReadOnlyDictionary<string, IReadOnlyCollection<string>> tagMembership)
+    public RegistryDatabase(IEnumerable<RegistryItem> items, IReadOnlyDictionary<string, IReadOnlyCollection<string>> tagMembership)
     {
         ArgumentNullException.ThrowIfNull(items);
         ArgumentNullException.ThrowIfNull(tagMembership);
@@ -41,11 +32,11 @@ public sealed class RegistryDatabase
         itemsById = new Dictionary<string, RegistryItem>(StringComparer.OrdinalIgnoreCase);
         var bySource = new Dictionary<string, List<RegistryItem>>(StringComparer.OrdinalIgnoreCase);
 
-        foreach (var item in items)
+        foreach (RegistryItem item in items)
         {
             itemsById[item.ToString()] = item;
 
-            if (!bySource.TryGetValue(item.SourceModId, out var sourceItems))
+            if (!bySource.TryGetValue(item.SourceModId, out List<RegistryItem>? sourceItems))
             {
                 sourceItems = new List<RegistryItem>();
                 bySource[item.SourceModId] = sourceItems;
@@ -55,23 +46,27 @@ public sealed class RegistryDatabase
         }
 
         itemsBySourceMod = new Dictionary<string, List<RegistryItem>>(StringComparer.OrdinalIgnoreCase);
-        
+        foreach (var kvp in bySource)
         {
+            var sourceMod = kvp.Key;
+            var sourceItems = kvp.Value;
             sourceItems.Sort(IdentifierComparer);
             itemsBySourceMod[sourceMod] = sourceItems;
         }
 
         var normalizedMembership = new Dictionary<string, IReadOnlyCollection<string>>(StringComparer.OrdinalIgnoreCase);
-        foreach (var (tag, identifiers) in tagMembership)
+        foreach (var kvp in tagMembership)
         {
+            string tag = kvp.Key;
+            IReadOnlyCollection<string> identifiers = kvp.Value;
+
             if (string.IsNullOrWhiteSpace(tag))
                 continue;
 
-            var normalizedTag = tag.Trim();
-            var source = identifiers ?? Array.Empty<string>();
-            var normalizedIdentifiers = source
-                .Where(static id => !string.IsNullOrWhiteSpace(id))
-                .Select(static id => id.Trim())
+            string normalizedTag = tag.Trim();
+            string[] normalizedIdentifiers = identifiers
+                .Where(identifier => !string.IsNullOrWhiteSpace(identifier))
+                .Select(identifier => identifier.Trim())
                 .ToArray();
 
             normalizedMembership[normalizedTag] =
@@ -81,43 +76,45 @@ public sealed class RegistryDatabase
         this.tagMembership = new ReadOnlyDictionary<string, IReadOnlyCollection<string>>(normalizedMembership);
 
         itemsByTag = new Dictionary<string, RegistryItem[]>(StringComparer.OrdinalIgnoreCase);
-        foreach (var (tag, identifiers) in normalizedMembership)
+        foreach (var kvp in normalizedMembership)
         {
-            var resolved = identifiers
-                .Select(id => TryGetByIdentifier(id, out var match) ? match : null)
-                .Where(static item => item is not null)
-                .Select(static item => item!)
+            string tag = kvp.Key;
+            IReadOnlyCollection<string> identifiers = kvp.Value;
+
+            RegistryItem[] resolved = identifiers
+                .Select(identifier => TryGetByIdentifier(identifier, out RegistryItem? match) ? match : null)
+                .Where(item => item is not null)
+                .Select(item => item!)
                 .Distinct()
-                .OrderBy(static item => item.ToString(), StringComparer.Ordinal)
+                .OrderBy(item => item.ToString(), StringComparer.Ordinal)
                 .ToArray();
 
             itemsByTag[tag] = resolved;
         }
 
         orderedItems = itemsById.Values
-            .OrderBy(static item => item.ToString(), StringComparer.Ordinal)
+            .OrderBy(item => item.ToString(), StringComparer.Ordinal)
             .ToList();
     }
 
     public IReadOnlyCollection<RegistryItem> Items => orderedItems;
-    public IReadOnlyDictionary<string, IReadOnlyCollection<string>> TagMembership => tagMembership;
 
-    public bool TryGetByIdentifier(string FTBQuests.Core.Model.Identifier, out RegistryItem? item)
+    public bool TryGetByIdentifier(string identifier, out RegistryItem? item)
     {
-        ArgumentException.ThrowIfNullOrEmpty(FTBQuests.Core.Model.Identifier);
-        return itemsById.TryGetValue(FTBQuests.Core.Model.Identifier, out item);
+        ArgumentException.ThrowIfNullOrEmpty(identifier);
+        return itemsById.TryGetValue(identifier, out item);
     }
 
     public IReadOnlyList<RegistryItem> GetByTag(string tag)
     {
         ArgumentException.ThrowIfNullOrEmpty(tag);
-        return itemsByTag.TryGetValue(tag, out var items) ? items : EmptyItems;
+        return itemsByTag.TryGetValue(tag, out RegistryItem[]? items) ? items : EmptyItems;
     }
 
     public IReadOnlyList<RegistryItem> GetBySourceModId(string sourceModId)
     {
         ArgumentException.ThrowIfNullOrEmpty(sourceModId);
-        return itemsBySourceMod.TryGetValue(sourceModId, out var sourceItems)
+        return itemsBySourceMod.TryGetValue(sourceModId, out List<RegistryItem>? sourceItems)
             ? sourceItems
             : EmptyItems;
     }
@@ -125,15 +122,14 @@ public sealed class RegistryDatabase
     public IReadOnlyList<RegistryItem> GetItemsByMod(string modId) => GetBySourceModId(modId);
 
     public IReadOnlyCollection<string> GetModIdentifiers() =>
-        itemsBySourceMod.Keys.OrderBy(static id => id, StringComparer.OrdinalIgnoreCase).ToList();
+        itemsBySourceMod.Keys.OrderBy(id => id, StringComparer.OrdinalIgnoreCase).ToList();
 
     public bool RemoveItem(Identifier id)
     {
-        ArgumentNullException.ThrowIfNull(id);
         if (string.IsNullOrWhiteSpace(id.ToString()))
             throw new ArgumentException("Identifier cannot be empty.", nameof(id));
 
-        if (!itemsById.Remove(id.ToString(), out var item))
+        if (!itemsById.Remove(id.ToString(), out RegistryItem? item))
             return false;
 
         RemoveItemInternal(item);
@@ -144,13 +140,12 @@ public sealed class RegistryDatabase
     {
         ArgumentException.ThrowIfNullOrEmpty(modId);
 
-        if (!itemsBySourceMod.TryGetValue(modId, out var modItems) || modItems.Count == 0)
+        if (!itemsBySourceMod.TryGetValue(modId, out List<RegistryItem>? modItems) || modItems.Count == 0)
             return 0;
 
         var snapshot = modItems.ToArray();
-        var removed = 0;
-
-        foreach (var item in snapshot)
+        int removed = 0;
+        foreach (RegistryItem item in snapshot)
         {
             if (!itemsById.Remove(item.ToString()))
                 continue;
@@ -162,6 +157,8 @@ public sealed class RegistryDatabase
         return removed;
     }
 
+    public IReadOnlyDictionary<string, IReadOnlyCollection<string>> TagMembership => this.tagMembership;
+
     public void AddIfMissing(RegistryItem item)
     {
         ArgumentNullException.ThrowIfNull(item);
@@ -172,7 +169,7 @@ public sealed class RegistryDatabase
         itemsById[item.ToString()] = item;
         InsertOrdered(orderedItems, item);
 
-        if (!itemsBySourceMod.TryGetValue(item.SourceModId, out var sourceItems))
+        if (!itemsBySourceMod.TryGetValue(item.SourceModId, out List<RegistryItem>? sourceItems))
         {
             sourceItems = new List<RegistryItem>();
             itemsBySourceMod[item.SourceModId] = sourceItems;
@@ -183,16 +180,15 @@ public sealed class RegistryDatabase
 
     private static void InsertOrdered(List<RegistryItem> list, RegistryItem item)
     {
-        var index = list.BinarySearch(item, IdentifierComparer);
+        int index = list.BinarySearch(item, IdentifierComparer);
         if (index < 0)
             index = ~index;
-
         list.Insert(index, item);
     }
 
     private static void RemoveOrdered(List<RegistryItem> list, RegistryItem item)
     {
-        var index = list.BinarySearch(item, IdentifierComparer);
+        int index = list.BinarySearch(item, IdentifierComparer);
         if (index >= 0)
             list.RemoveAt(index);
     }
@@ -201,17 +197,17 @@ public sealed class RegistryDatabase
     {
         RemoveOrdered(orderedItems, item);
 
-        if (itemsBySourceMod.TryGetValue(item.SourceModId, out var sourceItems))
+        if (itemsBySourceMod.TryGetValue(item.SourceModId, out List<RegistryItem>? sourceItems))
         {
             RemoveOrdered(sourceItems, item);
             if (sourceItems.Count == 0)
                 itemsBySourceMod.Remove(item.SourceModId);
         }
 
-        foreach (var tag in itemsByTag.Keys.ToList())
+        foreach (string tag in itemsByTag.Keys.ToList())
         {
-            var members = itemsByTag[tag];
-            var filtered = members
+            RegistryItem[] members = itemsByTag[tag];
+            RegistryItem[] filtered = members
                 .Where(member => !string.Equals(member.ToString(), item.ToString(), StringComparison.OrdinalIgnoreCase))
                 .ToArray();
 
@@ -225,5 +221,3 @@ public sealed class RegistryDatabase
         }
     }
 }
-
-
