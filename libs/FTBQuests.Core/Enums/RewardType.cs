@@ -1,4 +1,4 @@
-﻿namespace FTBQuests.Core.Enums
+namespace FTBQuests.Core.Enums
 {
     public enum RewardType
     {
@@ -11,4 +11,3 @@
         Xp
     }
 }
-

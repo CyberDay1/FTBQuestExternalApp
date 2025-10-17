@@ -1,7 +1,3 @@
-﻿using FTBQuests.Registry;
-using FTBQuests.Codecs;
-using FTBQuests.Core.Model;
-using FTBQuests.Assets;
 // <copyright file="PresetSlotStore.cs" company="CyberDay1">
 // Copyright (c) CyberDay1. All rights reserved.
 // </copyright>
@@ -9,6 +5,15 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+
+using FTBQuests.Core.Model;
+
+using FTBQuests.Codecs;
+
+using FTBQuests.Assets;
+
+using FTBQuests.Registry;
+
 namespace FTBQuests.IO.Presets;
 /// <summary>
 /// Provides enumeration and deletion helpers for preset slots stored on disk.
@@ -57,10 +62,3 @@ public sealed class PresetSlotStore
             return null;
             .FirstOrDefault(file => string.Equals(Path.GetFileNameWithoutExtension(file), slotName, StringComparison.OrdinalIgnoreCase));
 }
-
-
-
-
-
-
-

@@ -1,12 +1,14 @@
-﻿using FTBQuests.Core.Model;
-using FTBQuests.Assets;
 // <copyright file="VanillaRegistrySeeder.cs" company="CyberDay1">
 // Copyright (c) CyberDay1. All rights reserved.
 // </copyright>
-
 using System;
 using System.Collections.Generic;
 using System.IO;
+
+using FTBQuests.Core.Model;
+
+using FTBQuests.Assets;
+
 using FTBQuests.Registry.Model;
 
 namespace FTBQuests.Registry.Seed;
@@ -31,4 +33,3 @@ public static class VanillaRegistrySeeder
         }
     }
 }
-

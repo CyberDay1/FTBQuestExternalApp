@@ -1,10 +1,14 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
-using FTBQuests.Assets;
-using FTBQuests.Codecs.Model;
+
 using FTBQuests.Core.Model;
+
+using FTBQuests.Codecs.Model;
+
+using FTBQuests.Assets;
+
 using FTBQuests.Registry.Model;
 
 namespace FTBQuests.Registry;

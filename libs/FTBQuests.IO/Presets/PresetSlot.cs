@@ -1,11 +1,16 @@
-﻿using FTBQuests.Registry;
-using FTBQuests.Codecs;
-using FTBQuests.Core.Model;
-using FTBQuests.Assets;
 // <copyright file="PresetSlot.cs" company="CyberDay1">
 // Copyright (c) CyberDay1. All rights reserved.
 // </copyright>
 using System;
+
+using FTBQuests.Core.Model;
+
+using FTBQuests.Codecs;
+
+using FTBQuests.Assets;
+
+using FTBQuests.Registry;
+
 namespace FTBQuests.IO.Presets;
 /// <summary>
 /// Represents a single preset slot stored on disk.
@@ -29,10 +34,3 @@ public sealed class PresetSlot
     /// Gets the backing file path for the preset slot.
     public string FilePath { get; }
 }
-
-
-
-
-
-
-

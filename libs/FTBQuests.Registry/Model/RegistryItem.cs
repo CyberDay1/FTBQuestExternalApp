@@ -1,8 +1,9 @@
-﻿using FTBQuests.Core.Model;
-using FTBQuests.Assets;
 // <copyright file="RegistryItem.cs" company="CyberDay1">
 // Copyright (c) CyberDay1. All rights reserved.
 // </copyright>
+using FTBQuests.Core.Model;
+
+using FTBQuests.Assets;
 
 namespace FTBQuests.Registry.Model;
 
@@ -50,4 +51,3 @@ public sealed class RegistryItem
     /// </summary>
     public string SourceModId { get; }
 }
-

@@ -1,7 +1,3 @@
-﻿using FTBQuests.Registry;
-using FTBQuests.Codecs;
-using FTBQuests.Core.Model;
-using FTBQuests.Assets;
 // <copyright file="PresetStore.cs" company="CyberDay1">
 // Copyright (c) CyberDay1. All rights reserved.
 // </copyright>
@@ -10,9 +6,19 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+
+using FTBQuests.Core.Model;
+
+using FTBQuests.Codecs;
 using FTBQuests.Codecs.Model;
+
+using FTBQuests.Assets;
+
+using FTBQuests.Registry;
+
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+
 namespace FTBQuests.IO;
 public sealed class PresetStore
 {
@@ -139,10 +145,3 @@ public sealed class PresetStore
         public JObject? Chapter { get; set; }
     private sealed class PresetHeader
 }
-
-
-
-
-
-
-

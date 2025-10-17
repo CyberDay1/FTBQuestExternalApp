@@ -1,10 +1,14 @@
-﻿using FTBQuests.Registry;
-using FTBQuests.Codecs;
-using FTBQuests.Core.Model;
-using FTBQuests.Assets;
 // <copyright file="Class1.cs" company="CyberDay1">
 // Copyright (c) CyberDay1. All rights reserved.
 // </copyright>
+using FTBQuests.Core.Model;
+
+using FTBQuests.Codecs;
+
+using FTBQuests.Assets;
+
+using FTBQuests.Registry;
+
 namespace FTBQuests.IO;
 /// <summary>
 /// Provides extension points for quest data input and output.
@@ -22,10 +26,3 @@ public sealed class QuestDataIo
     /// Gets the codec registry used for serialization.
     public CodecRegistry Registry { get; }
 }
-
-
-
-
-
-
-

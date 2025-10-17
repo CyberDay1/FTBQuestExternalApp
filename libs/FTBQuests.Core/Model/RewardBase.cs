@@ -1,4 +1,4 @@
-﻿namespace FTBQuests.Core.Model;
+namespace FTBQuests.Core.Model;
 
 public abstract class RewardBase
 {
@@ -19,5 +19,3 @@ public abstract class RewardBase
         // Implemented by subclasses in higher layers
     }
 }
-
-

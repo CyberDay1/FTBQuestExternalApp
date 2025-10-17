@@ -1,13 +1,13 @@
-﻿using FTBQuests.Validation;
-using FTBQuests.Assets;
 // <copyright file="CycleValidator.cs" company="CyberDay1">
 // Copyright (c) CyberDay1. All rights reserved.
 // </copyright>
-
 using System;
 using System.Collections.Generic;
 using System.Linq;
+
 using FTBQuests.Codecs.Model;
+
+using FTBQuests.Assets;
 
 namespace FTBQuests.Validation.Validators;
 
@@ -197,4 +197,3 @@ public sealed class CycleValidationResult
 
     public IReadOnlyList<CyclePathNode> Path { get; }
 }
-

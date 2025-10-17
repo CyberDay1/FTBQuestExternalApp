@@ -1,11 +1,11 @@
-﻿using FTBQuests.Validation;
-using FTBQuests.Assets;
 // <copyright file="IValidator.cs" company="CyberDay1">
 // Copyright (c) CyberDay1. All rights reserved.
 // </copyright>
-
 using System.Collections.Generic;
+
 using FTBQuests.Codecs.Model;
+
+using FTBQuests.Assets;
 
 namespace FTBQuests.Validation;
 
@@ -21,4 +21,3 @@ public interface IValidator
     /// <returns>The sequence of validation issues discovered during the inspection.</returns>
     IEnumerable<ValidationIssue> Validate(FTBQuests.IO.QuestPack questPack);
 }
-

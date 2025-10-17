@@ -1,15 +1,21 @@
-﻿using FTBQuests.Registry;
-using FTBQuests.Codecs;
-using FTBQuests.Core.Model;
-using FTBQuests.Assets;
 // <copyright file="FTBQuests.IO.QuestPack.cs" company="CyberDay1">
 // Copyright (c) CyberDay1. All rights reserved.
 // </copyright>
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+
+using FTBQuests.Core.Model;
+
+using FTBQuests.Codecs;
 using FTBQuests.Codecs.Model;
+
+using FTBQuests.Assets;
+
+using FTBQuests.Registry;
+
 using Newtonsoft.Json.Linq;
+
 namespace FTBQuests.IO
 {
     public class QuestPack
@@ -68,10 +74,3 @@ namespace FTBQuests.IO
                     idAllocator.Register(quest.Id);
     }
 }
-
-
-
-
-
-
-
