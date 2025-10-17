@@ -2,7 +2,16 @@
 
 public abstract class RewardBase
 {
-    public string Id { get; set; } = string.Empty;
+        public string Id { get; set; }
+        public string Name { get; set; }
+
+        protected RewardBase() { }
+
+        protected RewardBase(string id, string name)
+        {
+            Id = id;
+            Name = name;
+        }
     public string Title { get; set; } = string.Empty;
 
     public virtual void Grant()
@@ -10,3 +19,5 @@ public abstract class RewardBase
         // Implemented by subclasses in higher layers
     }
 }
+
+

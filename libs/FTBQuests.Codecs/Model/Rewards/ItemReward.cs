@@ -1,1 +1,14 @@
-﻿using FTBQuests.Core.Model;using FTBQuests.Assets;using FTBQuests.Codecs.Enums;namespace FTBQuests.Codecs.Model;public sealed class ItemReward : RewardBase{    public ItemReward()        : base("item", RewardType.Item)    {    }    public Identifier ItemId { get; set; }    public int Count { get; set; } = 1;    public string? Nbt { get; set; }}
+﻿using FTBQuests.Core.Model;
+
+namespace FTBQuests.Codecs.Model.Rewards
+{
+    public class ItemReward : RewardBase
+    {
+        public string? ItemId { get; set; }
+        public int Count { get; set; }
+
+        public ItemReward(string id) : base(id, RewardType.Item.ToString()) { }
+    }
+}
+
+
