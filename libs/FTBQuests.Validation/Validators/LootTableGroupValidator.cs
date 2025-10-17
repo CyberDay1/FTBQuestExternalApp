@@ -1,12 +1,12 @@
-using FTBQuests.Validation;
-using FTBQuests.Assets;
 // <copyright file="LootTableGroupValidator.cs" company="CyberDay1">
 // Copyright (c) CyberDay1. All rights reserved.
 // </copyright>
-
 using System;
 using System.Collections.Generic;
 using System.Linq;
+
+using FTBQuests.Assets;
+
 using FTBQuests.Loot;
 
 namespace FTBQuests.Validation.Validators;

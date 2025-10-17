@@ -1,5 +1,7 @@
-﻿using FTBQuests.Core.Model;
+using FTBQuests.Core.Model;
+
 using FTBQuests.Assets;
+
 namespace FTBQuests.Registry;
 
 /// <summary>
@@ -19,4 +21,3 @@ public sealed class QuestRegistry
         // Placeholder logic; Codex will populate actual registry entries
     }
 }
-

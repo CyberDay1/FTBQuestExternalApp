@@ -1,5 +1,5 @@
-﻿using FTBQuests.Core.Model;
 using FTBQuests.Core.Enums;
+using FTBQuests.Core.Model;
 
 namespace FTBQuests.Codecs.Model.Rewards
 {
@@ -8,8 +8,3 @@ namespace FTBQuests.Codecs.Model.Rewards
         FTBQuests.Core.Enums.RewardType Type { get; }
     }
 }
-
-
-
-
-

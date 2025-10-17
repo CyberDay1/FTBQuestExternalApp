@@ -1,4 +1,4 @@
-﻿namespace FTBQuests.Codecs.Enums;
+namespace FTBQuests.Codecs.Model.Enums;
 
 public enum RewardType
 {

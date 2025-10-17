@@ -1,10 +1,12 @@
-﻿using FTBQuests.Core.Model;
-using FTBQuests.Assets;
 // <copyright file="RegistryImporter.cs" company="CyberDay1">
 // Copyright (c) CyberDay1. All rights reserved.
 // </copyright>
-
 using System.Text.Json;
+
+using FTBQuests.Core.Model;
+
+using FTBQuests.Assets;
+
 using FTBQuests.Registry.Model;
 
 namespace FTBQuests.Registry;
@@ -160,4 +162,3 @@ public sealed class RegistryImporter
         return identifier[..separatorIndex];
     }
 }
-
