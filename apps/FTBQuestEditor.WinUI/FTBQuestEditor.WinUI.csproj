@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
@@ -9,14 +9,14 @@
     <EnableDefaultPageItems>false</EnableDefaultPageItems>
     <EnableMsixTooling>true</EnableMsixTooling>
     <ApplicationManifest>app.manifest</ApplicationManifest>
-  </PropertyGroup>
+  <NoWarn>8600,8601,8602,8618,8625</NoWarn></PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)' == 'Release' and '$(RuntimeIdentifier)' == 'win-x64'">
     <SelfContained>true</SelfContained>
     <PublishSingleFile>true</PublishSingleFile>
     <IncludeAllContentForSelfExtract>true</IncludeAllContentForSelfExtract>
     <PublishDir>$(SolutionDir)dist$(DirectorySeparatorChar)portable$(DirectorySeparatorChar)</PublishDir>
-  </PropertyGroup>
+  <NoWarn>8600,8601,8602,8618,8625</NoWarn></PropertyGroup>
 
   <ItemGroup>
     <Page Include="App.xaml" />

@@ -1,9 +1,9 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
     <OutputType>Library</OutputType>
     <ImplicitUsings>enable</ImplicitUsings>
-  </PropertyGroup>
+  <NoWarn>8600,8601,8602,8618,8625</NoWarn></PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../FTBQuests.Core/FTBQuests.Core.csproj" />
   </ItemGroup>
