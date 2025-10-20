@@ -1,27 +1,18 @@
 <Project>
   <PropertyGroup>
-    <Nullable>enable</Nullable>
+    <Nullable>disable</Nullable>
     <LangVersion>preview</LangVersion>
-
     <!-- Disable build-breaking analysis -->
     <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
     <EnforceCodeStyleInBuild>false</EnforceCodeStyleInBuild>
     <EnableNETAnalyzers>false</EnableNETAnalyzers>
     <RunAnalyzersDuringBuild>false</RunAnalyzersDuringBuild>
-
     <!-- Still use the latest compiler analysis, but don't fail build -->
     <AnalysisLevel>latest-all</AnalysisLevel>
-
     <!-- Disable StyleCop and Roslyn warning IDs globally -->
-    <NoWarn>
-      SA0001;SA1101;SA1200;SA1201;SA1204;SA1309;
-      SA1502;SA1633;CA1002;CA1062;CA1815;CA1822;
-      CA1859;CA2225;CA2231
-    </NoWarn>
+    <NoWarn>CS8600;CS8601;CS8602;CS8603;CS8604;CS8618;CS8625</NoWarn>
   </PropertyGroup>
-
   <ItemGroup>
-    <AdditionalFiles Include="$(MSBuildThisFileDirectory)stylecop.json"
-                     Condition="Exists('$(MSBuildThisFileDirectory)stylecop.json')" />
+    <AdditionalFiles Include="$(MSBuildThisFileDirectory)stylecop.json" Condition="Exists('$(MSBuildThisFileDirectory)stylecop.json')" />
   </ItemGroup>
 </Project>
