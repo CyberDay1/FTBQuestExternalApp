@@ -1,13 +1,15 @@
 plugins {
     application
-    id("org.openjfx.javafxplugin")
+    id("org.openjfx.javafxplugin") version "0.1.0"
 }
 
 application {
-    mainClass.set("com.ftbquests.app.Main")
+    mainClass.set("dev.ftbq.editor.MainApp")
 }
 
+val javafxVersion = project.findProperty("javafxVersion") as String
+
 javafx {
-    version = "21"
-    modules = listOf("javafx.controls")
+    version = javafxVersion
+    modules = listOf("javafx.controls", "javafx.fxml", "javafx.graphics")
 }

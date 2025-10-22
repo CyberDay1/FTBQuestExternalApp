@@ -1,19 +1,41 @@
 plugins {
-    `java-library` apply false
-    application apply false
-    id("org.openjfx.javafxplugin") version "0.0.14" apply false
+    java
+    id("org.openjfx.javafxplugin") version "0.1.0" apply false
+}
+
+java {
+    toolchain {
+        languageVersion.set(JavaLanguageVersion.of(21))
+    }
+}
+
+repositories {
+    mavenCentral()
 }
 
 subprojects {
+    apply(plugin = "java")
+
     repositories {
         mavenCentral()
     }
 
-    plugins.withType<JavaPlugin> {
-        extensions.configure<JavaPluginExtension> {
-            toolchain {
-                languageVersion.set(JavaLanguageVersion.of(21))
-            }
+    extensions.configure<JavaPluginExtension> {
+        toolchain {
+            languageVersion.set(JavaLanguageVersion.of(21))
         }
+    }
+
+    tasks.withType<JavaCompile> {
+        options.encoding = "UTF-8"
+    }
+
+    tasks.withType<Test> {
+        useJUnitPlatform()
+    }
+
+    val junitVersion: String by project
+    dependencies {
+        testImplementation("org.junit.jupiter:junit-jupiter:$junitVersion")
     }
 }
