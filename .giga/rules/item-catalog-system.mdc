@@ -1,5 +1,5 @@
 ---
-description: Technical specification for item catalog extraction, processing and version management system
+description: Handles extraction, processing and version management of Minecraft item catalogs and metadata
 ---
 
 
@@ -7,43 +7,33 @@ description: Technical specification for item catalog extraction, processing and
 
 The item catalog system consists of two main components:
 
-### ItemCatalogExtractor
-**Importance Score: 95**
-File: `ingestion/src/main/java/dev/ftbq/editor/ingest/ItemCatalogExtractor.java`
+## ItemCatalogExtractor (Importance: 95)
+`ingestion/src/main/java/dev/ftbq/editor/ingest/ItemCatalogExtractor.java`
 
-Core extraction engine that:
-- Scans JAR files to identify and extract item definitions
-- Parses language files to obtain item names and descriptions 
-- Processes item tag data to establish hierarchical relationships
-- Extracts texture/model data for item visualization
-- Associates metadata with corresponding items
+Core extraction engine that processes Minecraft JAR files to build comprehensive item catalogs:
+- Parses internal JAR assets to extract item definitions and metadata
+- Handles mod-specific item catalogs from mods.toml and fabric.mod.json
+- Associates display names, textures and mod origins with items
+- Builds unified item representations with complete metadata
 
-### VersionCatalog Implementation
-**Importance Score: 90**
-File: `services/src/main/java/dev/ftbq/editor/services/version/VersionCatalogImpl.java`
+## VersionCatalog Management (Importance: 85) 
+`core-domain/src/main/java/dev/ftbq/editor/domain/version/VersionCatalog.java`
+`services/src/main/java/dev/ftbq/editor/services/version/VersionCatalogImpl.java`
 
-Manages version-specific item catalogs:
-- Maintains separate catalogs for different Minecraft versions
-- Merges vanilla Minecraft catalogs with mod-specific catalogs
-- Provides version-aware item lookups and filtering
-- Handles catalog transitions between game versions
-- Maps item IDs across version boundaries
+Version-aware catalog management system:
+- Maintains separate catalogs per Minecraft version
+- Merges vanilla and modded item catalogs 
+- Provides unified item lookup across versions
+- Tracks item availability and compatibility
 
-### Supporting Components
+## ItemMeta Model (Importance: 75)
+`ingestion/src/main/java/dev/ftbq/editor/ingest/ItemMeta.java`
 
-**ItemCatalog**
-**Importance Score: 85**
-File: `ingestion/src/main/java/dev/ftbq/editor/ingest/ItemCatalog.java`
-- Stores extracted item definitions and metadata
-- Provides lookup and search capabilities
-- Manages relationships between items
-
-**IconCache**
-**Importance Score: 75**  
-File: `ingestion/src/main/java/dev/ftbq/editor/ingest/IconCache.java`
-- Caches extracted item textures and icons
-- Associates visual assets with catalog entries
-- Handles texture format conversion and scaling
+Domain model for item metadata:
+- Captures mod source and origin information
+- Stores display names and texture references
+- Links items to their containing mods
+- Maintains version compatibility data
 
 $END$
 

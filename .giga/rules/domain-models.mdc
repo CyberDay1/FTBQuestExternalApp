@@ -1,62 +1,56 @@
 ---
-description: Core domain model documentation for quest-based progression systems and reward structures
+description: Documents core domain models and relationships for quest-based game content management
 ---
 
 
 # domain-models
 
-## Core Domain Model Structure
+The domain model consists of several interconnected core entities:
 
-### Quest Model (85)
+### Quest Structure (Importance: 95)
 `core-domain/src/main/java/dev/ftbq/editor/domain/Quest.java`
-- Central entity representing completable player objectives
-- Contains collections of tasks and rewards
-- Manages dependency relationships between quests
-- Controls visibility settings and progression requirements
+- Central entity representing individual quests
+- Contains tasks, rewards, and dependencies
+- Links to parent Chapter and dependent Quests
+- Tracks visibility settings and completion requirements
 
-### Chapter Organization (80) 
+### Chapter Organization (Importance: 90) 
 `core-domain/src/main/java/dev/ftbq/editor/domain/Chapter.java`
-- Groups related quests into logical chapters
-- Defines chapter-level display properties including icons and backgrounds
-- Controls chapter visibility and access requirements
-- Manages chapter groups for hierarchical organization
+`core-domain/src/main/java/dev/ftbq/editor/domain/ChapterGroup.java`
+- Chapters group related quests together
+- ChapterGroups provide higher-level organization
+- Defines chapter-specific background settings and layouts
+- Manages quest positioning and visual arrangement
 
-### Task System (85)
+### Tasks and Rewards (Importance: 85)
 `core-domain/src/main/java/dev/ftbq/editor/domain/Task.java`
-- Base structure for quest completion criteria
-- Specialized implementations:
+`core-domain/src/main/java/dev/ftbq/editor/domain/Reward.java`
+- Task types:
   - ItemTask: Item collection/crafting requirements
   - LocationTask: Position-based objectives 
-  - AdvancementTask: Achievement-linked goals
+  - AdvancementTask: Achievement-based goals
+- Reward types:
+  - ItemReward: Gives specific items
+  - XpReward: Provides experience points
+  - CommandReward: Executes commands
+  - CustomReward: Extensible reward system
 
-### Reward Structure (80)
-`core-domain/src/main/java/dev/ftbq/editor/domain/Reward.java`
-- Core reward definition system
-- Implementations include:
-  - ItemReward: Physical item rewards
-  - XpReward: Experience point rewards
-  - CommandReward: Server command execution
-  - CustomReward: Extensible reward types
-
-### LootTable System (90)
+### Loot System (Importance: 80)
 `core-domain/src/main/java/dev/ftbq/editor/domain/LootTable.java`
-- Advanced reward distribution system
-- Composed of LootPools containing weighted entries
-- Supports conditions and modifiers through LootFunction
-- Handles randomized reward selection and quantity calculation
+`core-domain/src/main/java/dev/ftbq/editor/domain/LootPool.java`
+- LootTables define potential rewards
+- LootPools group related items with weights
+- LootEntries specify individual items/commands
+- Supports conditions and modifier functions
 
-### Reference Types (75)
-- ItemRef: Links to game items and blocks
-- IconRef: Quest and chapter icon definitions
-- TagRef: Minecraft tag system integration
-- BackgroundRef: UI texture references with alignment/repeat properties
-
-### Quest File Container (85)
-`core-domain/src/main/java/dev/ftbq/editor/domain/QuestFile.java`
-- Top-level structure containing all quest data
-- Manages chapter organization and grouping
-- Handles file-level properties and settings
-- Coordinates quest dependencies and progression flow
+### References and Dependencies (Importance: 75)
+`core-domain/src/main/java/dev/ftbq/editor/domain/ItemRef.java`
+`core-domain/src/main/java/dev/ftbq/editor/domain/IconRef.java`
+`core-domain/src/main/java/dev/ftbq/editor/domain/Dependency.java`
+- ItemRef: Links to game items/blocks
+- IconRef: Manages quest/chapter icons
+- Dependencies: Quest prerequisites and unlock conditions
+- TagRef: Groups similar items/blocks
 
 $END$
 

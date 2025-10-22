@@ -1,60 +1,42 @@
 ---
-description: Specification for JSON serialization/deserialization of quest data, loot tables, and related game content
+description: Handles JSON serialization/deserialization of quest data and loot tables, including custom object mapping configurations.
 ---
 
 
 # data-serialization
 
-## Quest File Serialization (85)
+## Quest File JSON Serialization (Importance Score: 85)
 `io-formats/src/main/java/dev/ftbq/editor/io/QuestFileJson.java`
+Handles serialization of the core quest data structures, including:
+- Chapter groups and individual chapters
+- Quest definitions with dependencies
+- Task and reward configurations
+- Background and visibility settings
 
-JSON serialization logic for the quest system's core data structures:
-- Chapter groups with nested chapters
-- Individual quests with rewards and dependencies
-- Task definitions and completion criteria
-- Icon and background texture references
-- Quest visibility rules and progression states
-
-## Loot Table Processing (80)
+## Loot Table Processing (Importance Score: 80)
 `io-formats/src/main/java/dev/ftbq/editor/io/LootTableJson.java`
+Manages JSON conversion for loot table structures:
+- Loot pools with weighted entries
+- Item conditions and function modifiers
+- Custom reward distributions
+- NBT data handling for special items
 
-Custom JSON handling for Minecraft-style loot tables:
-- Multi-pool loot configurations 
-- Entry weighting and probability calculations
-- Conditional drop rules
-- NBT data and item metadata preservation
-- Sorted loading by table identifier
-
-## Item Reference Data (75)
-`io-formats/src/main/java/dev/ftbq/editor/io/model/ItemRefData.java`
-
-Specialized serialization for item references:
-- Registry name mapping
-- NBT tag compound data
-- Count and damage values
-- Custom display names
-- Item variant handling
-
-## JSON Configuration (70)
+## JSON Configuration Management (Importance Score: 75)
 `io-formats/src/main/java/dev/ftbq/editor/io/JsonConfig.java`
+Provides specialized object mapper configurations for:
+- Custom type handlers for domain-specific objects
+- Quest-specific serialization rules
+- Version-aware deserialization
+- Resource reference resolution
 
-Global JSON serialization configuration:
-- Custom ObjectMapper settings
-- Type adapters for domain objects
-- Version-specific serialization rules
-- Default value handling
-- Pretty printing options
-
-## Import/Export Pipeline (85)
+## Import/Export Workflows (Importance Score: 70)
 `io-formats/src/main/java/dev/ftbq/editor/io/exporter/Exporter.java`
 `io-formats/src/main/java/dev/ftbq/editor/io/importer/Importer.java`
-
-Bidirectional data transformation pipeline:
-- Quest pack format validation
-- Resource reference resolution
-- Version compatibility checks
-- Batch import/export operations
-- Error recovery and partial imports
+Implements bidirectional conversion between:
+- Internal domain models
+- FTB Quest file format
+- Custom item reference handling
+- Metadata preservation during transforms
 
 $END$
 

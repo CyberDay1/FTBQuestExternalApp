@@ -13,55 +13,46 @@
 - Explain your OBSERVATIONS clearly, then provide REASONING to identify the exact issue. Add console logs when needed to gather more information.
 
 
-### Quest Management System
-The system organizes game quests through a hierarchical structure:
+The project implements a quest management and item catalog system with five core business components:
 
-- **Quest Files** (Importance: 95)
-  Core data structure managing the complete quest hierarchy
-  `core-domain/src/main/java/dev/ftbq/editor/domain/QuestFile.java`
+1. **Item Catalog Management System**
+   - Item metadata extraction from Minecraft JAR files including mod assets
+   - Version-specific catalog merging for vanilla and modded items
+   - Icon caching and resource management
+   - Importance Score: 85
+   - Key File: `ingestion/src/main/java/dev/ftbq/editor/ingest/ItemCatalogExtractor.java`
 
-- **Chapter Groups** (Importance: 85)
-  Logical groupings of related chapters
-  `core-domain/src/main/java/dev/ftbq/editor/domain/ChapterGroup.java`
+2. **Quest Domain Model**
+   - Chapter and quest group hierarchies 
+   - Task and reward definitions
+   - Quest dependencies and progression tracking
+   - Background customization and visibility rules
+   - Importance Score: 90
+   - Key Files:
+     - `core-domain/src/main/java/dev/ftbq/editor/domain/Quest.java`
+     - `core-domain/src/main/java/dev/ftbq/editor/domain/Chapter.java`
 
-- **Chapters** (Importance: 85)
-  Collections of related quests with shared display properties
-  `core-domain/src/main/java/dev/ftbq/editor/domain/Chapter.java`
+3. **Loot Table System**
+   - Structured loot pool management
+   - Condition and function application
+   - Weight-based distribution rules
+   - Importance Score: 75
+   - Key File: `core-domain/src/main/java/dev/ftbq/editor/domain/LootTable.java`
 
-### Item Catalog System
-Manages game item definitions and metadata:
+4. **Version Catalog Management**
+   - Version-specific item compatibility
+   - Mod integration handling
+   - Unified catalog views across versions
+   - Importance Score: 80
+   - Key File: `core-domain/src/main/java/dev/ftbq/editor/domain/version/VersionCatalog.java`
 
-- **Catalog Extraction** (Importance: 90)
-  Extracts item definitions from game files
-  `ingestion/src/main/java/dev/ftbq/editor/ingest/ItemCatalogExtractor.java`
-
-- **Version Management** (Importance: 85)
-  Handles version-specific item catalogs
-  `services/src/main/java/dev/ftbq/editor/services/version/VersionCatalogImpl.java`
-
-### Reward System
-Manages quest rewards and completion criteria:
-
-- **Loot Tables** (Importance: 85)
-  Defines possible rewards and their probabilities
-  `io-formats/src/main/java/dev/ftbq/editor/io/LootTableJson.java`
-
-- **Reward Types** (Importance: 80)
-  - Item Rewards: Physical item grants
-  - XP Rewards: Experience point grants
-  - Command Rewards: Server command execution
-  - Custom Rewards: Extensible reward system
-
-### Asset Management
-Handles visual resources for quests:
-
-- **Icon References** (Importance: 75)
-  Manages quest and chapter icons
-  `core-domain/src/main/java/dev/ftbq/editor/domain/IconRef.java`
-
-- **Background Management** (Importance: 70)
-  Controls chapter background displays
-  `core-domain/src/main/java/dev/ftbq/editor/domain/BackgroundRef.java`
+5. **Validation Framework**
+   - Reference integrity checking
+   - Loot weight validation
+   - Required field verification
+   - Custom validation rule support
+   - Importance Score: 65
+   - Key File: `core-domain/src/main/java/dev/ftbq/editor/validation/Validator.java`
 
 $END$
 
