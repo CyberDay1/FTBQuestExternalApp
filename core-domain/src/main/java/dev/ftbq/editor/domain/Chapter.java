@@ -32,7 +32,7 @@ public record Chapter(String id,
         private String id;
         private String title;
         private IconRef icon = new IconRef("minecraft:book");
-        private BackgroundRef background = new BackgroundRef("minecraft:textures/gui/default.png", Optional.empty(), Optional.empty());
+        private BackgroundRef background = new BackgroundRef("minecraft:textures/gui/default.png");
         private final List<Quest> quests = new ArrayList<>();
         private Visibility visibility = Visibility.VISIBLE;
 

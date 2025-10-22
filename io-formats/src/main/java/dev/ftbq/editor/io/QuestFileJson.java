@@ -254,27 +254,32 @@ public final class QuestFileJson {
         }
     }
 
-    private record IconRefData(@JsonProperty("icon") String icon) {
+    private record IconRefData(@JsonProperty("icon") String icon,
+                               @JsonProperty("relative_path") @JsonInclude(JsonInclude.Include.NON_EMPTY) Optional<String> relativePath) {
 
         private static IconRefData fromDomain(IconRef icon) {
-            return new IconRefData(icon.icon());
+            return new IconRefData(icon.icon(), icon.relativePath());
         }
 
         private IconRef toDomain() {
-            return new IconRef(icon);
+            return new IconRef(icon, relativePath == null ? Optional.empty() : relativePath);
         }
     }
 
     private record BackgroundRefData(@JsonProperty("texture") String texture,
+                                     @JsonProperty("relative_path") @JsonInclude(JsonInclude.Include.NON_EMPTY) Optional<String> relativePath,
                                      @JsonProperty("alignment") @JsonInclude(JsonInclude.Include.NON_EMPTY) Optional<BackgroundAlignment> alignment,
                                      @JsonProperty("repeat") @JsonInclude(JsonInclude.Include.NON_EMPTY) Optional<BackgroundRepeat> repeat) {
 
         private static BackgroundRefData fromDomain(BackgroundRef background) {
-            return new BackgroundRefData(background.texture(), background.alignment(), background.repeat());
+            return new BackgroundRefData(background.texture(), background.relativePath(), background.alignment(), background.repeat());
         }
 
         private BackgroundRef toDomain() {
-            return new BackgroundRef(texture, alignment == null ? Optional.empty() : alignment, repeat == null ? Optional.empty() : repeat);
+            return new BackgroundRef(texture,
+                    relativePath == null ? Optional.empty() : relativePath,
+                    alignment == null ? Optional.empty() : alignment,
+                    repeat == null ? Optional.empty() : repeat);
         }
     }
 }
