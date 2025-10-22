@@ -10,13 +10,15 @@ import java.util.Objects;
 public record QuestFile(String id,
                         String title,
                         List<ChapterGroup> chapterGroups,
-                        List<Chapter> chapters) {
+                        List<Chapter> chapters,
+                        List<LootTable> lootTables) {
 
     public QuestFile {
         Objects.requireNonNull(id, "id");
         Objects.requireNonNull(title, "title");
         chapterGroups = List.copyOf(Objects.requireNonNull(chapterGroups, "chapterGroups"));
         chapters = List.copyOf(Objects.requireNonNull(chapters, "chapters"));
+        lootTables = List.copyOf(Objects.requireNonNull(lootTables, "lootTables"));
     }
 
     public static Builder builder() {
@@ -28,6 +30,7 @@ public record QuestFile(String id,
         private String title;
         private final List<ChapterGroup> chapterGroups = new ArrayList<>();
         private final List<Chapter> chapters = new ArrayList<>();
+        private final List<LootTable> lootTables = new ArrayList<>();
 
         public Builder id(String id) {
             this.id = id;
@@ -61,8 +64,19 @@ public record QuestFile(String id,
             return this;
         }
 
+        public Builder addLootTable(LootTable lootTable) {
+            this.lootTables.add(Objects.requireNonNull(lootTable, "lootTable"));
+            return this;
+        }
+
+        public Builder lootTables(List<LootTable> lootTables) {
+            this.lootTables.clear();
+            this.lootTables.addAll(Objects.requireNonNull(lootTables, "lootTables"));
+            return this;
+        }
+
         public QuestFile build() {
-            return new QuestFile(id, title, chapterGroups, chapters);
+            return new QuestFile(id, title, chapterGroups, chapters, lootTables);
         }
     }
 }
