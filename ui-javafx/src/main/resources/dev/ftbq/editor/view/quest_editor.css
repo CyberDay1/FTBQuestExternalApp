@@ -1,0 +1,22 @@
+.root {
+    -fx-font-family: "Segoe UI", "Open Sans", sans-serif;
+}
+
+.quest-editor-header {
+    -fx-font-size: 20px;
+    -fx-font-weight: bold;
+    -fx-padding: 0 0 12 0;
+}
+
+.list-view {
+    -fx-border-color: #d0d0d0;
+    -fx-border-radius: 4px;
+}
+
+.text-field, .text-area {
+    -fx-border-radius: 4px;
+}
+
+.button {
+    -fx-padding: 6 18 6 18;
+}
