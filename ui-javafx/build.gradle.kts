@@ -13,3 +13,7 @@ javafx {
     version = javafxVersion
     modules = listOf("javafx.controls", "javafx.fxml", "javafx.graphics")
 }
+
+dependencies {
+    implementation(project(":datastore"))
+}
