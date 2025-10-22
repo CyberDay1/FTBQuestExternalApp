@@ -1,6 +1,7 @@
 package dev.ftbq.editor.store;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertIterableEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.nio.file.Path;
@@ -36,7 +37,9 @@ class StoreDaoTest {
             StoreDao dao = new StoreDao(connection);
             dao.upsertItem(item);
             assertEquals(Optional.of(item), dao.findItemById(item.id()));
-            assertEquals(List.of(item), dao.listItems());
+            assertEquals(
+                    List.of(item),
+                    dao.listItems(null, List.of(), null, null, null, StoreDao.SortMode.NAME, Integer.MAX_VALUE, 0));
 
             StoreDao.LootTableEntity lootTable = new StoreDao.LootTableEntity("chests/spawn_bonus_chest", "{\"pools\":[]}");
             dao.upsertLootTable(lootTable);
@@ -50,9 +53,99 @@ class StoreDaoTest {
         try (Connection connection = Jdbc.open(databasePath)) {
             StoreDao dao = new StoreDao(connection);
             assertTrue(dao.findItemById("minecraft:stone").isPresent());
-            assertEquals(1, dao.listItems().size());
+            assertEquals(
+                    1,
+                    dao.listItems(null, List.of(), null, null, null, StoreDao.SortMode.NAME, Integer.MAX_VALUE, 0)
+                            .size());
             assertEquals(1, dao.listLootTables().size());
             assertEquals(Optional.of("dark"), dao.getSetting("theme"));
+        }
+    }
+
+    @Test
+    void listItemsSupportsFilteringSortingAndPagination() throws Exception {
+        try (Connection connection = Jdbc.openInMemory()) {
+            StoreDao dao = new StoreDao(connection);
+            StoreDao.ItemEntity apple = new StoreDao.ItemEntity(
+                    "minecraft:apple",
+                    "Apple",
+                    true,
+                    "minecraft",
+                    "Minecraft",
+                    "[\"food\",\"fruit\"]",
+                    null,
+                    null,
+                    null,
+                    "1.20.1",
+                    "item");
+            StoreDao.ItemEntity berry = new StoreDao.ItemEntity(
+                    "mod:berry",
+                    "Sweet Berry",
+                    false,
+                    "modid",
+                    "Modded Foods",
+                    "[\"food\",\"berry\"]",
+                    null,
+                    null,
+                    null,
+                    "1.20.1",
+                    "item");
+            StoreDao.ItemEntity block = new StoreDao.ItemEntity(
+                    "mod:block",
+                    "Fancy Block",
+                    false,
+                    "buildingmod",
+                    "Building Blocks",
+                    "[\"building\"]",
+                    null,
+                    null,
+                    null,
+                    "1.18",
+                    "block");
+
+            dao.upsertItem(apple);
+            dao.upsertItem(berry);
+            dao.upsertItem(block);
+
+            assertEquals(
+                    List.of(apple),
+                    dao.listItems("apple", List.of(), null, null, null, StoreDao.SortMode.NAME, Integer.MAX_VALUE, 0));
+
+            assertEquals(
+                    List.of(apple, berry),
+                    dao.listItems(
+                            null,
+                            List.of("food"),
+                            null,
+                            null,
+                            "item",
+                            StoreDao.SortMode.NAME,
+                            Integer.MAX_VALUE,
+                            0));
+
+            assertEquals(
+                    List.of(berry),
+                    dao.listItems(
+                            null,
+                            List.of("berry"),
+                            "Modded Foods",
+                            "1.20.1",
+                            "item",
+                            StoreDao.SortMode.NAME,
+                            Integer.MAX_VALUE,
+                            0));
+
+            assertEquals(
+                    List.of(block, apple, berry),
+                    dao.listItems(null, List.of(), null, null, null, StoreDao.SortMode.MOD, Integer.MAX_VALUE, 0));
+
+            assertEquals(
+                    List.of(apple, block),
+                    dao.listItems(null, List.of(), null, null, null, StoreDao.SortMode.VANILLA_FIRST, 2, 0));
+
+            assertIterableEquals(
+                    List.of(block),
+                    dao.listItems(null, List.of(), null, null, null, StoreDao.SortMode.VANILLA_FIRST, 1, 1));
         }
     }
 }

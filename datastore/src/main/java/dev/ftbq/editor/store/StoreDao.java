@@ -7,6 +7,7 @@ import java.sql.SQLException;
 import java.sql.Types;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
 
 public final class StoreDao {
@@ -63,12 +64,86 @@ public final class StoreDao {
         }
     }
 
-    public List<ItemEntity> listItems() {
-        try (PreparedStatement statement = connection.prepareStatement("""
+    public List<ItemEntity> listItems(
+            String filterText,
+            List<String> tagFilters,
+            String modFilter,
+            String version,
+            String kind,
+            SortMode sortMode,
+            int limit,
+            int offset) {
+        StringBuilder sql = new StringBuilder("""
                 SELECT id, display_name, is_vanilla, mod_id, mod_name, tags, texture_path, icon_hash, source_jar, version, kind
                 FROM items
-                ORDER BY id
-                """)) {
+                """);
+
+        List<String> conditions = new ArrayList<>();
+        List<Object> parameters = new ArrayList<>();
+
+        if (filterText != null && !filterText.isBlank()) {
+            String normalized = "%" + filterText.toLowerCase(Locale.ROOT) + "%";
+            conditions.add("(LOWER(COALESCE(display_name, '')) LIKE ? OR LOWER(id) LIKE ?)");
+            parameters.add(normalized);
+            parameters.add(normalized);
+        }
+
+        if (tagFilters != null) {
+            for (String tag : tagFilters) {
+                if (tag == null || tag.isBlank()) {
+                    continue;
+                }
+                conditions.add("(tags IS NOT NULL AND LOWER(tags) LIKE ?)");
+                parameters.add("%\"" + tag.toLowerCase(Locale.ROOT) + "\"%");
+            }
+        }
+
+        if (modFilter != null && !modFilter.isBlank()) {
+            String normalizedMod = modFilter.toLowerCase(Locale.ROOT);
+            conditions.add("(LOWER(COALESCE(mod_id, '')) = ? OR LOWER(COALESCE(mod_name, '')) = ?)");
+            parameters.add(normalizedMod);
+            parameters.add(normalizedMod);
+        }
+
+        if (version != null && !version.isBlank()) {
+            conditions.add("version = ?");
+            parameters.add(version);
+        }
+
+        if (kind != null && !kind.isBlank()) {
+            conditions.add("kind = ?");
+            parameters.add(kind);
+        }
+
+        if (!conditions.isEmpty()) {
+            sql.append(" WHERE ");
+            sql.append(String.join(" AND ", conditions));
+        }
+
+        sql.append(" ORDER BY ");
+        SortMode effectiveSortMode = sortMode == null ? SortMode.NAME : sortMode;
+        switch (effectiveSortMode) {
+            case MOD -> sql.append("LOWER(COALESCE(mod_name, mod_id, '')) ASC, LOWER(COALESCE(display_name, id)) ASC, id ASC");
+            case VANILLA_FIRST -> sql.append("is_vanilla DESC, LOWER(COALESCE(display_name, id)) ASC, id ASC");
+            case NAME -> sql.append("LOWER(COALESCE(display_name, id)) ASC, id ASC");
+        }
+
+        sql.append(" LIMIT ? OFFSET ?");
+        parameters.add(limit);
+        parameters.add(offset);
+
+        try (PreparedStatement statement = connection.prepareStatement(sql.toString())) {
+            int index = 1;
+            for (Object parameter : parameters) {
+                if (parameter instanceof String value) {
+                    statement.setString(index++, value);
+                } else if (parameter instanceof Integer value) {
+                    statement.setInt(index++, value);
+                } else {
+                    throw new IllegalStateException("Unsupported parameter type: " + parameter.getClass());
+                }
+            }
+
             try (ResultSet resultSet = statement.executeQuery()) {
                 List<ItemEntity> items = new ArrayList<>();
                 while (resultSet.next()) {
@@ -211,5 +286,11 @@ public final class StoreDao {
     }
 
     public record LootTableEntity(String name, String data) {
+    }
+
+    public enum SortMode {
+        NAME,
+        MOD,
+        VANILLA_FIRST
     }
 }
