@@ -1,8 +1,0 @@
-bin/
-obj/
-*.jar
-*.png
-*.exe
-*.dll
-/.cache
-/assets-cache

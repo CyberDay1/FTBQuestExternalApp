@@ -1,8 +1,0 @@
-<Project>
-  <PropertyGroup>
-    <Nullable>disable</Nullable>
-    <WarningsAsErrors>false</WarningsAsErrors>
-    <LangVersion>preview</LangVersion>
-    <NoWarn>CS8618;CS8625</NoWarn>
-  </PropertyGroup>
-</Project>
