@@ -8,7 +8,10 @@ import dev.ftbq.editor.domain.Task;
 import dev.ftbq.editor.domain.Visibility;
 import dev.ftbq.editor.services.CommandBus;
 import dev.ftbq.editor.viewmodel.QuestEditorViewModel;
+import dev.ftbq.editor.controller.ItemBrowserController;
 import javafx.fxml.FXML;
+import javafx.fxml.FXMLLoader;
+import javafx.scene.Parent;
 import javafx.scene.control.Button;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
@@ -17,7 +20,11 @@ import javafx.scene.control.TextField;
 import javafx.scene.control.Tooltip;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.BorderPane;
+import javafx.scene.Scene;
+import javafx.stage.Modality;
+import javafx.stage.Stage;
 
+import java.io.IOException;
 import java.util.Objects;
 
 public class QuestEditorController {
@@ -183,6 +190,28 @@ public class QuestEditorController {
     }
 
     void openItemBrowser() {
-        /* will open item browser dialog implemented in 06-05 */
+        try {
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/dev/ftbq/editor/view/item_browser.fxml"));
+            Parent root = loader.load();
+            ItemBrowserController controller = loader.getController();
+            controller.setOnItemSelected(entity -> {
+                if (entity != null) {
+                    IconRef selectedIcon = new IconRef(entity.id());
+                    viewModel.iconProperty().set(selectedIcon);
+                }
+            });
+
+            Stage stage = new Stage();
+            stage.setTitle("Item Browser");
+            stage.setScene(new Scene(root));
+            if (rootPane != null && rootPane.getScene() != null) {
+                stage.initOwner(rootPane.getScene().getWindow());
+                stage.initModality(Modality.WINDOW_MODAL);
+            }
+            stage.setOnHidden(event -> controller.dispose());
+            stage.show();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 }
