@@ -1,34 +1,32 @@
 package dev.ftbq.editor;
 
+import dev.ftbq.editor.viewmodel.ChapterGroupBrowserViewModel;
+import dev.ftbq.editor.view.ChapterGroupBrowserController;
 import javafx.application.Application;
+import javafx.fxml.FXMLLoader;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
 
+import java.io.IOException;
+
 public class MainApp extends Application {
-    private static final String APPLICATION_TITLE = "FTB Quests Editor";
-
-    private final WindowSettings windowSettings = new WindowSettings();
-
     @Override
-    public void start(Stage primaryStage) {
-        NavigationPane navigationPane = new NavigationPane();
-        Scene scene = new Scene(navigationPane);
+    public void start(Stage primaryStage) throws IOException {
+        FXMLLoader loader = new FXMLLoader(getClass().getResource("/dev/ftbq/editor/view/chapter_group_browser.fxml"));
+        Scene scene = new Scene(loader.load());
 
-        primaryStage.setTitle(APPLICATION_TITLE);
+        ChapterGroupBrowserController controller = loader.getController();
+        ChapterGroupBrowserViewModel viewModel = new ChapterGroupBrowserViewModel();
+        controller.setViewModel(viewModel);
+
+        primaryStage.setTitle("FTB Quest Chapter Browser");
         primaryStage.setScene(scene);
-
-        windowSettings.apply(primaryStage);
-        windowSettings.observe(primaryStage);
-
+        primaryStage.setWidth(420);
+        primaryStage.setHeight(600);
         primaryStage.show();
     }
 
     public static void main(String[] args) {
-        try {
-            dev.ftbq.editor.store.Database.init();
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
         launch(args);
     }
 }

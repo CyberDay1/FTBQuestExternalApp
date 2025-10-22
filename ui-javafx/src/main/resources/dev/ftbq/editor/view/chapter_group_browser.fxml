@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.control.TreeView?>
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.VBox?>
+
+<BorderPane xmlns="http://javafx.com/javafx" xmlns:fx="http://javafx.com/fxml"
+            fx:controller="dev.ftbq.editor.view.ChapterGroupBrowserController">
+    <top>
+        <VBox spacing="8.0" BorderPane.alignment="CENTER">
+            <padding>
+                <Insets top="12" right="12" bottom="12" left="12" />
+            </padding>
+            <Label text="Chapter Groups" />
+            <TextField fx:id="searchField" promptText="Search groups or chapters" />
+        </VBox>
+    </top>
+    <center>
+        <TreeView fx:id="chapterTree" showRoot="false">
+            <padding>
+                <Insets top="0" right="12" bottom="12" left="12" />
+            </padding>
+        </TreeView>
+    </center>
+</BorderPane>
