@@ -12,6 +12,10 @@ CREATE TABLE IF NOT EXISTS items (
     kind TEXT
 );
 
+CREATE INDEX IF NOT EXISTS idx_items_display_name ON items(display_name);
+CREATE INDEX IF NOT EXISTS idx_items_mod_id ON items(mod_id);
+CREATE INDEX IF NOT EXISTS idx_items_version ON items(version);
+
 CREATE TABLE IF NOT EXISTS loot_tables (
     name TEXT PRIMARY KEY,
     data TEXT
