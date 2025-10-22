@@ -1,0 +1,22 @@
+[
+  {
+    "fileName": "main-overview.mdc",
+    "description": "Complete system overview with architecture, key components, and high-level data flow between the core modules (io-formats, ingestion, core-domain, datastore, services)"
+  },
+  {
+    "fileName": "domain-models.mdc",
+    "description": "Comprehensive documentation of the core domain models including Quest, Chapter, Task, Reward, LootTable structures and their relationships within the core-domain module"
+  },
+  {
+    "fileName": "item-catalog-system.mdc",
+    "description": "Detailed documentation of the item catalog extraction, processing and version management system, including the ItemCatalogExtractor algorithm and VersionCatalog implementation"
+  },
+  {
+    "fileName": "data-serialization.mdc",
+    "description": "Documentation of the JSON serialization/deserialization workflows, custom ObjectMapper configurations, and data format specifications for quest files and loot tables"
+  },
+  {
+    "fileName": "validation-framework.mdc",
+    "description": "Documentation of the validation framework including BrokenReferenceValidator, LootWeightsValidator, and RequiredFieldsValidator implementations and their integration points"
+  }
+]
