@@ -18,6 +18,7 @@ import java.util.Objects;
  */
 public class VersionCatalogImpl implements VersionCatalog {
     private final Map<MinecraftVersion, ItemCatalog> vanillaCatalogs;
+    private final Map<MinecraftVersion, Snapshot> mergedSnapshots;
     private MinecraftVersion activeVersion;
 
     public VersionCatalogImpl(Map<MinecraftVersion, ItemCatalog> vanillaCatalogs, MinecraftVersion defaultVersion) {
@@ -29,6 +30,7 @@ public class VersionCatalogImpl implements VersionCatalog {
         EnumMap<MinecraftVersion, ItemCatalog> copy = new EnumMap<>(MinecraftVersion.class);
         copy.putAll(vanillaCatalogs);
         this.vanillaCatalogs = Collections.unmodifiableMap(copy);
+        this.mergedSnapshots = new EnumMap<>(MinecraftVersion.class);
 
         MinecraftVersion versionToUse = defaultVersion;
         if (versionToUse == null) {
@@ -56,7 +58,11 @@ public class VersionCatalogImpl implements VersionCatalog {
         if (!vanillaCatalogs.containsKey(version)) {
             throw new IllegalArgumentException("No vanilla catalog available for version " + version);
         }
+        if (version == activeVersion) {
+            return;
+        }
         activeVersion = version;
+        invalidateSnapshots();
     }
 
     @Override
@@ -70,21 +76,50 @@ public class VersionCatalogImpl implements VersionCatalog {
 
     @Override
     public ItemCatalog mergeWithMods(List<ItemCatalog> modCatalogs) {
-        List<ItemCatalog> catalogsToMerge = new ArrayList<>();
+        List<ItemCatalog> sanitizedMods = sanitize(modCatalogs);
+        MinecraftVersion version = getActiveVersion();
+        Snapshot cached = mergedSnapshots.get(version);
+        if (cached != null && cached.matches(sanitizedMods)) {
+            return cached.catalog();
+        }
+
+        List<ItemCatalog> catalogsToMerge = new ArrayList<>(1 + sanitizedMods.size());
         catalogsToMerge.add(getVanillaItems());
-        if (modCatalogs != null) {
-            for (ItemCatalog catalog : modCatalogs) {
-                if (catalog != null) {
-                    catalogsToMerge.add(catalog);
-                }
+        catalogsToMerge.addAll(sanitizedMods);
+
+        ItemCatalog merged;
+        if (catalogsToMerge.size() == 1) {
+            merged = catalogsToMerge.get(0);
+        } else {
+            merged = new CombinedItemCatalog(catalogsToMerge);
+        }
+
+        mergedSnapshots.put(version, new Snapshot(sanitizedMods, merged));
+        return merged;
+    }
+
+    /**
+     * Clears all cached merged snapshots. Should be invoked when mod jars are rescanned
+     * to ensure fresh catalog data is produced on the next merge operation.
+     */
+    public void invalidateSnapshots() {
+        mergedSnapshots.clear();
+    }
+
+    private static List<ItemCatalog> sanitize(List<ItemCatalog> modCatalogs) {
+        if (modCatalogs == null || modCatalogs.isEmpty()) {
+            return List.of();
+        }
+        List<ItemCatalog> sanitized = new ArrayList<>(modCatalogs.size());
+        for (ItemCatalog catalog : modCatalogs) {
+            if (catalog != null) {
+                sanitized.add(catalog);
             }
         }
-
-        if (catalogsToMerge.size() == 1) {
-            return catalogsToMerge.get(0);
+        if (sanitized.isEmpty()) {
+            return List.of();
         }
-
-        return new CombinedItemCatalog(catalogsToMerge);
+        return List.copyOf(sanitized);
     }
 
     private static final class CombinedItemCatalog implements ItemCatalog {
@@ -109,6 +144,17 @@ public class VersionCatalogImpl implements VersionCatalog {
         @Override
         public Collection<ItemRef> items() {
             return items;
+        }
+    }
+
+    private record Snapshot(List<ItemCatalog> modCatalogs, ItemCatalog catalog) {
+        Snapshot {
+            Objects.requireNonNull(modCatalogs, "modCatalogs");
+            Objects.requireNonNull(catalog, "catalog");
+        }
+
+        boolean matches(List<ItemCatalog> otherModCatalogs) {
+            return modCatalogs.equals(otherModCatalogs);
         }
     }
 }
