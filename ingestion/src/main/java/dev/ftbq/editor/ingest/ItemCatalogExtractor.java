@@ -7,6 +7,8 @@ import dev.ftbq.editor.resources.ResourceId;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
 import java.nio.file.Path;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -26,6 +28,7 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
+import java.nio.charset.StandardCharsets;
 
 /**
  * Utilities for extracting {@link ItemCatalog} instances from scanned JAR files.
@@ -57,9 +60,11 @@ public final class ItemCatalogExtractor {
 
         Map<String, ItemMeta> items = new LinkedHashMap<>();
         Map<String, Set<String>> tags = new TreeMap<>();
-        Map<ResourceId, ModelDefinition> models = new LinkedHashMap<>();
+        final Map<String, ModMetadata> modMetadata = new LinkedHashMap<>();
 
         try (ZipFile zipFile = new ZipFile(jar.toFile())) {
+            modMetadata.putAll(extractModMetadata(zipFile));
+
             Enumeration<? extends ZipEntry> entries = zipFile.entries();
             while (entries.hasMoreElements()) {
                 ZipEntry entry = entries.nextElement();
@@ -76,7 +81,7 @@ public final class ItemCatalogExtractor {
                     try (InputStream input = zipFile.getInputStream(entry)) {
                         Map<String, String> translations = MAPPER.readValue(input, STRING_MAP);
                         translations.forEach((key, value) ->
-                                parseLangEntry(namespace, key, value, isVanilla).ifPresent(meta ->
+                                parseLangEntry(namespace, key, value, isVanilla, modMetadata).ifPresent(meta ->
                                         items.putIfAbsent(meta.id(), meta)));
                     }
                 } else if (name.startsWith("data/") && name.contains("/tags/items/") && name.endsWith(".json")) {
@@ -110,10 +115,10 @@ public final class ItemCatalogExtractor {
                 }
             }
 
-            for (Set<String> values : tags.values()) {
-                for (String value : values) {
-                    items.computeIfAbsent(value, id -> createPlaceholderItem(id, isVanilla));
-                }
+        // Ensure all items referenced by tags exist in the item list.
+        for (Set<String> values : tags.values()) {
+            for (String value : values) {
+                items.computeIfAbsent(value, id -> createPlaceholderItem(id, isVanilla, modMetadata));
             }
 
             Path iconCacheDirectory = ensureIconCacheDirectory();
@@ -139,7 +144,8 @@ public final class ItemCatalogExtractor {
         return path.substring(start, slash);
     }
 
-    private static Optional<ItemMeta> parseLangEntry(String namespaceFromPath, String key, String value, boolean isVanilla) {
+    private static Optional<ItemMeta> parseLangEntry(String namespaceFromPath, String key, String value, boolean isVanilla,
+            Map<String, ModMetadata> modMetadata) {
         if (key == null || value == null) {
             return Optional.empty();
         }
@@ -160,6 +166,7 @@ public final class ItemCatalogExtractor {
             return Optional.empty();
         }
         String id = namespace + ":" + itemName;
+        ModMetadata metadata = modMetadata.get(namespace);
         return Optional.of(new ItemMeta(
                 id,
                 value,
@@ -168,15 +175,17 @@ public final class ItemCatalogExtractor {
                 isVanilla,
                 null,
                 null,
-                namespace,
-                null
+                metadata != null ? metadata.modId() : namespace,
+                metadata != null ? metadata.name() : null,
+                metadata != null ? metadata.version() : null
         ));
     }
 
-    private static ItemMeta createPlaceholderItem(String id, boolean isVanilla) {
+    private static ItemMeta createPlaceholderItem(String id, boolean isVanilla, Map<String, ModMetadata> modMetadata) {
         int colon = id.indexOf(':');
         String namespace = colon > 0 ? id.substring(0, colon) : "minecraft";
         String itemName = colon > 0 ? id.substring(colon + 1) : id;
+        ModMetadata metadata = modMetadata.get(namespace);
         return new ItemMeta(
                 namespace + ":" + itemName,
                 id,
@@ -185,8 +194,9 @@ public final class ItemCatalogExtractor {
                 isVanilla,
                 null,
                 null,
-                namespace,
-                null
+                metadata != null ? metadata.modId() : namespace,
+                metadata != null ? metadata.name() : null,
+                metadata != null ? metadata.version() : null
         );
     }
 
@@ -217,238 +227,122 @@ public final class ItemCatalogExtractor {
         return namespace + ":" + tagPath;
     }
 
-    private static Path ensureIconCacheDirectory() throws IOException {
-        Path directory = Path.of("cache", "icons");
-        Files.createDirectories(directory);
-        return directory;
-    }
-
-    private static void parseModelEntry(ZipFile zipFile, ZipEntry entry, Map<ResourceId, ModelDefinition> models) throws IOException {
-        String namespace = extractNamespace(entry.getName(), "assets/");
-        if (namespace.isEmpty()) {
-            return;
-        }
-        int modelsIndex = entry.getName().indexOf("/models/");
-        if (modelsIndex < 0) {
-            return;
-        }
-        int relativeStart = modelsIndex + "/models/".length();
-        String relativePath = entry.getName().substring(relativeStart, entry.getName().length() - ".json".length());
-        ResourceId modelId = new ResourceId(namespace, relativePath);
-        try (InputStream input = zipFile.getInputStream(entry)) {
-            JsonNode root = MAPPER.readTree(input);
-            ResourceId parent = null;
-            JsonNode parentNode = root.get("parent");
-            if (parentNode != null && parentNode.isTextual()) {
-                String value = parentNode.asText();
-                if (!value.isBlank()) {
-                    parent = ResourceId.fromString(value, namespace);
+    private static Map<String, ModMetadata> extractModMetadata(ZipFile zipFile) throws IOException {
+        Map<String, ModMetadata> metadata = new LinkedHashMap<>();
+        Enumeration<? extends ZipEntry> entries = zipFile.entries();
+        while (entries.hasMoreElements()) {
+            ZipEntry entry = entries.nextElement();
+            if (entry.isDirectory()) {
+                continue;
+            }
+            String name = entry.getName();
+            if ("META-INF/mods.toml".equals(name)) {
+                try (InputStream input = zipFile.getInputStream(entry)) {
+                    parseModsToml(input).forEach(mod -> metadata.putIfAbsent(mod.modId(), mod));
+                }
+            } else if (name.endsWith("fabric.mod.json")) {
+                try (InputStream input = zipFile.getInputStream(entry)) {
+                    parseFabricModJson(input).forEach(mod -> metadata.putIfAbsent(mod.modId(), mod));
                 }
             }
-            Map<String, String> textures = new LinkedHashMap<>();
-            JsonNode texturesNode = root.get("textures");
-            if (texturesNode != null && texturesNode.isObject()) {
-                texturesNode.fields().forEachRemaining(field -> {
-                    JsonNode value = field.getValue();
-                    if (value != null && value.isTextual()) {
-                        textures.put(field.getKey(), value.asText());
+        }
+        return metadata;
+    }
+
+    private static List<ModMetadata> parseModsToml(InputStream input) throws IOException {
+        Map<String, ModMetadata> results = new LinkedHashMap<>();
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(input, StandardCharsets.UTF_8))) {
+            String line;
+            boolean inModsSection = false;
+            String currentModId = null;
+            String currentName = null;
+            String currentVersion = null;
+            while ((line = reader.readLine()) != null) {
+                String trimmed = line.trim();
+                if (trimmed.isEmpty() || trimmed.startsWith("#")) {
+                    continue;
+                }
+                if (trimmed.startsWith("[[")) {
+                    if (inModsSection && currentModId != null) {
+                        results.putIfAbsent(currentModId, new ModMetadata(currentModId, currentName, currentVersion));
                     }
-                });
+                    inModsSection = "[[mods]]".equals(trimmed);
+                    currentModId = null;
+                    currentName = null;
+                    currentVersion = null;
+                    continue;
+                }
+                if (!inModsSection) {
+                    continue;
+                }
+                int equals = trimmed.indexOf('=');
+                if (equals < 0) {
+                    continue;
+                }
+                String key = trimmed.substring(0, equals).trim();
+                String value = trimmed.substring(equals + 1).trim();
+                value = stripQuotes(value);
+                switch (key) {
+                    case "modId" -> currentModId = value;
+                    case "displayName" -> currentName = value;
+                    case "display_name" -> {
+                        if (currentName == null || currentName.isBlank()) {
+                            currentName = value;
+                        }
+                    }
+                    case "version" -> currentVersion = value;
+                    default -> { }
+                }
             }
-            models.put(modelId, new ModelDefinition(modelId, parent, Collections.unmodifiableMap(textures)));
+            if (inModsSection && currentModId != null) {
+                results.putIfAbsent(currentModId, new ModMetadata(currentModId, currentName, currentVersion));
+            }
         }
+        return new ArrayList<>(results.values());
     }
 
-    private static ItemMeta enrichWithIcon(
-            ItemMeta meta,
-            Map<ResourceId, ModelDefinition> models,
-            Map<ResourceId, Map<String, String>> mergedTextureCache,
-            ZipFile zipFile,
-            Path iconCacheDirectory
-    ) throws IOException {
-        ResourceId itemId = ResourceId.fromString(meta.id(), meta.namespace());
-        TextureResolution texture = resolveItemTexture(itemId, models, mergedTextureCache, zipFile, iconCacheDirectory);
-        if (texture == null) {
-            return meta;
+    private static List<ModMetadata> parseFabricModJson(InputStream input) throws IOException {
+        List<ModMetadata> results = new ArrayList<>();
+        JsonNode root = MAPPER.readTree(input);
+        if (root == null) {
+            return results;
         }
-        return new ItemMeta(
-                meta.id(),
-                meta.displayName(),
-                meta.namespace(),
-                meta.kind(),
-                meta.isVanilla(),
-                texture.texturePath(),
-                texture.iconHash(),
-                meta.modId(),
-                meta.modName()
-        );
+        String id = textOrNull(root.get("id"));
+        if (id == null || id.isBlank()) {
+            return results;
+        }
+        String name = textOrNull(root.get("name"));
+        String version = textOrNull(root.get("version"));
+        ModMetadata base = new ModMetadata(id, name, version);
+        results.add(base);
+        JsonNode provides = root.get("provides");
+        if (provides != null && provides.isArray()) {
+            provides.forEach(node -> {
+                String alias = textOrNull(node);
+                if (alias != null && !alias.isBlank()) {
+                    results.add(new ModMetadata(alias, name, version));
+                }
+            });
+        }
+        return results;
     }
 
-    private static TextureResolution resolveItemTexture(
-            ResourceId itemId,
-            Map<ResourceId, ModelDefinition> models,
-            Map<ResourceId, Map<String, String>> mergedTextureCache,
-            ZipFile zipFile,
-            Path iconCacheDirectory
-    ) throws IOException {
-        ResourceId modelId = findModelId(itemId, models);
-        if (modelId == null) {
+    private static String textOrNull(JsonNode node) {
+        if (node == null) {
             return null;
         }
-        ResourceId textureId = resolveTextureForModel(modelId, models, mergedTextureCache);
-        if (textureId == null) {
-            return null;
-        }
-        String iconHash = storeTexture(textureId, zipFile, iconCacheDirectory);
-        return new TextureResolution(textureId.toString(), iconHash);
-    }
-
-    private static ResourceId findModelId(ResourceId itemId, Map<ResourceId, ModelDefinition> models) {
-        ResourceId primary = itemId.withPath("item/" + itemId.path());
-        if (models.containsKey(primary)) {
-            return primary;
-        }
-        if (models.containsKey(itemId)) {
-            return itemId;
+        if (node.isTextual()) {
+            return node.asText();
         }
         return null;
     }
 
-    private static ResourceId resolveTextureForModel(
-            ResourceId modelId,
-            Map<ResourceId, ModelDefinition> models,
-            Map<ResourceId, Map<String, String>> mergedTextureCache
-    ) {
-        Map<String, String> textures = resolveMergedTextures(modelId, models, mergedTextureCache, new HashSet<>());
-        if (textures.isEmpty()) {
-            return null;
+    private static String stripQuotes(String value) {
+        if ((value.startsWith("\"") && value.endsWith("\"")) || (value.startsWith("'") && value.endsWith("'"))) {
+            return value.substring(1, value.length() - 1);
         }
-        for (String key : TEXTURE_PREFERENCE) {
-            ResourceId resolved = resolveTextureReference(modelId, textures.get(key), models, mergedTextureCache, new HashSet<>());
-            if (resolved != null) {
-                return resolved;
-            }
-        }
-        for (String value : textures.values()) {
-            ResourceId resolved = resolveTextureReference(modelId, value, models, mergedTextureCache, new HashSet<>());
-            if (resolved != null) {
-                return resolved;
-            }
-        }
-        return null;
+        return value;
     }
 
-    private static Map<String, String> resolveMergedTextures(
-            ResourceId modelId,
-            Map<ResourceId, ModelDefinition> models,
-            Map<ResourceId, Map<String, String>> cache,
-            Set<ResourceId> visiting
-    ) {
-        Map<String, String> cached = cache.get(modelId);
-        if (cached != null) {
-            return cached;
-        }
-        if (!visiting.add(modelId)) {
-            return Collections.emptyMap();
-        }
-        ModelDefinition definition = models.get(modelId);
-        if (definition == null) {
-            visiting.remove(modelId);
-            cache.put(modelId, Collections.emptyMap());
-            return Collections.emptyMap();
-        }
-        Map<String, String> merged = new LinkedHashMap<>();
-        if (definition.parent() != null) {
-            merged.putAll(resolveMergedTextures(definition.parent(), models, cache, visiting));
-        }
-        merged.putAll(definition.textures());
-        visiting.remove(modelId);
-        Map<String, String> result = Collections.unmodifiableMap(merged);
-        cache.put(modelId, result);
-        return result;
-    }
-
-    private static ResourceId resolveTextureReference(
-            ResourceId modelId,
-            String reference,
-            Map<ResourceId, ModelDefinition> models,
-            Map<ResourceId, Map<String, String>> mergedTextureCache,
-            Set<String> seenKeys
-    ) {
-        if (reference == null || reference.isEmpty()) {
-            return null;
-        }
-        if (reference.startsWith("#")) {
-            String key = reference.substring(1);
-            return resolveTextureKey(modelId, key, models, mergedTextureCache, seenKeys);
-        }
-        return ResourceId.fromString(reference, modelId.namespace());
-    }
-
-    private static ResourceId resolveTextureKey(
-            ResourceId modelId,
-            String key,
-            Map<ResourceId, ModelDefinition> models,
-            Map<ResourceId, Map<String, String>> mergedTextureCache,
-            Set<String> seenKeys
-    ) {
-        String marker = modelId + "#" + key;
-        if (!seenKeys.add(marker)) {
-            return null;
-        }
-        Map<String, String> textures = resolveMergedTextures(modelId, models, mergedTextureCache, new HashSet<>());
-        String value = textures.get(key);
-        if (value == null || value.isEmpty()) {
-            return null;
-        }
-        return resolveTextureReference(modelId, value, models, mergedTextureCache, seenKeys);
-    }
-
-    private static String storeTexture(ResourceId textureId, ZipFile zipFile, Path iconCacheDirectory) throws IOException {
-        String entryName = buildTextureEntryName(textureId);
-        ZipEntry textureEntry = zipFile.getEntry(entryName);
-        if (textureEntry == null) {
-            return null;
-        }
-        try (InputStream input = zipFile.getInputStream(textureEntry)) {
-            byte[] bytes = input.readAllBytes();
-            String hash = hashBytes(bytes);
-            Path output = iconCacheDirectory.resolve(hash + ".png");
-            if (!Files.exists(output)) {
-                Files.write(output, bytes);
-            }
-            return hash;
-        }
-    }
-
-    private static String buildTextureEntryName(ResourceId textureId) {
-        String path = textureId.path();
-        if (!path.endsWith(".png")) {
-            path = path + ".png";
-        }
-        return "assets/" + textureId.namespace() + "/textures/" + path;
-    }
-
-    private static String hashBytes(byte[] bytes) {
-        MessageDigest digest;
-        try {
-            digest = MessageDigest.getInstance("SHA-256");
-        } catch (NoSuchAlgorithmException e) {
-            throw new IllegalStateException("SHA-256 digest unavailable", e);
-        }
-        byte[] hashed = digest.digest(bytes);
-        StringBuilder builder = new StringBuilder(hashed.length * 2);
-        for (byte b : hashed) {
-            int value = b & 0xFF;
-            if (value < 0x10) {
-                builder.append('0');
-            }
-            builder.append(Integer.toHexString(value));
-        }
-        return builder.toString();
-    }
-
-    private record ModelDefinition(ResourceId id, ResourceId parent, Map<String, String> textures) { }
-
-    private record TextureResolution(String texturePath, String iconHash) { }
+    private record ModMetadata(String modId, String name, String version) { }
 }

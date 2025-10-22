@@ -14,7 +14,8 @@ public record ItemMeta(
         String texturePath,
         String iconHash,
         String modId,
-        String modName
+        String modName,
+        String modVersion
 ) {
     public ItemMeta {
         Objects.requireNonNull(id, "id");
