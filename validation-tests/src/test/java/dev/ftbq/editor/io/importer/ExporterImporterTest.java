@@ -35,6 +35,7 @@ import java.util.Map;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ExporterImporterTest {
@@ -52,7 +53,7 @@ class ExporterImporterTest {
                 "quest-1",
                 "Quest One",
                 "Complete the task",
-                new IconRef(iconFile.toString()),
+                new IconRef(iconFile.toString(), Optional.of(tempDir.relativize(iconFile).toString())),
                 List.of(
                         new ItemTask(new ItemRef("minecraft:stone", 4), true),
                         new AdvancementTask("minecraft:story/root"),
@@ -71,9 +72,10 @@ class ExporterImporterTest {
         Chapter chapter = new Chapter(
                 "chapter-1",
                 "Chapter One",
-                new IconRef(iconFile.toString()),
+                new IconRef(iconFile.toString(), Optional.of(tempDir.relativize(iconFile).toString())),
                 new BackgroundRef(
                         backgroundFile.toString(),
+                        Optional.of(tempDir.relativize(backgroundFile).toString()),
                         Optional.of(BackgroundAlignment.CENTER),
                         Optional.of(BackgroundRepeat.BOTH)
                 ),
@@ -84,7 +86,7 @@ class ExporterImporterTest {
         ChapterGroup group = new ChapterGroup(
                 "group-1",
                 "Main Group",
-                new IconRef(iconFile.toString()),
+                new IconRef(iconFile.toString(), Optional.of(tempDir.relativize(iconFile).toString())),
                 List.of("chapter-1"),
                 Visibility.VISIBLE
         );
@@ -111,7 +113,7 @@ class ExporterImporterTest {
                 .build();
 
         Path exportRoot = tempDir.resolve("export");
-        new Exporter().exportPack(questFile, exportRoot);
+        new Exporter().exportPack(questFile, tempDir, exportRoot);
 
         Path assetIcon = exportRoot.resolve("assets/example/ftbquests/icons/" + iconFile.getFileName());
         Path assetBackground = exportRoot.resolve("assets/example/ftbquests/backgrounds/" + backgroundFile.getFileName());
@@ -121,5 +123,39 @@ class ExporterImporterTest {
         QuestFile imported = new Importer().importPack(exportRoot);
 
         assertEquals(questFile, imported);
+    }
+
+    @Test
+    void missingRelativeAssetPathThrows() {
+        Quest quest = Quest.builder()
+                .id("quest-1")
+                .title("Quest One")
+                .description("desc")
+                .icon(new IconRef("minecraft:book", Optional.of("icons/missing.txt")))
+                .build();
+
+        Chapter chapter = Chapter.builder()
+                .id("chapter-1")
+                .title("Chapter One")
+                .addQuest(quest)
+                .build();
+
+        ChapterGroup group = ChapterGroup.builder()
+                .id("group-1")
+                .title("Group")
+                .addChapterId("chapter-1")
+                .build();
+
+        QuestFile questFile = QuestFile.builder()
+                .id("example:pack")
+                .title("Quest Title")
+                .chapterGroups(List.of(group))
+                .chapters(List.of(chapter))
+                .build();
+
+        Path exportRoot = tempDir.resolve("export-missing");
+
+        IOException exception = assertThrows(IOException.class, () -> new Exporter().exportPack(questFile, tempDir, exportRoot));
+        assertTrue(exception.getMessage().contains("Missing icon asset at relative path: icons/missing.txt"));
     }
 }

@@ -44,7 +44,7 @@ class QuestFileJsonTest {
                 "quest-1",
                 "Quest One",
                 "Complete a task",
-                new IconRef("quest_icon"),
+                new IconRef("quest_icon", Optional.of("assets/example/quest_icon.png")),
                 List.of(
                         new ItemTask(new ItemRef("minecraft:stone", 4), true),
                         new AdvancementTask("minecraft:story/root"),
@@ -63,9 +63,10 @@ class QuestFileJsonTest {
         Chapter chapter = new Chapter(
                 "chapter-1",
                 "Chapter One",
-                new IconRef("chapter_icon"),
+                new IconRef("chapter_icon", Optional.of("assets/example/chapter_icon.png")),
                 new BackgroundRef(
                         "chapter_background",
+                        Optional.of("assets/example/backgrounds/chapter_background.png"),
                         Optional.of(BackgroundAlignment.CENTER),
                         Optional.of(BackgroundRepeat.BOTH)
                 ),
@@ -76,7 +77,7 @@ class QuestFileJsonTest {
         ChapterGroup group = new ChapterGroup(
                 "group-1",
                 "Main Group",
-                new IconRef("group_icon"),
+                new IconRef("group_icon", Optional.of("assets/example/group_icon.png")),
                 List.of("chapter-1"),
                 Visibility.VISIBLE
         );
