@@ -1,27 +1,25 @@
-# FTBQuestExternalApp (Java Port)
+# FTB Quest External App — Java Scaffold
 
-This repository is currently a stub for the Java port of the FTB Quest External App.
+This repository contains the Gradle multi-module scaffold for the Java-based port of the FTB Quest External App.
 
-## Current Status
+## Module Overview
 
-The codebase has not been populated yet. Use this repository as the starting point for
-future Codex tasks or manual development work.
+- `core-domain`: Domain models and business logic abstractions.
+- `io-formats`: Serialization and file format codecs.
+- `ingestion`: Data ingestion pipelines and adapters.
+- `datastore`: Persistence and storage integrations.
+- `services`: Application services and orchestration layer.
+- `ui-javafx`: JavaFX desktop client entry point.
+- `validation-tests`: End-to-end validation test suite.
 
 ## Getting Started
 
-1. Clone the repository.
-2. Create a working branch for your changes.
-3. Implement the desired functionality.
-4. Commit your work with messages that follow the `<task id>: <summary>` convention.
+1. Ensure you have Java 21 and Gradle installed (Gradle wrapper to be added in future tasks).
+2. Run `./gradlew build` after the wrapper is introduced to verify the scaffold builds successfully.
+3. Add implementation code within the respective modules as development progresses.
 
 ## Conventions
 
-- Do not commit binary artifacts (for example, PNG images, JAR files, or compiled
-  outputs).
-- Keep the project headless; do not run any GUI clients as part of the workflow.
-- Prefer source files, JSON, and other text-based assets in version control.
-
-## Notes
-
-If you encounter missing instructions or tasks, document your observations in the
-repository so future contributors can pick up where you left off.
+- Commit only source files, configuration, and other text-based assets.
+- Keep the project headless in CI environments.
+- Use feature branches when developing new functionality.
