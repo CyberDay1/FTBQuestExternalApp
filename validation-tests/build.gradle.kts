@@ -1,11 +1,9 @@
 plugins {
-    `java-library`
+    id("java")
 }
 
-val junitVersion: String by project
-
 dependencies {
-    testImplementation("org.junit.jupiter:junit-jupiter:$junitVersion")
+    testImplementation("org.junit.jupiter:junit-jupiter:5.10.2")
     testImplementation(project(":io-formats"))
     testImplementation(project(":ingestion"))
 }

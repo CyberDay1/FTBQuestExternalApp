@@ -6,7 +6,7 @@ plugins {
 
 dependencies {
     implementation(project(":core-domain"))
-    implementation("com.fasterxml.jackson.core:jackson-databind:2.17.1")
+    implementation("com.fasterxml.jackson.core:jackson-databind:${rootProject.extra["jacksonVersion"]}")
 }
 
 tasks.register<JavaExec>("vanillaBootstrap") {

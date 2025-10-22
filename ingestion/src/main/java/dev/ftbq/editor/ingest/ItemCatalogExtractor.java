@@ -4,11 +4,12 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.ftbq.editor.resources.ResourceId;
+import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
-import java.nio.file.Files;
-import java.io.BufferedReader;
 import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -16,8 +17,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Enumeration;
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -28,7 +27,6 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
-import java.nio.charset.StandardCharsets;
 
 /**
  * Utilities for extracting {@link ItemCatalog} instances from scanned JAR files.
@@ -60,7 +58,8 @@ public final class ItemCatalogExtractor {
 
         Map<String, ItemMeta> items = new LinkedHashMap<>();
         Map<String, Set<String>> tags = new TreeMap<>();
-        final Map<String, ModMetadata> modMetadata = new LinkedHashMap<>();
+        Map<String, ModMetadata> modMetadata = new LinkedHashMap<>();
+        Map<ResourceId, String> modelTextures = new LinkedHashMap<>();
 
         try (ZipFile zipFile = new ZipFile(jar.toFile())) {
             modMetadata.putAll(extractModMetadata(zipFile));
@@ -81,8 +80,8 @@ public final class ItemCatalogExtractor {
                     try (InputStream input = zipFile.getInputStream(entry)) {
                         Map<String, String> translations = MAPPER.readValue(input, STRING_MAP);
                         translations.forEach((key, value) ->
-                                parseLangEntry(namespace, key, value, isVanilla, modMetadata).ifPresent(meta ->
-                                        items.putIfAbsent(meta.id(), meta)));
+                                parseLangEntry(namespace, key, value, isVanilla, modMetadata)
+                                        .ifPresent(meta -> items.putIfAbsent(meta.id(), meta)));
                     }
                 } else if (name.startsWith("data/") && name.contains("/tags/items/") && name.endsWith(".json")) {
                     String namespace = extractNamespace(name, "data/");
@@ -111,27 +110,60 @@ public final class ItemCatalogExtractor {
                         }
                     }
                 } else if (name.startsWith("assets/") && name.contains("/models/item/") && name.endsWith(".json")) {
-                    parseModelEntry(zipFile, entry, models);
+                    String namespace = extractNamespace(name, "assets/");
+                    if (namespace.isEmpty()) {
+                        continue;
+                    }
+                    String itemPath = extractModelPath(name, namespace);
+                    if (itemPath.isEmpty()) {
+                        continue;
+                    }
+                    try (InputStream input = zipFile.getInputStream(entry)) {
+                        JsonNode root = MAPPER.readTree(input);
+                        JsonNode texturesNode = root != null ? root.get("textures") : null;
+                        String texture = selectTexture(namespace, texturesNode);
+                        if (texture != null) {
+                            modelTextures.put(new ResourceId(namespace, itemPath), texture);
+                        }
+                    }
                 }
             }
 
-        // Ensure all items referenced by tags exist in the item list.
-        for (Set<String> values : tags.values()) {
-            for (String value : values) {
-                items.computeIfAbsent(value, id -> createPlaceholderItem(id, isVanilla, modMetadata));
+            // Ensure all items referenced by tags exist in the item list.
+            for (Set<String> values : tags.values()) {
+                for (String value : values) {
+                    items.computeIfAbsent(value, id -> createPlaceholderItem(id, isVanilla, modMetadata));
+                }
             }
+
+            List<ItemMeta> baseItems = new ArrayList<>(items.values());
+            baseItems.sort(Comparator.comparing(ItemMeta::id));
 
             Path iconCacheDirectory = ensureIconCacheDirectory();
-            Map<ResourceId, Map<String, String>> mergedTextureCache = new HashMap<>();
-            List<ItemMeta> sortedItems = new ArrayList<>(items.size());
-            for (ItemMeta meta : items.values()) {
-                sortedItems.add(enrichWithIcon(meta, models, mergedTextureCache, zipFile, iconCacheDirectory));
+            List<ItemMeta> enrichedItems = new ArrayList<>(baseItems.size());
+            for (ItemMeta meta : baseItems) {
+                ResourceId itemId = ResourceId.fromString(meta.id());
+                String texturePath = modelTextures.get(itemId);
+                String iconHash = null;
+                if (texturePath != null) {
+                    iconHash = cacheTexture(iconCacheDirectory, texturePath, zipFile);
+                }
+                enrichedItems.add(new ItemMeta(
+                        meta.id(),
+                        meta.displayName(),
+                        meta.namespace(),
+                        meta.kind(),
+                        meta.isVanilla(),
+                        texturePath,
+                        iconHash,
+                        meta.modId(),
+                        meta.modName(),
+                        meta.modVersion()
+                ));
             }
-            sortedItems.sort(Comparator.comparing(ItemMeta::id));
 
             Map<String, List<String>> finalizedTags = finalizeTags(tags);
-
-            return new ItemCatalog(source, version, isVanilla, Collections.unmodifiableList(sortedItems), finalizedTags);
+            return new ItemCatalog(source, version, isVanilla, Collections.unmodifiableList(enrichedItems), finalizedTags);
         }
     }
 
@@ -142,6 +174,89 @@ public final class ItemCatalogExtractor {
             return "";
         }
         return path.substring(start, slash);
+    }
+
+    private static String extractModelPath(String path, String namespace) {
+        String prefix = "assets/" + namespace + "/models/item/";
+        if (!path.startsWith(prefix) || !path.endsWith(".json")) {
+            return "";
+        }
+        return path.substring(prefix.length(), path.length() - 5);
+    }
+
+    private static String selectTexture(String namespace, JsonNode texturesNode) {
+        if (texturesNode == null || !texturesNode.isObject()) {
+            return null;
+        }
+        for (String key : TEXTURE_PREFERENCE) {
+            JsonNode value = texturesNode.get(key);
+            if (value != null && value.isTextual()) {
+                String texture = value.asText();
+                if (texture != null && !texture.isBlank()) {
+                    return normalizeTexture(namespace, texture);
+                }
+            }
+        }
+        var fields = texturesNode.fields();
+        while (fields.hasNext()) {
+            Map.Entry<String, JsonNode> entry = fields.next();
+            JsonNode value = entry.getValue();
+            if (value != null && value.isTextual()) {
+                String texture = value.asText();
+                if (texture != null && !texture.isBlank()) {
+                    return normalizeTexture(namespace, texture);
+                }
+            }
+        }
+        return null;
+    }
+
+    private static String normalizeTexture(String namespace, String texture) {
+        if (texture.contains(":")) {
+            return texture;
+        }
+        return namespace + ':' + texture;
+    }
+
+    private static String cacheTexture(Path iconCacheDirectory, String textureResource, ZipFile zipFile) throws IOException {
+        ResourceId textureId = ResourceId.fromString(textureResource);
+        String entryPath = "assets/" + textureId.namespace() + "/textures/" + textureId.path() + ".png";
+        ZipEntry textureEntry = zipFile.getEntry(entryPath);
+        if (textureEntry == null) {
+            return null;
+        }
+        byte[] data;
+        try (InputStream input = zipFile.getInputStream(textureEntry)) {
+            data = input.readAllBytes();
+        }
+        String hash = hashBytes(data);
+        Path target = iconCacheDirectory.resolve(hash + ".png");
+        if (!Files.exists(target)) {
+            Files.createDirectories(iconCacheDirectory);
+            Files.write(target, data);
+        }
+        return hash;
+    }
+
+    private static String hashBytes(byte[] data) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] hash = digest.digest(data);
+            StringBuilder builder = new StringBuilder(hash.length * 2);
+            for (byte b : hash) {
+                builder.append(String.format("%02x", b));
+            }
+            return builder.toString();
+        } catch (NoSuchAlgorithmException e) {
+            throw new IllegalStateException("SHA-256 not available", e);
+        }
+    }
+
+    private static Path ensureIconCacheDirectory() throws IOException {
+        Path cacheRoot = Path.of("cache");
+        Path iconsDir = cacheRoot.resolve("icons");
+        Files.createDirectories(iconsDir);
+        return iconsDir;
     }
 
     private static Optional<ItemMeta> parseLangEntry(String namespaceFromPath, String key, String value, boolean isVanilla,
