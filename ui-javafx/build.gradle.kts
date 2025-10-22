@@ -16,4 +16,6 @@ javafx {
 
 dependencies {
     implementation(project(":datastore"))
+    implementation(project(":core-domain"))
+    implementation(project(":services"))
 }
