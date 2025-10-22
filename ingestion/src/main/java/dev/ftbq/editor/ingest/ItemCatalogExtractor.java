@@ -3,15 +3,21 @@ package dev.ftbq.editor.ingest;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import java.io.BufferedReader;
+import dev.ftbq.editor.resources.ResourceId;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.file.Files;
+import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.nio.file.Path;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Enumeration;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -31,6 +37,7 @@ public final class ItemCatalogExtractor {
 
     private static final ObjectMapper MAPPER = new ObjectMapper();
     private static final TypeReference<Map<String, String>> STRING_MAP = new TypeReference<>() { };
+    private static final List<String> TEXTURE_PREFERENCE = List.of("layer0", "texture", "all", "particle");
 
     private ItemCatalogExtractor() {
         throw new AssertionError("ItemCatalogExtractor cannot be instantiated");
@@ -103,28 +110,29 @@ public final class ItemCatalogExtractor {
                             });
                         }
                     }
+                } else if (name.startsWith("assets/") && name.contains("/models/item/") && name.endsWith(".json")) {
+                    parseModelEntry(zipFile, entry, models);
                 }
             }
-        }
 
         // Ensure all items referenced by tags exist in the item list.
         for (Set<String> values : tags.values()) {
             for (String value : values) {
                 items.computeIfAbsent(value, id -> createPlaceholderItem(id, isVanilla, modMetadata));
             }
+
+            Path iconCacheDirectory = ensureIconCacheDirectory();
+            Map<ResourceId, Map<String, String>> mergedTextureCache = new HashMap<>();
+            List<ItemMeta> sortedItems = new ArrayList<>(items.size());
+            for (ItemMeta meta : items.values()) {
+                sortedItems.add(enrichWithIcon(meta, models, mergedTextureCache, zipFile, iconCacheDirectory));
+            }
+            sortedItems.sort(Comparator.comparing(ItemMeta::id));
+
+            Map<String, List<String>> finalizedTags = finalizeTags(tags);
+
+            return new ItemCatalog(source, version, isVanilla, Collections.unmodifiableList(sortedItems), finalizedTags);
         }
-
-        List<ItemMeta> sortedItems = new ArrayList<>(items.values());
-        sortedItems.sort(Comparator.comparing(ItemMeta::id));
-
-        Map<String, List<String>> finalizedTags = new LinkedHashMap<>();
-        tags.forEach((tag, values) -> {
-            List<String> sortedValues = new ArrayList<>(values);
-            Collections.sort(sortedValues);
-            finalizedTags.put(tag, Collections.unmodifiableList(sortedValues));
-        });
-
-        return new ItemCatalog(source, version, isVanilla, Collections.unmodifiableList(sortedItems), finalizedTags);
     }
 
     private static String extractNamespace(String path, String prefix) {
@@ -190,6 +198,16 @@ public final class ItemCatalogExtractor {
                 metadata != null ? metadata.name() : null,
                 metadata != null ? metadata.version() : null
         );
+    }
+
+    private static Map<String, List<String>> finalizeTags(Map<String, Set<String>> tags) {
+        Map<String, List<String>> finalizedTags = new LinkedHashMap<>();
+        tags.forEach((tag, values) -> {
+            List<String> sortedValues = new ArrayList<>(values);
+            Collections.sort(sortedValues);
+            finalizedTags.put(tag, Collections.unmodifiableList(sortedValues));
+        });
+        return Collections.unmodifiableMap(finalizedTags);
     }
 
     private static String buildTagId(String namespace, String path) {
