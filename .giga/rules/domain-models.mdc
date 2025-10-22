@@ -1,54 +1,62 @@
 ---
-description: Core domain models and relationships for quests, chapters, tasks, rewards and loot tables
+description: Core domain model documentation for quest-based progression systems and reward structures
 ---
 
 
 # domain-models
 
-The domain model consists of several key entities that form the core quest system:
+## Core Domain Model Structure
 
-## Quest Structure (Score: 95)
-- Quest represents individual quests containing tasks and rewards
-- Chapter groups related quests together with shared settings
-- ChapterGroup provides top-level organization of chapters
-- Dependencies track relationships between quests
-- Visibility controls when quests become available
-- IconRef/BackgroundRef handle visual representation
+### Quest Model (85)
+`core-domain/src/main/java/dev/ftbq/editor/domain/Quest.java`
+- Central entity representing completable player objectives
+- Contains collections of tasks and rewards
+- Manages dependency relationships between quests
+- Controls visibility settings and progression requirements
 
-## Task System (Score: 90)
-- Base Task class defines common task behavior
+### Chapter Organization (80) 
+`core-domain/src/main/java/dev/ftbq/editor/domain/Chapter.java`
+- Groups related quests into logical chapters
+- Defines chapter-level display properties including icons and backgrounds
+- Controls chapter visibility and access requirements
+- Manages chapter groups for hierarchical organization
+
+### Task System (85)
+`core-domain/src/main/java/dev/ftbq/editor/domain/Task.java`
+- Base structure for quest completion criteria
 - Specialized implementations:
-  - ItemTask for item collection/crafting goals
-  - AdvancementTask for achievement requirements  
-  - LocationTask for position-based objectives
-- Tasks link to rewards upon completion
+  - ItemTask: Item collection/crafting requirements
+  - LocationTask: Position-based objectives 
+  - AdvancementTask: Achievement-linked goals
 
-## Reward Structure (Score: 85)
-- Reward base class for completion bonuses
+### Reward Structure (80)
+`core-domain/src/main/java/dev/ftbq/editor/domain/Reward.java`
+- Core reward definition system
 - Implementations include:
-  - ItemReward for item-based rewards
-  - XpReward for experience points
-  - CommandReward for command execution
-  - CustomReward for mod-specific rewards
+  - ItemReward: Physical item rewards
+  - XpReward: Experience point rewards
+  - CommandReward: Server command execution
+  - CustomReward: Extensible reward types
 
-## Loot System (Score: 90)
-- LootTable defines reward probability distributions
-- LootPool groups related entries
-- LootEntry specifies individual rewards
-- LootFunction modifies rewards
-- LootCondition controls when rewards are available
+### LootTable System (90)
+`core-domain/src/main/java/dev/ftbq/editor/domain/LootTable.java`
+- Advanced reward distribution system
+- Composed of LootPools containing weighted entries
+- Supports conditions and modifiers through LootFunction
+- Handles randomized reward selection and quantity calculation
 
-## Resource References (Score: 80)
-- ItemRef links to game items
-- TagRef handles item tag references
-- ResourceId provides unique identifiers
+### Reference Types (75)
+- ItemRef: Links to game items and blocks
+- IconRef: Quest and chapter icon definitions
+- TagRef: Minecraft tag system integration
+- BackgroundRef: UI texture references with alignment/repeat properties
 
-Key domain files:
-- `core-domain/src/main/java/dev/ftbq/editor/domain/Quest.java`
-- `core-domain/src/main/java/dev/ftbq/editor/domain/Chapter.java`
-- `core-domain/src/main/java/dev/ftbq/editor/domain/Task.java`
-- `core-domain/src/main/java/dev/ftbq/editor/domain/Reward.java`
-- `core-domain/src/main/java/dev/ftbq/editor/domain/LootTable.java`
+### Quest File Container (85)
+`core-domain/src/main/java/dev/ftbq/editor/domain/QuestFile.java`
+- Top-level structure containing all quest data
+- Manages chapter organization and grouping
+- Handles file-level properties and settings
+- Coordinates quest dependencies and progression flow
 
 $END$
 

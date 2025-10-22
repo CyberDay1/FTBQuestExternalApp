@@ -1,67 +1,49 @@
 ---
-description: Technical specification for extracting, processing and managing Minecraft item catalogs and version-specific data
+description: Technical specification for item catalog extraction, processing and version management system
 ---
 
 
 # item-catalog-system
 
-### Core Components
+The item catalog system consists of two main components:
 
-1. **Catalog Extraction System (85)**
-The ItemCatalogExtractor provides a specialized workflow for pulling item data from Minecraft JAR files:
+### ItemCatalogExtractor
+**Importance Score: 95**
+File: `ingestion/src/main/java/dev/ftbq/editor/ingest/ItemCatalogExtractor.java`
 
-- Handles both vanilla and modded item extraction
-- Processes JSON assets and resources to build normalized item metadata 
-- Maps texture references to items and caches associated resources
-- Merges multiple catalogs while preserving unique items and metadata
+Core extraction engine that:
+- Scans JAR files to identify and extract item definitions
+- Parses language files to obtain item names and descriptions 
+- Processes item tag data to establish hierarchical relationships
+- Extracts texture/model data for item visualization
+- Associates metadata with corresponding items
 
-Key files:
-```
-ingestion/src/main/java/dev/ftbq/editor/ingest/ItemCatalogExtractor.java
-ingestion/src/main/java/dev/ftbq/editor/ingest/ItemCatalog.java
-```
+### VersionCatalog Implementation
+**Importance Score: 90**
+File: `services/src/main/java/dev/ftbq/editor/services/version/VersionCatalogImpl.java`
 
-2. **Version Management (80)** 
-The VersionCatalog system maintains version-specific item data:
+Manages version-specific item catalogs:
+- Maintains separate catalogs for different Minecraft versions
+- Merges vanilla Minecraft catalogs with mod-specific catalogs
+- Provides version-aware item lookups and filtering
+- Handles catalog transitions between game versions
+- Maps item IDs across version boundaries
 
-- Tracks available items per Minecraft version
-- Manages active version selection and catalog switching
-- Merges vanilla and mod-specific catalogs
-- Validates version compatibility of items
+### Supporting Components
 
-Key files:
-```
-core-domain/src/main/java/dev/ftbq/editor/domain/version/VersionCatalog.java
-services/src/main/java/dev/ftbq/editor/services/version/VersionCatalogImpl.java
-```
+**ItemCatalog**
+**Importance Score: 85**
+File: `ingestion/src/main/java/dev/ftbq/editor/ingest/ItemCatalog.java`
+- Stores extracted item definitions and metadata
+- Provides lookup and search capabilities
+- Manages relationships between items
 
-3. **Item Reference System (75)**
-Specialized reference tracking and validation:
-
-- Maps item IDs across different versions and mods
-- Validates item existence and compatibility
-- Maintains metadata linkages between items and their resources
-- Handles tag-based item references
-
-Key files:
-```
-io-formats/src/main/java/dev/ftbq/editor/io/model/ItemRefData.java
-core-domain/src/main/java/dev/ftbq/editor/domain/ItemRef.java
-```
-
-4. **Resource Management (70)**
-The IconCache and resource ID system:
-
-- Manages texture and icon resources for items
-- Caches frequently accessed resources
-- Validates resource existence and accessibility
-- Maps resources across versions
-
-Key files:
-```
-ingestion/src/main/java/dev/ftbq/editor/ingest/IconCache.java
-core-domain/src/main/java/dev/ftbq/editor/resources/ResourceId.java
-```
+**IconCache**
+**Importance Score: 75**  
+File: `ingestion/src/main/java/dev/ftbq/editor/ingest/IconCache.java`
+- Caches extracted item textures and icons
+- Associates visual assets with catalog entries
+- Handles texture format conversion and scaling
 
 $END$
 

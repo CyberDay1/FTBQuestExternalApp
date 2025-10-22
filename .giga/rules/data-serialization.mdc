@@ -1,51 +1,60 @@
 ---
-description: Specification for JSON serialization/deserialization workflows and data format handling for quest files and loot tables
+description: Specification for JSON serialization/deserialization of quest data, loot tables, and related game content
 ---
 
 
 # data-serialization
 
-### Core JSON Serialization Components (Importance Score: 85)
-- **File Path:** `io-formats/src/main/java/dev/ftbq/editor/io/JsonConfig.java`
+## Quest File Serialization (85)
+`io-formats/src/main/java/dev/ftbq/editor/io/QuestFileJson.java`
 
-The JSON serialization system handles specialized quest and loot table data formats through:
+JSON serialization logic for the quest system's core data structures:
+- Chapter groups with nested chapters
+- Individual quests with rewards and dependencies
+- Task definitions and completion criteria
+- Icon and background texture references
+- Quest visibility rules and progression states
 
-1. Custom ObjectMapper configurations for quest-specific JSON structures
-2. Domain-specific serialization rules for quest dependencies and reward chains
-3. Polymorphic deserialization handlers for different task and reward types
-4. Version-aware parsing to maintain backward compatibility with older quest formats
+## Loot Table Processing (80)
+`io-formats/src/main/java/dev/ftbq/editor/io/LootTableJson.java`
 
-### Quest File Format Processing (Importance Score: 90) 
-- **File Path:** `io-formats/src/main/java/dev/ftbq/editor/io/QuestFileJson.java`
+Custom JSON handling for Minecraft-style loot tables:
+- Multi-pool loot configurations 
+- Entry weighting and probability calculations
+- Conditional drop rules
+- NBT data and item metadata preservation
+- Sorted loading by table identifier
 
-Specialized quest file processing includes:
+## Item Reference Data (75)
+`io-formats/src/main/java/dev/ftbq/editor/io/model/ItemRefData.java`
 
-1. Chapter hierarchy serialization with nested group structures
-2. Quest dependency graph serialization maintaining referential integrity
-3. Custom task type registration and polymorphic deserialization
-4. Background and icon reference resolution during deserialization
+Specialized serialization for item references:
+- Registry name mapping
+- NBT tag compound data
+- Count and damage values
+- Custom display names
+- Item variant handling
 
-### Loot Table Serialization (Importance Score: 75)
-- **File Path:** `io-formats/src/main/java/dev/ftbq/editor/io/LootTableJson.java`
+## JSON Configuration (70)
+`io-formats/src/main/java/dev/ftbq/editor/io/JsonConfig.java`
 
-The loot table serialization system handles:
+Global JSON serialization configuration:
+- Custom ObjectMapper settings
+- Type adapters for domain objects
+- Version-specific serialization rules
+- Default value handling
+- Pretty printing options
 
-1. Pool-based loot structure serialization
-2. Condition and function chain processing
-3. Weight-based entry serialization
-4. NBT data preservation for complex item stacks
+## Import/Export Pipeline (85)
+`io-formats/src/main/java/dev/ftbq/editor/io/exporter/Exporter.java`
+`io-formats/src/main/java/dev/ftbq/editor/io/importer/Importer.java`
 
-### Import/Export Workflows (Importance Score: 70)
-- **File Path:**
-  - `io-formats/src/main/java/dev/ftbq/editor/io/exporter/Exporter.java`
-  - `io-formats/src/main/java/dev/ftbq/editor/io/importer/Importer.java`
-
-Specialized data transformation workflows for:
-
-1. Quest pack format conversion between versions
-2. Loot table migration and upgrade paths
-3. Reference resolution during import/export operations
-4. Validation of structural integrity during transformations
+Bidirectional data transformation pipeline:
+- Quest pack format validation
+- Resource reference resolution
+- Version compatibility checks
+- Batch import/export operations
+- Error recovery and partial imports
 
 $END$
 

@@ -1,36 +1,43 @@
 ---
-description: Provides validation rules and checks for quest data integrity, reference validation, and reward balance
+description: Documentation for quest validation framework including reference checking, loot weights, and required fields validation
 ---
 
 
 # validation-framework
 
-The validation framework implements three core validators for ensuring quest data integrity:
+The validation framework provides three core validators for quest data integrity:
 
-### BrokenReferenceValidator (Score: 85)
-- **File:** `core-domain/src/main/java/dev/ftbq/editor/validation/BrokenReferenceValidator.java`
-- Validates all item references, icon references, and quest dependencies
-- Checks quest reward items against the active version's item catalog
-- Ensures all referenced chapters and quest IDs exist within the file
-- Validates loot table references in quest rewards
+### BrokenReferenceValidator (core-domain/src/main/java/dev/ftbq/editor/validation/BrokenReferenceValidator.java)
+**Importance Score: 85**
+Validates referential integrity across the quest system by checking:
+- Item references against the item catalog
+- Quest dependencies point to valid quests
+- Chapter and quest group relationships
+- Icon and background resource references
 
-### LootWeightsValidator (Score: 80)
-- **File:** `core-domain/src/main/java/dev/ftbq/editor/validation/LootWeightsValidator.java`
-- Validates weight distributions in loot tables
-- Ensures pool weights sum to expected totals
-- Verifies minimum and maximum pool entries
-- Validates conditional probability calculations
+### LootWeightsValidator (core-domain/src/main/java/dev/ftbq/editor/validation/LootWeightsValidator.java) 
+**Importance Score: 80**
+Ensures loot table probability distributions are valid:
+- Loot pool entry weights sum to expected totals
+- Individual entry weights are positive values
+- Pool distributions follow configured rules
+- Weighted entries have valid probability ranges
 
-### RequiredFieldsValidator (Score: 75)
-- **File:** `core-domain/src/main/java/dev/ftbq/editor/validation/RequiredFieldsValidator.java`
-- Enforces required fields for quests including:
-  - Quest titles and descriptions
-  - Task completion criteria
-  - Reward specifications
-  - Chapter assignments
-- Validates minimum data requirements for loot tables
+### RequiredFieldsValidator (core-domain/src/main/java/dev/ftbq/editor/validation/RequiredFieldsValidator.java)
+**Importance Score: 75**
+Verifies required quest data fields:
+- Quest titles and descriptions
+- Task completion criteria
+- Reward definitions
+- Chapter metadata
+- Essential quest progression flags
 
-The framework uses a common `ValidationIssue` class to report problems and integrates with the domain model through the `Validator` interface.
+### Integration Points
+- Validators integrate with ValidationIssue (core-domain/src/main/java/dev/ftbq/editor/validation/ValidationIssue.java) for error reporting
+- Common Validator interface (core-domain/src/main/java/dev/ftbq/editor/validation/Validator.java) defines validation contract
+- Validators execute during quest file save operations
+- Results feed into UI validation indicators
+- Blocking vs warning validation levels supported
 
 $END$
 
