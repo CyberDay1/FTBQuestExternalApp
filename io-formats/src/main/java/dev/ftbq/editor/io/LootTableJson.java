@@ -1,6 +1,12 @@
 package dev.ftbq.editor.io;
 
+import com.fasterxml.jackson.annotation.JsonAnyGetter;
+import com.fasterxml.jackson.annotation.JsonAnySetter;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.JsonNodeFactory;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import dev.ftbq.editor.domain.LootCondition;
 import dev.ftbq.editor.domain.LootEntry;
 import dev.ftbq.editor.domain.LootFunction;
@@ -14,6 +20,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -64,17 +71,11 @@ public final class LootTableJson {
     }
 
     static LootTableData toData(LootTable lootTable) {
-        return new LootTableData(
-                lootTable.id(),
-                lootTable.pools().stream().map(LootPoolData::fromDomain).collect(Collectors.toList())
-        );
+        return LootTableData.fromDomain(lootTable);
     }
 
     static LootTable fromData(LootTableData data) {
-        return new LootTable(
-                data.id(),
-                data.pools().stream().map(LootPoolData::toDomain).collect(Collectors.toList())
-        );
+        return data.toDomain();
     }
 
     private static Path resourceLocationToPath(String id) {
@@ -88,70 +89,258 @@ public final class LootTableJson {
         return path;
     }
 
-    static record LootTableData(@JsonProperty("id") String id,
-                                @JsonProperty("pools") List<LootPoolData> pools) {
+    private static Map<String, JsonNode> extrasToMap(ObjectNode extras) {
+        Map<String, JsonNode> map = new LinkedHashMap<>();
+        extras.fields().forEachRemaining(entry -> map.put(entry.getKey(), entry.getValue()));
+        return map;
     }
 
-    static record LootPoolData(@JsonProperty("name") String name,
-                               @JsonProperty("rolls") int rolls,
-                               @JsonProperty("entries") List<LootEntryData> entries,
-                               @JsonProperty("conditions") List<LootConditionData> conditions,
-                               @JsonProperty("functions") List<LootFunctionData> functions) {
+    static final class LootTableData {
+        @JsonProperty("id")
+        private String id;
+        @JsonProperty("pools")
+        private List<LootPoolData> pools = List.of();
+        @JsonIgnore
+        private ObjectNode extras = JsonNodeFactory.instance.objectNode();
+
+        LootTableData() {
+        }
+
+        static LootTableData fromDomain(LootTable lootTable) {
+            LootTableData data = new LootTableData();
+            data.id = lootTable.id();
+            data.pools = lootTable.pools().stream()
+                    .map(LootPoolData::fromDomain)
+                    .collect(Collectors.toList());
+            data.extras = lootTable.extras().deepCopy();
+            return data;
+        }
+
+        LootTable toDomain() {
+            List<LootPool> domainPools = safeList(pools).stream()
+                    .map(LootPoolData::toDomain)
+                    .collect(Collectors.toList());
+            return new LootTable(id, domainPools, extras());
+        }
+
+        @JsonAnySetter
+        public void addExtra(String name, JsonNode value) {
+            extras().set(name, value);
+        }
+
+        @JsonAnyGetter
+        public Map<String, JsonNode> getExtrasForJson() {
+            return extrasToMap(extras());
+        }
+
+        @JsonIgnore
+        ObjectNode extras() {
+            if (extras == null) {
+                extras = JsonNodeFactory.instance.objectNode();
+            }
+            return extras;
+        }
+
+        private static <T> List<T> safeList(List<T> value) {
+            return value == null ? List.of() : value;
+        }
+    }
+
+    static final class LootPoolData {
+        @JsonProperty("name")
+        private String name;
+        @JsonProperty("rolls")
+        private int rolls;
+        @JsonProperty("entries")
+        private List<LootEntryData> entries = List.of();
+        @JsonProperty("conditions")
+        private List<LootConditionData> conditions = List.of();
+        @JsonProperty("functions")
+        private List<LootFunctionData> functions = List.of();
+        @JsonIgnore
+        private ObjectNode extras = JsonNodeFactory.instance.objectNode();
+
+        LootPoolData() {
+        }
 
         static LootPoolData fromDomain(LootPool pool) {
-            return new LootPoolData(
-                    pool.name(),
-                    pool.rolls(),
-                    pool.entries().stream().map(LootEntryData::fromDomain).collect(Collectors.toList()),
-                    pool.conditions().stream().map(LootConditionData::fromDomain).collect(Collectors.toList()),
-                    pool.functions().stream().map(LootFunctionData::fromDomain).collect(Collectors.toList())
-            );
+            LootPoolData data = new LootPoolData();
+            data.name = pool.name();
+            data.rolls = pool.rolls();
+            data.entries = pool.entries().stream()
+                    .map(LootEntryData::fromDomain)
+                    .collect(Collectors.toList());
+            data.conditions = pool.conditions().stream()
+                    .map(LootConditionData::fromDomain)
+                    .collect(Collectors.toList());
+            data.functions = pool.functions().stream()
+                    .map(LootFunctionData::fromDomain)
+                    .collect(Collectors.toList());
+            data.extras = pool.extras().deepCopy();
+            return data;
         }
 
         LootPool toDomain() {
-            return new LootPool(
-                    name,
-                    rolls,
-                    entries.stream().map(LootEntryData::toDomain).collect(Collectors.toList()),
-                    conditions.stream().map(LootConditionData::toDomain).collect(Collectors.toList()),
-                    functions.stream().map(LootFunctionData::toDomain).collect(Collectors.toList())
-            );
+            List<LootEntry> domainEntries = safeList(entries).stream()
+                    .map(LootEntryData::toDomain)
+                    .collect(Collectors.toList());
+            List<LootCondition> domainConditions = safeList(conditions).stream()
+                    .map(LootConditionData::toDomain)
+                    .collect(Collectors.toList());
+            List<LootFunction> domainFunctions = safeList(functions).stream()
+                    .map(LootFunctionData::toDomain)
+                    .collect(Collectors.toList());
+            return new LootPool(name, rolls, domainEntries, domainConditions, domainFunctions, extras());
+        }
+
+        @JsonAnySetter
+        public void addExtra(String name, JsonNode value) {
+            extras().set(name, value);
+        }
+
+        @JsonAnyGetter
+        public Map<String, JsonNode> getExtrasForJson() {
+            return extrasToMap(extras());
+        }
+
+        @JsonIgnore
+        ObjectNode extras() {
+            if (extras == null) {
+                extras = JsonNodeFactory.instance.objectNode();
+            }
+            return extras;
+        }
+
+        private static <T> List<T> safeList(List<T> value) {
+            return value == null ? List.of() : value;
         }
     }
 
-    static record LootEntryData(@JsonProperty("item") ItemRefData item,
-                                @JsonProperty("weight") double weight) {
+    static final class LootEntryData {
+        @JsonProperty("item")
+        private ItemRefData item;
+        @JsonProperty("weight")
+        private double weight;
+        @JsonIgnore
+        private ObjectNode extras = JsonNodeFactory.instance.objectNode();
+
+        LootEntryData() {
+        }
 
         static LootEntryData fromDomain(LootEntry entry) {
-            return new LootEntryData(ItemRefData.fromDomain(entry.item()), entry.weight());
+            LootEntryData data = new LootEntryData();
+            data.item = ItemRefData.fromDomain(entry.item());
+            data.weight = entry.weight();
+            data.extras = entry.extras().deepCopy();
+            return data;
         }
 
         LootEntry toDomain() {
-            return new LootEntry(item.toDomain(), weight);
+            return new LootEntry(item.toDomain(), weight, extras());
+        }
+
+        @JsonAnySetter
+        public void addExtra(String name, JsonNode value) {
+            extras().set(name, value);
+        }
+
+        @JsonAnyGetter
+        public Map<String, JsonNode> getExtrasForJson() {
+            return extrasToMap(extras());
+        }
+
+        @JsonIgnore
+        ObjectNode extras() {
+            if (extras == null) {
+                extras = JsonNodeFactory.instance.objectNode();
+            }
+            return extras;
         }
     }
 
-    static record LootConditionData(@JsonProperty("type") String type,
-                                    @JsonProperty("parameters") Map<String, Object> parameters) {
+    static final class LootConditionData {
+        @JsonProperty("type")
+        private String type;
+        @JsonProperty("parameters")
+        private Map<String, Object> parameters = Map.of();
+        @JsonIgnore
+        private ObjectNode extras = JsonNodeFactory.instance.objectNode();
+
+        LootConditionData() {
+        }
 
         static LootConditionData fromDomain(LootCondition condition) {
-            return new LootConditionData(condition.type(), condition.parameters());
+            LootConditionData data = new LootConditionData();
+            data.type = condition.type();
+            data.parameters = condition.parameters();
+            data.extras = condition.extras().deepCopy();
+            return data;
         }
 
         LootCondition toDomain() {
-            return new LootCondition(type, parameters == null ? Map.of() : parameters);
+            Map<String, Object> params = parameters == null ? Map.of() : parameters;
+            return new LootCondition(type, params, extras());
+        }
+
+        @JsonAnySetter
+        public void addExtra(String name, JsonNode value) {
+            extras().set(name, value);
+        }
+
+        @JsonAnyGetter
+        public Map<String, JsonNode> getExtrasForJson() {
+            return extrasToMap(extras());
+        }
+
+        @JsonIgnore
+        ObjectNode extras() {
+            if (extras == null) {
+                extras = JsonNodeFactory.instance.objectNode();
+            }
+            return extras;
         }
     }
 
-    static record LootFunctionData(@JsonProperty("type") String type,
-                                   @JsonProperty("parameters") Map<String, Object> parameters) {
+    static final class LootFunctionData {
+        @JsonProperty("type")
+        private String type;
+        @JsonProperty("parameters")
+        private Map<String, Object> parameters = Map.of();
+        @JsonIgnore
+        private ObjectNode extras = JsonNodeFactory.instance.objectNode();
+
+        LootFunctionData() {
+        }
 
         static LootFunctionData fromDomain(LootFunction function) {
-            return new LootFunctionData(function.type(), function.parameters());
+            LootFunctionData data = new LootFunctionData();
+            data.type = function.type();
+            data.parameters = function.parameters();
+            data.extras = function.extras().deepCopy();
+            return data;
         }
 
         LootFunction toDomain() {
-            return new LootFunction(type, parameters == null ? Map.of() : parameters);
+            Map<String, Object> params = parameters == null ? Map.of() : parameters;
+            return new LootFunction(type, params, extras());
+        }
+
+        @JsonAnySetter
+        public void addExtra(String name, JsonNode value) {
+            extras().set(name, value);
+        }
+
+        @JsonAnyGetter
+        public Map<String, JsonNode> getExtrasForJson() {
+            return extrasToMap(extras());
+        }
+
+        @JsonIgnore
+        ObjectNode extras() {
+            if (extras == null) {
+                extras = JsonNodeFactory.instance.objectNode();
+            }
+            return extras;
         }
     }
 }

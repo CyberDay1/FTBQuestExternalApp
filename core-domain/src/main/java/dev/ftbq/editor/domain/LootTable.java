@@ -1,5 +1,8 @@
 package dev.ftbq.editor.domain;
 
+import com.fasterxml.jackson.databind.node.JsonNodeFactory;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -7,11 +10,16 @@ import java.util.Objects;
 /**
  * Simplified loot table representation.
  */
-public record LootTable(String id, List<LootPool> pools) {
+public record LootTable(String id, List<LootPool> pools, ObjectNode extras) {
 
     public LootTable {
         Objects.requireNonNull(id, "id");
         pools = List.copyOf(Objects.requireNonNull(pools, "pools"));
+        extras = Objects.requireNonNull(extras, "extras").deepCopy();
+    }
+
+    public LootTable(String id, List<LootPool> pools) {
+        this(id, pools, JsonNodeFactory.instance.objectNode());
     }
 
     public static Builder builder() {
@@ -21,6 +29,7 @@ public record LootTable(String id, List<LootPool> pools) {
     public static final class Builder {
         private String id;
         private final List<LootPool> pools = new ArrayList<>();
+        private ObjectNode extras = JsonNodeFactory.instance.objectNode();
 
         public Builder id(String id) {
             this.id = id;
@@ -38,8 +47,13 @@ public record LootTable(String id, List<LootPool> pools) {
             return this;
         }
 
+        public Builder extras(ObjectNode extras) {
+            this.extras = Objects.requireNonNull(extras, "extras");
+            return this;
+        }
+
         public LootTable build() {
-            return new LootTable(id, pools);
+            return new LootTable(id, pools, extras);
         }
     }
 }

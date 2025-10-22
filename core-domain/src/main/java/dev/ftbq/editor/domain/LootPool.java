@@ -1,5 +1,8 @@
 package dev.ftbq.editor.domain;
 
+import com.fasterxml.jackson.databind.node.JsonNodeFactory;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -11,7 +14,8 @@ public record LootPool(String name,
                        int rolls,
                        List<LootEntry> entries,
                        List<LootCondition> conditions,
-                       List<LootFunction> functions) {
+                       List<LootFunction> functions,
+                       ObjectNode extras) {
 
     public LootPool {
         Objects.requireNonNull(name, "name");
@@ -21,6 +25,15 @@ public record LootPool(String name,
         entries = List.copyOf(Objects.requireNonNull(entries, "entries"));
         conditions = List.copyOf(Objects.requireNonNull(conditions, "conditions"));
         functions = List.copyOf(Objects.requireNonNull(functions, "functions"));
+        extras = Objects.requireNonNull(extras, "extras").deepCopy();
+    }
+
+    public LootPool(String name,
+                    int rolls,
+                    List<LootEntry> entries,
+                    List<LootCondition> conditions,
+                    List<LootFunction> functions) {
+        this(name, rolls, entries, conditions, functions, JsonNodeFactory.instance.objectNode());
     }
 
     public static Builder builder() {
@@ -33,6 +46,7 @@ public record LootPool(String name,
         private final List<LootEntry> entries = new ArrayList<>();
         private final List<LootCondition> conditions = new ArrayList<>();
         private final List<LootFunction> functions = new ArrayList<>();
+        private ObjectNode extras = JsonNodeFactory.instance.objectNode();
 
         public Builder name(String name) {
             this.name = name;
@@ -77,8 +91,13 @@ public record LootPool(String name,
             return this;
         }
 
+        public Builder extras(ObjectNode extras) {
+            this.extras = Objects.requireNonNull(extras, "extras");
+            return this;
+        }
+
         public LootPool build() {
-            return new LootPool(name, rolls, entries, conditions, functions);
+            return new LootPool(name, rolls, entries, conditions, functions, extras);
         }
     }
 }
