@@ -29,12 +29,17 @@ public class MainApp extends Application {
         chapterTab.setContent(chapterRoot);
         chapterTab.setClosable(false);
 
-        Tab questTab = new Tab("Quest Editor");
-        Parent questRoot = FXMLLoader.load(getClass().getResource("/dev/ftbq/editor/view/quest_editor.fxml"));
-        questTab.setContent(questRoot);
-        questTab.setClosable(false);
+        tabPane.getTabs().add(chapterTab);
 
-        tabPane.getTabs().addAll(chapterTab, questTab);
+        try {
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/dev/ftbq/editor/view/quest_editor.fxml"));
+            Parent questRoot = loader.load();
+            Tab questTab = new Tab("Quest Editor", questRoot);
+            questTab.setClosable(false);
+            tabPane.getTabs().add(questTab);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
 
         Scene scene = new Scene(tabPane);
 

@@ -46,7 +46,7 @@
             <Label text="Icon:" GridPane.rowIndex="2" GridPane.columnIndex="0"/>
             <HBox spacing="10" GridPane.rowIndex="2" GridPane.columnIndex="1">
                 <children>
-                    <Button fx:id="chooseIconButton" text="Choose Icon" onAction="#handleChooseIcon"/>
+                    <Button fx:id="chooseIconButton" text="Choose Icon" onAction="#onChooseIconButton"/>
                     <ImageView fx:id="questIconView" fitHeight="32" fitWidth="32" preserveRatio="true"/>
                 </children>
             </HBox>

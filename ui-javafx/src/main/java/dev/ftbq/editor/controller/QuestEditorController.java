@@ -153,9 +153,11 @@ public class QuestEditorController {
                 .build();
     }
 
-    private void loadQuest(Quest quest) {
-        viewModel.loadQuest(quest);
-        refreshFromViewModel();
+    public void loadQuest(Quest quest) {
+        if (viewModel != null) {
+            viewModel.loadQuest(quest);
+            refreshFromViewModel();
+        }
     }
 
     private void refreshFromViewModel() {
@@ -164,7 +166,8 @@ public class QuestEditorController {
     }
 
     @FXML
-    private void handleChooseIcon() {
+    private void onChooseIconButton() {
+        System.out.println("Item browser will open here (06-05)");
         openItemBrowser();
     }
 
