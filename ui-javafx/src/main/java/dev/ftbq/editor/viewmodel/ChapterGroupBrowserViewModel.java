@@ -1,5 +1,6 @@
 package dev.ftbq.editor.viewmodel;
 
+import dev.ftbq.editor.domain.BackgroundRef;
 import javafx.beans.Observable;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
@@ -107,7 +108,7 @@ public class ChapterGroupBrowserViewModel {
     public static final class ChapterGroup {
         private final StringProperty name = new SimpleStringProperty();
         private final ObservableList<Chapter> chapters = FXCollections.observableArrayList(
-                chapter -> new Observable[]{chapter.nameProperty()}
+                chapter -> new Observable[]{chapter.nameProperty(), chapter.backgroundProperty()}
         );
 
         public ChapterGroup(String name) {
@@ -133,6 +134,7 @@ public class ChapterGroupBrowserViewModel {
 
     public static final class Chapter {
         private final StringProperty name = new SimpleStringProperty();
+        private final javafx.beans.property.ObjectProperty<BackgroundRef> background = new javafx.beans.property.SimpleObjectProperty<>(new BackgroundRef("minecraft:textures/gui/default.png"));
 
         public Chapter(String name) {
             setName(name);
@@ -148,6 +150,18 @@ public class ChapterGroupBrowserViewModel {
 
         public StringProperty nameProperty() {
             return name;
+        }
+
+        public BackgroundRef getBackground() {
+            return background.get();
+        }
+
+        public void setBackground(BackgroundRef background) {
+            this.background.set(background == null ? new BackgroundRef("minecraft:textures/gui/default.png") : background);
+        }
+
+        public javafx.beans.property.ObjectProperty<BackgroundRef> backgroundProperty() {
+            return background;
         }
     }
 }

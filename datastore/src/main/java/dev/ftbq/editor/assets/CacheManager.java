@@ -111,6 +111,11 @@ public final class CacheManager {
         }
     }
 
+    public Path resolveBackground(String hash) {
+        Objects.requireNonNull(hash, "hash");
+        return backgroundDirectory.resolve(hash + BACKGROUND_EXTENSION);
+    }
+
     public void clearIcons() {
         synchronized (iconLock) {
             purgeDirectory(iconDirectory);

@@ -67,6 +67,8 @@ class QuestFileJsonTest {
                 new BackgroundRef(
                         "chapter_background",
                         Optional.of("assets/example/backgrounds/chapter_background.png"),
+                        Optional.of("cache/backgrounds/chapter_background.png"),
+                        Optional.of("#223344"),
                         Optional.of(BackgroundAlignment.CENTER),
                         Optional.of(BackgroundRepeat.BOTH)
                 ),

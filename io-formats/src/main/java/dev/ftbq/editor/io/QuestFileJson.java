@@ -268,16 +268,20 @@ public final class QuestFileJson {
 
     private record BackgroundRefData(@JsonProperty("texture") String texture,
                                      @JsonProperty("relative_path") @JsonInclude(JsonInclude.Include.NON_EMPTY) Optional<String> relativePath,
+                                     @JsonProperty("path") @JsonInclude(JsonInclude.Include.NON_EMPTY) Optional<String> path,
+                                     @JsonProperty("color") @JsonInclude(JsonInclude.Include.NON_EMPTY) Optional<String> color,
                                      @JsonProperty("alignment") @JsonInclude(JsonInclude.Include.NON_EMPTY) Optional<BackgroundAlignment> alignment,
                                      @JsonProperty("repeat") @JsonInclude(JsonInclude.Include.NON_EMPTY) Optional<BackgroundRepeat> repeat) {
 
         private static BackgroundRefData fromDomain(BackgroundRef background) {
-            return new BackgroundRefData(background.texture(), background.relativePath(), background.alignment(), background.repeat());
+            return new BackgroundRefData(background.texture(), background.relativePath(), background.path(), background.colorHex(), background.alignment(), background.repeat());
         }
 
         private BackgroundRef toDomain() {
             return new BackgroundRef(texture,
                     relativePath == null ? Optional.empty() : relativePath,
+                    path == null ? Optional.empty() : path,
+                    color == null ? Optional.empty() : color,
                     alignment == null ? Optional.empty() : alignment,
                     repeat == null ? Optional.empty() : repeat);
         }

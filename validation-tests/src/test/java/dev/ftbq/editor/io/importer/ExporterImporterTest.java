@@ -76,6 +76,8 @@ class ExporterImporterTest {
                 new BackgroundRef(
                         backgroundFile.toString(),
                         Optional.of(tempDir.relativize(backgroundFile).toString()),
+                        Optional.of(tempDir.resolve("cache").resolve("background" + backgroundFile.getFileName()).toString()),
+                        Optional.of("#334455"),
                         Optional.of(BackgroundAlignment.CENTER),
                         Optional.of(BackgroundRepeat.BOTH)
                 ),
