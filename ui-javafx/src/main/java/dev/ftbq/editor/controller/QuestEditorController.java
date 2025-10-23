@@ -26,6 +26,7 @@ import javafx.stage.Stage;
 
 import java.io.IOException;
 import java.util.Objects;
+import java.util.function.Consumer;
 
 public class QuestEditorController {
     @FXML
@@ -42,6 +43,9 @@ public class QuestEditorController {
 
     @FXML
     private ImageView questIconView;
+
+    @FXML
+    private Button linkLootTableButton;
 
     @FXML
     private ListView<Dependency> dependencyListView;
@@ -61,6 +65,7 @@ public class QuestEditorController {
     private final QuestEditorViewModel viewModel;
 
     private final Tooltip iconTooltip = new Tooltip();
+    private Consumer<String> lootTableLinkHandler = tableId -> { };
 
     public QuestEditorController() {
         this(new QuestEditorViewModel(CommandBus.noop()));
@@ -72,6 +77,10 @@ public class QuestEditorController {
 
     public void setCommandBus(CommandBus commandBus) {
         viewModel.setCommandBus(Objects.requireNonNull(commandBus, "commandBus"));
+    }
+
+    public void setLootTableLinkHandler(Consumer<String> handler) {
+        lootTableLinkHandler = handler == null ? tableId -> { } : handler;
     }
 
     @FXML
@@ -176,6 +185,17 @@ public class QuestEditorController {
     private void onChooseIconButton() {
         System.out.println("Item browser will open here (06-05)");
         openItemBrowser();
+    }
+
+    @FXML
+    private void onLinkLootTable() {
+        String tableId;
+        if (viewModel.getCurrentQuest() != null) {
+            tableId = viewModel.getCurrentQuest().id();
+        } else {
+            tableId = viewModel.titleProperty().get();
+        }
+        lootTableLinkHandler.accept(tableId == null ? "" : tableId);
     }
 
     @FXML

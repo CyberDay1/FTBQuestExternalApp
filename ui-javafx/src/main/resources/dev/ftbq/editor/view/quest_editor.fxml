@@ -64,6 +64,7 @@
     <bottom>
         <HBox spacing="10" alignment="CENTER_RIGHT">
             <children>
+                <Button fx:id="linkLootTableButton" text="Link Loot Table" onAction="#onLinkLootTable"/>
                 <Button fx:id="saveButton" text="Save" onAction="#handleSave"/>
                 <Button fx:id="cancelButton" text="Cancel" onAction="#handleCancel"/>
             </children>
