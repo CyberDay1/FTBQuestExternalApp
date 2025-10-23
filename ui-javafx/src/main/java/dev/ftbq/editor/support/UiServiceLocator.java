@@ -45,6 +45,10 @@ public final class UiServiceLocator {
         return versionCatalog;
     }
 
+    public static synchronized void rebuildVersionCatalog() {
+        versionCatalog = null;
+    }
+
     public static synchronized void overrideStoreDao(StoreDao customDao) {
         storeDao = Objects.requireNonNull(customDao, "customDao");
     }

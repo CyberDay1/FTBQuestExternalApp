@@ -55,6 +55,16 @@ public class MainApp extends Application {
             e.printStackTrace();
         }
 
+        try {
+            FXMLLoader settingsLoader = new FXMLLoader(getClass().getResource("/dev/ftbq/editor/view/settings.fxml"));
+            Parent settingsRoot = settingsLoader.load();
+            Tab settingsTab = new Tab("Settings", settingsRoot);
+            settingsTab.setClosable(false);
+            tabPane.getTabs().add(settingsTab);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
         Scene scene = new Scene(tabPane);
 
         primaryStage.setTitle("FTB Quest Editor");
