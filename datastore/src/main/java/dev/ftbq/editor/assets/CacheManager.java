@@ -111,6 +111,12 @@ public final class CacheManager {
         }
     }
 
+    public void clearIcons() {
+        synchronized (iconLock) {
+            purgeDirectory(iconDirectory);
+        }
+    }
+
     private void initialiseDirectories() {
         try {
             Files.createDirectories(rootDirectory);

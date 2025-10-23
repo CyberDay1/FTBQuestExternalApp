@@ -18,4 +18,5 @@ dependencies {
     implementation(project(":datastore"))
     implementation(project(":core-domain"))
     implementation(project(":services"))
+    implementation(project(":ingestion"))
 }
