@@ -1,5 +1,6 @@
 package dev.ftbq.editor.controller;
 
+import dev.ftbq.editor.ThemeService;
 import dev.ftbq.editor.domain.Dependency;
 import dev.ftbq.editor.domain.IconRef;
 import dev.ftbq.editor.domain.Quest;
@@ -224,6 +225,7 @@ public class QuestEditorController {
             Stage stage = new Stage();
             stage.setTitle("Item Browser");
             stage.setScene(new Scene(root));
+            ThemeService.getInstance().registerStage(stage);
             if (rootPane != null && rootPane.getScene() != null) {
                 stage.initOwner(rootPane.getScene().getWindow());
                 stage.initModality(Modality.WINDOW_MODAL);

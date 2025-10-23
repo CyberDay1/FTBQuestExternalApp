@@ -1,5 +1,6 @@
 package dev.ftbq.editor.controller;
 
+import dev.ftbq.editor.ThemeService;
 import dev.ftbq.editor.assets.CacheManager;
 import dev.ftbq.editor.domain.ItemRef;
 import dev.ftbq.editor.domain.LootPool;
@@ -178,6 +179,7 @@ public class LootTableEditorController {
             stage.setTitle("Select Item");
             stage.initModality(Modality.APPLICATION_MODAL);
             stage.setScene(new Scene(root));
+            ThemeService.getInstance().registerStage(stage);
             stage.show();
             stage.setOnHidden(event -> controller.dispose());
         } catch (IOException e) {
