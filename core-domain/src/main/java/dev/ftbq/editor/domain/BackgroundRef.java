@@ -8,23 +8,35 @@ import java.util.Optional;
  */
 public record BackgroundRef(String texture,
                              Optional<String> relativePath,
+                             Optional<String> path,
+                             Optional<String> colorHex,
                              Optional<BackgroundAlignment> alignment,
                              Optional<BackgroundRepeat> repeat) {
 
     public BackgroundRef {
         Objects.requireNonNull(texture, "texture");
         relativePath = Objects.requireNonNull(relativePath, "relativePath");
+        path = Objects.requireNonNull(path, "path");
+        colorHex = Objects.requireNonNull(colorHex, "colorHex");
         Objects.requireNonNull(alignment, "alignment");
         Objects.requireNonNull(repeat, "repeat");
     }
 
     public BackgroundRef(String texture,
+                          Optional<String> relativePath,
+                          Optional<String> path,
                           Optional<BackgroundAlignment> alignment,
                           Optional<BackgroundRepeat> repeat) {
-        this(texture, Optional.empty(), alignment, repeat);
+        this(texture, relativePath, path, Optional.empty(), alignment, repeat);
+    }
+
+    public BackgroundRef(String texture,
+                          Optional<BackgroundAlignment> alignment,
+                          Optional<BackgroundRepeat> repeat) {
+        this(texture, Optional.empty(), Optional.empty(), Optional.empty(), alignment, repeat);
     }
 
     public BackgroundRef(String texture) {
-        this(texture, Optional.empty(), Optional.empty(), Optional.empty());
+        this(texture, Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty());
     }
 }

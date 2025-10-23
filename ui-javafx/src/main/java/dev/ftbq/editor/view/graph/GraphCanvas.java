@@ -13,6 +13,7 @@ import javafx.geometry.Point2D;
 import javafx.scene.Group;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
+import javafx.scene.image.Image;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.input.ScrollEvent;
@@ -28,6 +29,9 @@ import javafx.scene.text.FontWeight;
 import javafx.scene.transform.Scale;
 import javafx.scene.transform.Translate;
 
+import java.nio.file.Files;
+import java.nio.file.InvalidPathException;
+import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
@@ -50,6 +54,8 @@ public class GraphCanvas extends Pane {
     private static final double MAX_SCALE = 2.6;
 
     private final ObjectProperty<Chapter> chapter = new SimpleObjectProperty<>();
+    private static final BackgroundRef DEFAULT_BACKGROUND = new BackgroundRef("minecraft:textures/gui/default.png");
+
     private final Canvas backgroundLayer = new Canvas();
     private final Canvas edgeLayer = new Canvas();
     private final Pane nodeLayer = new Pane();
@@ -57,9 +63,11 @@ public class GraphCanvas extends Pane {
     private final Scale scaleTransform = new Scale(1, 1);
     private final Translate translateTransform = new Translate();
 
+    private final ObjectProperty<BackgroundRef> backgroundRef = new SimpleObjectProperty<>(DEFAULT_BACKGROUND);
     private final Map<String, QuestNodeView> nodeViews = new HashMap<>();
     private final ObservableList<GraphEdge> edges = FXCollections.observableArrayList();
     private final Map<String, ValidationLevel> validationStateByQuest = new HashMap<>();
+    private final Map<String, Image> backgroundImages = new HashMap<>();
     private QuestGraphModel model;
 
     private double currentScale = 1.0;
@@ -87,7 +95,18 @@ public class GraphCanvas extends Pane {
         addEventFilter(MouseEvent.MOUSE_RELEASED, this::handleMouseReleased);
         addEventFilter(ScrollEvent.SCROLL, this::handleScroll);
 
-        chapter.addListener((obs, oldChapter, newChapter) -> rebuildGraph());
+        chapter.addListener((obs, oldChapter, newChapter) -> {
+            if (newChapter != null) {
+                backgroundRef.set(Objects.requireNonNullElse(newChapter.background(), DEFAULT_BACKGROUND));
+            } else {
+                backgroundRef.set(DEFAULT_BACKGROUND);
+            }
+            rebuildGraph();
+        });
+        backgroundRef.addListener((obs, oldBackground, newBackground) -> {
+            backgroundImages.clear();
+            drawBackground();
+        });
     }
 
     public ObjectProperty<Chapter> chapterProperty() {
@@ -100,6 +119,18 @@ public class GraphCanvas extends Pane {
 
     public Chapter getChapter() {
         return chapter.get();
+    }
+
+    public ObjectProperty<BackgroundRef> backgroundRefProperty() {
+        return backgroundRef;
+    }
+
+    public BackgroundRef getBackgroundRef() {
+        return backgroundRef.get();
+    }
+
+    public void setBackgroundRef(BackgroundRef background) {
+        backgroundRef.set(background == null ? DEFAULT_BACKGROUND : background);
     }
 
     public void setValidationState(String questId, ValidationLevel level) {
@@ -175,6 +206,7 @@ public class GraphCanvas extends Pane {
         }
 
         model = QuestGraphModel.fromChapter(activeChapter, validationStateByQuest);
+        backgroundRef.set(activeChapter.background());
 
         for (QuestGraphModel.Node node : model.getNodes()) {
             QuestNodeView view = new QuestNodeView(node);
@@ -312,68 +344,173 @@ public class GraphCanvas extends Pane {
 
     private void drawBackground() {
         GraphicsContext gc = backgroundLayer.getGraphicsContext2D();
-        gc.clearRect(0, 0, backgroundLayer.getWidth(), backgroundLayer.getHeight());
-        Chapter active = chapter.get();
-        if (active == null) {
-            gc.setFill(Color.web("#1e1e1e"));
-            gc.fillRect(0, 0, backgroundLayer.getWidth(), backgroundLayer.getHeight());
+        double width = backgroundLayer.getWidth();
+        double height = backgroundLayer.getHeight();
+        gc.clearRect(0, 0, width, height);
+
+        BackgroundRef background = backgroundRef.get();
+        Color fill = fallbackColor(background);
+        gc.setFill(fill);
+        gc.fillRect(0, 0, width, height);
+
+        Optional<Image> image = loadBackgroundImage(background);
+        if (image.isEmpty()) {
             return;
         }
-        BackgroundRef background = active.background();
-        Paint basePaint = paintFromBackground(background);
+
+        Image tile = image.get();
+        double tileWidth = tile.getWidth();
+        double tileHeight = tile.getHeight();
+        if (tileWidth <= 0 || tileHeight <= 0) {
+            return;
+        }
+
         BackgroundRepeat repeat = background.repeat().orElse(BackgroundRepeat.BOTH);
         if (repeat == BackgroundRepeat.NONE) {
-            gc.setFill(basePaint);
-            gc.fillRect(0, 0, backgroundLayer.getWidth(), backgroundLayer.getHeight());
+            Point2D offset = alignmentOffset(background.alignment(), width, height, tileWidth, tileHeight);
+            gc.drawImage(tile, offset.getX(), offset.getY());
             return;
         }
 
-        double tileSize = 128;
-        int tilesX = (int) Math.ceil(backgroundLayer.getWidth() / tileSize) + 1;
-        int tilesY = (int) Math.ceil(backgroundLayer.getHeight() / tileSize) + 1;
-        double offsetX = alignmentOffset(background.alignment(), backgroundLayer.getWidth(), tileSize, true);
-        double offsetY = alignmentOffset(background.alignment(), backgroundLayer.getHeight(), tileSize, false);
+        boolean repeatX = repeat == BackgroundRepeat.BOTH || repeat == BackgroundRepeat.HORIZONTAL;
+        boolean repeatY = repeat == BackgroundRepeat.BOTH || repeat == BackgroundRepeat.VERTICAL;
 
-        for (int x = -1; x < tilesX; x++) {
-            for (int y = -1; y < tilesY; y++) {
-                if (repeat == BackgroundRepeat.HORIZONTAL && y != 0) {
-                    continue;
+        Point2D anchor = alignmentOffset(background.alignment(), width, height, tileWidth, tileHeight);
+        double startX = repeatX ? repeatStart(anchor.getX(), tileWidth) : anchor.getX();
+        double startY = repeatY ? repeatStart(anchor.getY(), tileHeight) : anchor.getY();
+
+        for (double drawX = startX; drawX < width; drawX += tileWidth) {
+            if (!repeatX && drawX > startX) {
+                break;
+            }
+            for (double drawY = startY; drawY < height; drawY += tileHeight) {
+                if (!repeatY && drawY > startY) {
+                    break;
                 }
-                if (repeat == BackgroundRepeat.VERTICAL && x != 0) {
-                    continue;
-                }
-                double drawX = x * tileSize + offsetX;
-                double drawY = y * tileSize + offsetY;
-                gc.setFill(basePaint);
-                gc.fillRect(drawX, drawY, tileSize, tileSize);
-                gc.setStroke(((Color) basePaint).darker().deriveColor(0, 1, 0.8, 0.4));
-                gc.strokeRect(drawX, drawY, tileSize, tileSize);
+                gc.drawImage(tile, drawX, drawY);
             }
         }
     }
 
-    private double alignmentOffset(Optional<BackgroundAlignment> alignment, double canvasLength, double tileSize, boolean horizontal) {
-        if (alignment.isEmpty()) {
-            return 0;
+    private Color fallbackColor(BackgroundRef background) {
+        if (background == null) {
+            return Color.web("#1e1e1e");
         }
-        BackgroundAlignment value = alignment.get();
-        return switch (value) {
-            case CENTER -> (canvasLength - tileSize) / 2;
-            case TOP_LEFT -> horizontal ? 0 : 0;
-            case TOP_RIGHT -> horizontal ? canvasLength - tileSize : 0;
-            case BOTTOM_LEFT -> horizontal ? 0 : canvasLength - tileSize;
-            case BOTTOM_RIGHT -> horizontal ? canvasLength - tileSize : canvasLength - tileSize;
-            case TOP -> horizontal ? (canvasLength - tileSize) / 2 : 0;
-            case BOTTOM -> horizontal ? (canvasLength - tileSize) / 2 : canvasLength - tileSize;
-            case LEFT -> horizontal ? 0 : (canvasLength - tileSize) / 2;
-            case RIGHT -> horizontal ? canvasLength - tileSize : (canvasLength - tileSize) / 2;
-        };
+        Optional<String> colorHex = background.colorHex();
+        if (colorHex.isPresent()) {
+            try {
+                return Color.web(colorHex.get());
+            } catch (IllegalArgumentException ignored) {
+                // fall back to derived color
+            }
+        }
+        return colorFromString(background.texture());
     }
 
-    private Paint paintFromBackground(BackgroundRef background) {
-        Color primary = colorFromString(background.texture());
-        Color secondary = primary.deriveColor(180, 1.1, 0.7, 1.0);
-        return new CheckerboardPaint(primary, secondary, 16).create();
+    private Optional<Image> loadBackgroundImage(BackgroundRef background) {
+        if (background == null) {
+            return Optional.empty();
+        }
+        Optional<Image> fromPath = background.path()
+                .flatMap(this::loadBackgroundImageFromPath);
+        if (fromPath.isPresent()) {
+            return fromPath;
+        }
+        return loadBackgroundImageFromPath(background.texture());
+    }
+
+    private Optional<Image> loadBackgroundImageFromPath(String value) {
+        if (value == null || value.isBlank()) {
+            return Optional.empty();
+        }
+        if (backgroundImages.containsKey(value)) {
+            return Optional.ofNullable(backgroundImages.get(value));
+        }
+        Optional<Image> loaded = loadImage(value);
+        backgroundImages.put(value, loaded.orElse(null));
+        return loaded;
+    }
+
+    private Optional<Image> loadImage(String value) {
+        try {
+            Path path = Path.of(value);
+            if (!Files.exists(path)) {
+                return Optional.empty();
+            }
+            return Optional.of(new Image(path.toUri().toString(), true));
+        } catch (InvalidPathException ex) {
+            return Optional.empty();
+        }
+    }
+
+    private Point2D alignmentOffset(Optional<BackgroundAlignment> alignment,
+                                     double canvasWidth,
+                                     double canvasHeight,
+                                     double tileWidth,
+                                     double tileHeight) {
+        if (alignment.isEmpty()) {
+            return new Point2D(0, 0);
+        }
+        BackgroundAlignment value = alignment.get();
+        double x;
+        double y;
+        switch (value) {
+            case CENTER -> {
+                x = (canvasWidth - tileWidth) / 2;
+                y = (canvasHeight - tileHeight) / 2;
+            }
+            case TOP_LEFT -> {
+                x = 0;
+                y = 0;
+            }
+            case TOP_RIGHT -> {
+                x = canvasWidth - tileWidth;
+                y = 0;
+            }
+            case BOTTOM_LEFT -> {
+                x = 0;
+                y = canvasHeight - tileHeight;
+            }
+            case BOTTOM_RIGHT -> {
+                x = canvasWidth - tileWidth;
+                y = canvasHeight - tileHeight;
+            }
+            case TOP -> {
+                x = (canvasWidth - tileWidth) / 2;
+                y = 0;
+            }
+            case BOTTOM -> {
+                x = (canvasWidth - tileWidth) / 2;
+                y = canvasHeight - tileHeight;
+            }
+            case LEFT -> {
+                x = 0;
+                y = (canvasHeight - tileHeight) / 2;
+            }
+            case RIGHT -> {
+                x = canvasWidth - tileWidth;
+                y = (canvasHeight - tileHeight) / 2;
+            }
+            default -> {
+                x = 0;
+                y = 0;
+            }
+        }
+        return new Point2D(clamp(x, -tileWidth, canvasWidth), clamp(y, -tileHeight, canvasHeight));
+    }
+
+    private double repeatStart(double anchor, double tileSize) {
+        if (tileSize <= 0) {
+            return 0;
+        }
+        double start = anchor % tileSize;
+        if (start > 0) {
+            start -= tileSize;
+        }
+        if (start == 0) {
+            start = -tileSize;
+        }
+        return start;
     }
 
     private static Color colorFromString(String value) {
@@ -539,27 +676,4 @@ public class GraphCanvas extends Pane {
         }
     }
 
-    private static final class CheckerboardPaint {
-        private final Color a;
-        private final Color b;
-        private final int squareSize;
-
-        private CheckerboardPaint(Color a, Color b, int squareSize) {
-            this.a = a;
-            this.b = b;
-            this.squareSize = squareSize;
-        }
-
-        private Paint create() {
-            int size = squareSize * 2;
-            javafx.scene.image.WritableImage image = new javafx.scene.image.WritableImage(size, size);
-            for (int x = 0; x < size; x++) {
-                for (int y = 0; y < size; y++) {
-                    boolean even = ((x / squareSize) + (y / squareSize)) % 2 == 0;
-                    image.getPixelWriter().setColor(x, y, even ? a : b);
-                }
-            }
-            return new javafx.scene.paint.ImagePattern(image, 0, 0, size, size, false);
-        }
-    }
 }
