@@ -67,6 +67,9 @@ public class MainApp extends Application {
 
         Scene scene = new Scene(tabPane);
 
+        ThemeService themeService = ThemeService.getInstance();
+        themeService.registerStage(primaryStage);
+
         primaryStage.setTitle("FTB Quest Editor");
         primaryStage.setScene(scene);
         primaryStage.setWidth(960);
