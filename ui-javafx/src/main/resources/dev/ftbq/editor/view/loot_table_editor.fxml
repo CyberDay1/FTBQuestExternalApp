@@ -7,6 +7,7 @@
 <?import javafx.scene.control.TableColumn?>
 <?import javafx.scene.control.TableView?>
 <?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.VBox?>
 
 <VBox xmlns="http://javafx.com/javafx"
@@ -20,14 +21,28 @@
         <Label text="Loot Table Editor" style="-fx-font-size: 18px; -fx-font-weight: bold;" />
         <TextField fx:id="tableNameField" promptText="Enter loot table name" />
         <ListView fx:id="lootItemList" prefHeight="200.0" prefWidth="400.0" />
+        <Button fx:id="addPoolButton" text="Add Pool" onAction="#onAddPool" />
         <TableView fx:id="entryTable" prefHeight="250.0" prefWidth="400.0">
             <columns>
-                <TableColumn fx:id="iconColumn" text="Icon" prefWidth="100.0" />
-                <TableColumn fx:id='itemIdColumn' text='Item ID' prefWidth='300.0' />
+                <TableColumn fx:id="iconColumn" text="Icon" prefWidth="80.0" />
+                <TableColumn fx:id="itemIdColumn" text="Item ID" prefWidth="180.0" />
+                <TableColumn fx:id="displayNameColumn" text="Display Name" prefWidth="180.0" />
+                <TableColumn fx:id="weightColumn" text="Weight" prefWidth="100.0" />
+                <TableColumn fx:id="conditionsColumn" text="Conditions" prefWidth="200.0" />
             </columns>
         </TableView>
-        <Button fx:id="addItemButton" text="Add Item" />
-        <Button fx:id="removeItemButton" text="Remove Selected" />
+        <HBox spacing="8">
+            <children>
+                <Button fx:id="addEntryButton" text="Add Entry" onAction="#onAddEntry" />
+                <Button fx:id="removeEntryButton" text="Remove Selected" onAction="#onRemoveEntry" />
+            </children>
+        </HBox>
+        <HBox spacing="8" alignment="CENTER_LEFT">
+            <children>
+                <Button fx:id="previewButton" text="Preview" onAction="#onPreview" />
+                <Label fx:id="previewSummary" wrapText="true" />
+            </children>
+        </HBox>
     </children>
 
     <padding>
