@@ -1,27 +1,24 @@
 package dev.ftbq.editor.services.bus;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 
-import java.util.concurrent.atomic.AtomicReference;
-
+import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 import org.junit.jupiter.api.Test;
 
 class EventBusTest {
 
     @Test
-    void publishesEventToSubscriber() {
-        EventBus eventBus = new EventBus();
-        AtomicReference<TestEvent> received = new AtomicReference<>();
-        eventBus.subscribe(TestEvent.class, received::set);
+    void publishesEventToSubscribers() {
+        EventBus bus = new EventBus();
+        List<String> received = new CopyOnWriteArrayList<>();
+        bus.subscribe(TestEvent.class, event -> received.add(event.message()));
 
-        TestEvent event = new TestEvent("payload");
-        eventBus.publish(event);
+        bus.publish(new TestEvent("hello"));
+        bus.publish(new TestEvent("world"));
 
-        assertNotNull(received.get());
-        assertEquals(event, received.get());
+        assertEquals(List.of("hello", "world"), received);
     }
 
-    private record TestEvent(String value) implements Event {
-    }
+    private record TestEvent(String message) implements Event {}
 }
