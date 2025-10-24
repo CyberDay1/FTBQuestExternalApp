@@ -1,58 +1,29 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<?import javafx.scene.control.*?>
-<?import javafx.scene.layout.*?>
 <?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ListView?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.VBox?>
 
-<BorderPane xmlns="http://javafx.com/javafx/21.0.1" xmlns:fx="http://javafx.com/fxml/1"
-            fx:controller="dev.ftbq.editor.controller.LootTableEditorController">
-    <top>
-        <HBox spacing="8" alignment="CENTER_LEFT" BorderPane.alignment="CENTER_LEFT">
-            <padding>
-                <Insets top="8" right="8" bottom="8" left="8"/>
-            </padding>
-            <children>
-                <TextField fx:id="tableNameField" promptText="Loot table name" HBox.hgrow="ALWAYS"/>
-                <Button fx:id="addPoolButton" text="Add Pool" onAction="#onAddPool"/>
-            </children>
-        </HBox>
-    </top>
-    <center>
-        <SplitPane dividerPositions="0.3">
-            <items>
-                <ListView fx:id="poolListView" prefWidth="200.0"/>
-                <VBox spacing="8" <padding><Insets top="10" right="10" bottom="10" left="10" /></padding>>
-                    <children>
-                        <TableView fx:id="entryTable" prefHeight="400.0" VBox.vgrow="ALWAYS">
-                            <columns>
-                                <TableColumn fx:id="iconColumn" text="Icon" prefWidth="60.0"/>
-                                <TableColumn fx:id="itemIdColumn" text="Item ID" prefWidth="180.0"/>
-                                <TableColumn fx:id="displayNameColumn" text="Display Name" prefWidth="200.0"/>
-                                <TableColumn fx:id="weightColumn" text="Weight" prefWidth="100.0"/>
-                                <TableColumn fx:id="conditionsColumn" text="Conditions" prefWidth="160.0"/>
-                            </columns>
-                        </TableView>
-                        <HBox spacing="8" alignment="CENTER_RIGHT">
-                            <children>
-                                <Button fx:id="addEntryButton" text="Add Entry" onAction="#onAddEntry"/>
-                                <Button fx:id="removeEntryButton" text="Remove Entry" onAction="#onRemoveEntry"/>
-                            </children>
-                        </HBox>
-                    </children>
-                </VBox>
-            </items>
-        </SplitPane>
-    </center>
-    <bottom>
-        <HBox spacing="12" alignment="CENTER_LEFT" BorderPane.alignment="CENTER_LEFT">
-            <padding>
-                <Insets top="8" right="8" bottom="8" left="8"/>
-            </padding>
-            <children>
-                <Button fx:id="previewButton" text="Preview" onAction="#onPreview"/>
-                <Label fx:id="previewSummary" text="" wrapText="true" HBox.hgrow="ALWAYS"/>
-            </children>
-        </HBox>
-    </bottom>
-</BorderPane>
+<VBox xmlns="http://javafx.com/javafx"
+      xmlns:fx="http://javafx.com/fxml"
+      fx:controller="dev.ftbq.editor.controller.LootTableEditorController"
+      spacing="10"
+      alignment="CENTER_LEFT"
+      style="-fx-padding: 10;">
 
+    <children>
+        <Label text="Loot Table Editor" style="-fx-font-size: 18px; -fx-font-weight: bold;" />
+        <TextField fx:id="lootTableNameField" promptText="Enter loot table name" />
+        <ListView fx:id="lootItemList" prefHeight="200.0" prefWidth="400.0" />
+        <Button fx:id="addItemButton" text="Add Item" />
+        <Button fx:id="removeItemButton" text="Remove Selected" />
+    </children>
+
+    <padding>
+        <Insets top="10" right="10" bottom="10" left="10" />
+    </padding>
+
+</VBox>
