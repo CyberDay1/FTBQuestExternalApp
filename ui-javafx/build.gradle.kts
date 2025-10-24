@@ -1,4 +1,4 @@
-plugins {
+﻿plugins {
     java
     application
     id("org.openjfx.javafxplugin") version "0.1.0"
@@ -25,3 +25,21 @@ dependencies {
     val jacksonVersion: String by project
     implementation("com.fasterxml.jackson.core:jackson-databind:$jacksonVersion")
 }
+
+repositories {
+    mavenCentral()
+}
+
+
+val junitVersion: String by project
+
+
+dependencies {
+    testImplementation("org.junit.jupiter:junit-jupiter:${junitVersion}")
+}
+
+
+tasks.test {
+    useJUnitPlatform()
+}
+
