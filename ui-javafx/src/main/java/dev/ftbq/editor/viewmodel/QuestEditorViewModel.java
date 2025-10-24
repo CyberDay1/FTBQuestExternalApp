@@ -161,7 +161,11 @@ public class QuestEditorViewModel {
         if (commandBus == null || commandSubscriptionRegistered) {
             return;
         }
-        commandBus.subscribe(QuestFieldChangeCommand.class, this::handleFieldChangeCommand);
+        commandBus.subscribe(command -> {
+            if (command instanceof QuestFieldChangeCommand changeCommand) {
+                handleFieldChangeCommand(changeCommand);
+            }
+        });
         commandSubscriptionRegistered = true;
     }
 
