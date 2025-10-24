@@ -4,6 +4,8 @@ import dev.ftbq.editor.controller.LootTableEditorController;
 import dev.ftbq.editor.controller.QuestEditorController;
 import dev.ftbq.editor.viewmodel.ChapterGroupBrowserViewModel;
 import dev.ftbq.editor.view.ChapterGroupBrowserController;
+import dev.ftbq.editor.services.bus.ServiceLocator;
+import dev.ftbq.editor.services.logging.StructuredLogger;
 import javafx.application.Application;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
@@ -15,8 +17,11 @@ import javafx.stage.Stage;
 import java.io.IOException;
 
 public class MainApp extends Application {
+    private final StructuredLogger logger = ServiceLocator.loggerFactory().create(MainApp.class);
+
     @Override
     public void start(Stage primaryStage) throws IOException {
+        logger.info("Starting FTB Quest Editor UI");
         FXMLLoader chapterLoader = new FXMLLoader(getClass().getResource("/dev/ftbq/editor/view/chapter_group_browser.fxml"));
         Parent chapterRoot = chapterLoader.load();
 
@@ -52,7 +57,7 @@ public class MainApp extends Application {
             questTab.setClosable(false);
             tabPane.getTabs().add(questTab);
         } catch (Exception e) {
-            e.printStackTrace();
+            logger.error("Failed to load quest editor UI", e);
         }
 
         try {
@@ -62,7 +67,7 @@ public class MainApp extends Application {
             settingsTab.setClosable(false);
             tabPane.getTabs().add(settingsTab);
         } catch (Exception e) {
-            e.printStackTrace();
+            logger.error("Failed to load settings UI", e);
         }
 
         Scene scene = new Scene(tabPane);
@@ -75,9 +80,16 @@ public class MainApp extends Application {
         primaryStage.setWidth(960);
         primaryStage.setHeight(720);
         primaryStage.show();
+        logger.info("Primary stage shown", StructuredLogger.field("width", primaryStage.getWidth()), StructuredLogger.field("height", primaryStage.getHeight()));
     }
 
     public static void main(String[] args) {
         launch(args);
+    }
+
+    @Override
+    public void stop() throws Exception {
+        logger.info("Stopping FTB Quest Editor UI");
+        super.stop();
     }
 }

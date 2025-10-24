@@ -11,6 +11,7 @@ import dev.ftbq.editor.services.bus.CommandBus;
 import dev.ftbq.editor.services.bus.EventBus;
 import dev.ftbq.editor.services.bus.ServiceLocator;
 import dev.ftbq.editor.services.bus.UndoManager;
+import dev.ftbq.editor.services.logging.StructuredLogger;
 import dev.ftbq.editor.viewmodel.QuestEditorViewModel;
 import dev.ftbq.editor.controller.ItemBrowserController;
 import javafx.fxml.FXML;
@@ -69,18 +70,26 @@ public class QuestEditorController {
     private Button cancelButton;
 
     private final QuestEditorViewModel viewModel;
+    private final StructuredLogger logger;
 
     private final Tooltip iconTooltip = new Tooltip();
     private Consumer<String> lootTableLinkHandler = tableId -> { };
     private UndoManager undoManager;
 
     public QuestEditorController() {
-        this(new QuestEditorViewModel(ServiceLocator.commandBus(), ServiceLocator.eventBus(), ServiceLocator.undoManager()));
+        this(
+                new QuestEditorViewModel(ServiceLocator.commandBus(), ServiceLocator.eventBus(), ServiceLocator.undoManager()),
+                ServiceLocator.loggerFactory().create(QuestEditorController.class));
         this.undoManager = ServiceLocator.undoManager();
     }
 
     QuestEditorController(QuestEditorViewModel viewModel) {
+        this(viewModel, ServiceLocator.loggerFactory().create(QuestEditorController.class));
+    }
+
+    QuestEditorController(QuestEditorViewModel viewModel, StructuredLogger logger) {
         this.viewModel = Objects.requireNonNull(viewModel, "viewModel");
+        this.logger = Objects.requireNonNull(logger, "logger");
     }
 
     public void setCommandBus(CommandBus commandBus) {
@@ -102,7 +111,7 @@ public class QuestEditorController {
 
     @FXML
     public void initialize() {
-        System.out.println("QuestEditorController.initialize()");
+        logger.info("Quest editor view initialised");
         attachStylesheet();
         bindFields();
         configureListViews();
@@ -222,7 +231,7 @@ public class QuestEditorController {
 
     @FXML
     private void onChooseIconButton() {
-        System.out.println("Item browser will open here (06-05)");
+        logger.debug("Opening item browser for quest icon selection");
         openItemBrowser();
     }
 
@@ -234,17 +243,20 @@ public class QuestEditorController {
         } else {
             tableId = viewModel.titleProperty().get();
         }
+        logger.debug("Linking quest to loot table", StructuredLogger.field("questId", tableId));
         lootTableLinkHandler.accept(tableId == null ? "" : tableId);
     }
 
     @FXML
     private void handleSave() {
-        viewModel.save();
+        Quest saved = viewModel.save();
+        logger.info("Quest saved", StructuredLogger.field("questId", saved.id()));
     }
 
     @FXML
     private void handleCancel() {
         viewModel.revertChanges();
+        logger.info("Quest edits reverted", StructuredLogger.field("questId", viewModel.getCurrentQuest() != null ? viewModel.getCurrentQuest().id() : ""));
         refreshFromViewModel();
     }
 
@@ -271,7 +283,7 @@ public class QuestEditorController {
             stage.setOnHidden(event -> controller.dispose());
             stage.show();
         } catch (IOException e) {
-            e.printStackTrace();
+            logger.error("Failed to open item browser", e);
         }
     }
 }

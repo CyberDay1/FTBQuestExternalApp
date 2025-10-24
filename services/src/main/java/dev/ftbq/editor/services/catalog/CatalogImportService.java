@@ -2,6 +2,8 @@ package dev.ftbq.editor.services.catalog;
 
 import dev.ftbq.editor.ingest.ItemCatalog;
 import dev.ftbq.editor.ingest.ItemMeta;
+import dev.ftbq.editor.services.logging.AppLoggerFactory;
+import dev.ftbq.editor.services.logging.StructuredLogger;
 import dev.ftbq.editor.store.StoreDao;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -17,9 +19,15 @@ import java.util.Set;
 public final class CatalogImportService {
 
     private final StoreDao storeDao;
+    private final StructuredLogger logger;
 
-    public CatalogImportService(StoreDao storeDao) {
+    public CatalogImportService(StoreDao storeDao, StructuredLogger logger) {
         this.storeDao = Objects.requireNonNull(storeDao, "storeDao");
+        this.logger = Objects.requireNonNull(logger, "logger");
+    }
+
+    public CatalogImportService(StoreDao storeDao, AppLoggerFactory loggerFactory) {
+        this(storeDao, Objects.requireNonNull(loggerFactory, "loggerFactory").create(CatalogImportService.class));
     }
 
     /**
@@ -32,6 +40,13 @@ public final class CatalogImportService {
 
         Map<String, List<String>> tagsByItem = buildTagsByItem(catalog.tags());
 
+        logger.info("Importing item catalog",
+                StructuredLogger.field("source", catalog.source()),
+                StructuredLogger.field("version", catalog.version()),
+                StructuredLogger.field("vanilla", catalog.isVanilla()),
+                StructuredLogger.field("items", catalog.items().size()));
+
+        int upserted = 0;
         for (ItemMeta item : catalog.items()) {
             if (item == null) {
                 continue;
@@ -53,7 +68,13 @@ public final class CatalogImportService {
                     item.kind());
 
             storeDao.upsertItem(entity);
+            upserted++;
         }
+
+        logger.info("Catalog import completed",
+                StructuredLogger.field("source", catalog.source()),
+                StructuredLogger.field("version", catalog.version()),
+                StructuredLogger.field("upserted", upserted));
     }
 
     private static Map<String, List<String>> buildTagsByItem(Map<String, List<String>> tags) {

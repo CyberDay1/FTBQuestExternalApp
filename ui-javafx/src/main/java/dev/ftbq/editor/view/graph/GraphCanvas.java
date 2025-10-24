@@ -5,6 +5,8 @@ import dev.ftbq.editor.domain.BackgroundRef;
 import dev.ftbq.editor.domain.BackgroundRepeat;
 import dev.ftbq.editor.domain.Chapter;
 import dev.ftbq.editor.domain.Quest;
+import dev.ftbq.editor.services.bus.ServiceLocator;
+import dev.ftbq.editor.services.logging.StructuredLogger;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.collections.FXCollections;
@@ -69,6 +71,7 @@ public class GraphCanvas extends Pane {
     private final Map<String, ValidationLevel> validationStateByQuest = new HashMap<>();
     private final Map<String, Image> backgroundImages = new HashMap<>();
     private QuestGraphModel model;
+    private final StructuredLogger logger = ServiceLocator.loggerFactory().create(GraphCanvas.class);
 
     private double currentScale = 1.0;
     private boolean panning;
@@ -136,6 +139,9 @@ public class GraphCanvas extends Pane {
     public void setValidationState(String questId, ValidationLevel level) {
         Objects.requireNonNull(questId, "questId");
         validationStateByQuest.put(questId, Objects.requireNonNull(level, "level"));
+        logger.info("Validation state updated",
+                StructuredLogger.field("questId", questId),
+                StructuredLogger.field("level", level));
         if (model != null) {
             model.updateValidation(questId, level);
         }
@@ -147,6 +153,7 @@ public class GraphCanvas extends Pane {
 
     public void clearValidationStates() {
         validationStateByQuest.clear();
+        logger.info("Validation states cleared");
         if (model != null) {
             model.getNodes().forEach(node -> model.updateValidation(node.getQuest().id(), ValidationLevel.OK));
         }

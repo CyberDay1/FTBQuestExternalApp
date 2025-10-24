@@ -4,6 +4,8 @@ import dev.ftbq.editor.domain.ItemRef;
 import dev.ftbq.editor.domain.version.ItemCatalog;
 import dev.ftbq.editor.domain.version.MinecraftVersion;
 import dev.ftbq.editor.domain.version.VersionCatalog;
+import dev.ftbq.editor.services.logging.AppLoggerFactory;
+import dev.ftbq.editor.services.logging.StructuredLogger;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -19,9 +21,20 @@ import java.util.Objects;
 public class VersionCatalogImpl implements VersionCatalog {
     private final Map<MinecraftVersion, ItemCatalog> vanillaCatalogs;
     private final Map<MinecraftVersion, Snapshot> mergedSnapshots;
+    private final StructuredLogger logger;
     private MinecraftVersion activeVersion;
 
     public VersionCatalogImpl(Map<MinecraftVersion, ItemCatalog> vanillaCatalogs, MinecraftVersion defaultVersion) {
+        this(vanillaCatalogs, defaultVersion, AppLoggerFactory.create().create(VersionCatalogImpl.class));
+    }
+
+    public VersionCatalogImpl(Map<MinecraftVersion, ItemCatalog> vanillaCatalogs) {
+        this(vanillaCatalogs, null, AppLoggerFactory.create().create(VersionCatalogImpl.class));
+    }
+
+    public VersionCatalogImpl(Map<MinecraftVersion, ItemCatalog> vanillaCatalogs,
+                              MinecraftVersion defaultVersion,
+                              StructuredLogger logger) {
         Objects.requireNonNull(vanillaCatalogs, "vanillaCatalogs");
         if (vanillaCatalogs.isEmpty()) {
             throw new IllegalArgumentException("At least one vanilla catalog must be provided");
@@ -31,6 +44,7 @@ public class VersionCatalogImpl implements VersionCatalog {
         copy.putAll(vanillaCatalogs);
         this.vanillaCatalogs = Collections.unmodifiableMap(copy);
         this.mergedSnapshots = new EnumMap<>(MinecraftVersion.class);
+        this.logger = Objects.requireNonNull(logger, "logger");
 
         MinecraftVersion versionToUse = defaultVersion;
         if (versionToUse == null) {
@@ -41,10 +55,7 @@ public class VersionCatalogImpl implements VersionCatalog {
             throw new IllegalArgumentException("Default version does not have a vanilla catalog: " + versionToUse);
         }
         this.activeVersion = versionToUse;
-    }
-
-    public VersionCatalogImpl(Map<MinecraftVersion, ItemCatalog> vanillaCatalogs) {
-        this(vanillaCatalogs, null);
+        this.logger.info("Version catalog initialised", StructuredLogger.field("activeVersion", activeVersion));
     }
 
     @Override
@@ -63,6 +74,7 @@ public class VersionCatalogImpl implements VersionCatalog {
         }
         activeVersion = version;
         invalidateSnapshots();
+        logger.info("Active version updated", StructuredLogger.field("activeVersion", version));
     }
 
     @Override
@@ -95,6 +107,11 @@ public class VersionCatalogImpl implements VersionCatalog {
         }
 
         mergedSnapshots.put(version, new Snapshot(sanitizedMods, merged));
+        int resultCount = merged.items() != null ? merged.items().size() : 0;
+        logger.info("Merged item catalogs",
+                StructuredLogger.field("version", version),
+                StructuredLogger.field("mods", sanitizedMods.size()),
+                StructuredLogger.field("resultItems", resultCount));
         return merged;
     }
 
@@ -104,6 +121,7 @@ public class VersionCatalogImpl implements VersionCatalog {
      */
     public void invalidateSnapshots() {
         mergedSnapshots.clear();
+        logger.debug("Version catalog snapshots invalidated", StructuredLogger.field("activeVersion", activeVersion));
     }
 
     private static List<ItemCatalog> sanitize(List<ItemCatalog> modCatalogs) {

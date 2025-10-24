@@ -9,6 +9,8 @@ import java.util.List;
 import java.util.Objects;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Entry point for reading the contents of Minecraft related JAR files without loading classes.
@@ -18,6 +20,8 @@ import java.util.zip.ZipFile;
  * collects metadata that can be used by higher level ingestion workflows.
  */
 public final class JarScanner {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(JarScanner.class);
 
     private JarScanner() {
         throw new AssertionError("JarScanner cannot be instantiated");
@@ -51,6 +55,7 @@ public final class JarScanner {
         Objects.requireNonNull(jar, "jar");
         Objects.requireNonNull(kind, "kind");
 
+        LOGGER.info("Scanning jar | path={} kind={} version={}", jar, kind, versionLabel);
         List<JarEntryInfo> entries = new ArrayList<>();
         try (ZipFile zipFile = new ZipFile(jar.toFile())) {
             Enumeration<? extends ZipEntry> enumeration = zipFile.entries();
@@ -65,7 +70,9 @@ public final class JarScanner {
             }
         }
 
-        return new JarScanResult(kind, versionLabel, Collections.unmodifiableList(entries));
+        JarScanResult result = new JarScanResult(kind, versionLabel, Collections.unmodifiableList(entries));
+        LOGGER.info("Jar scan complete | path={} kind={} version={} entries={}", jar, kind, versionLabel, entries.size());
+        return result;
     }
 
     /**

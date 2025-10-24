@@ -5,8 +5,9 @@ import dev.ftbq.editor.domain.version.MinecraftVersion;
 import dev.ftbq.editor.domain.version.VersionCatalog;
 import dev.ftbq.editor.ingest.ItemCatalogExtractor;
 import dev.ftbq.editor.ingest.JarScanner;
+import dev.ftbq.editor.services.bus.ServiceLocator;
 import dev.ftbq.editor.services.catalog.CatalogImportService;
-import dev.ftbq.editor.store.StoreDao;
+import dev.ftbq.editor.services.logging.StructuredLogger;
 import dev.ftbq.editor.support.UiServiceLocator;
 import java.io.File;
 import java.io.IOException;
@@ -15,8 +16,6 @@ import java.util.Arrays;
 import java.util.Locale;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.scene.control.Button;
@@ -29,7 +28,6 @@ import javafx.stage.Window;
  * Controller for the application settings view.
  */
 public class SettingsController {
-    private static final Logger LOGGER = Logger.getLogger(SettingsController.class.getName());
 
     @FXML
     private ComboBox<MinecraftVersion> versionBox;
@@ -43,18 +41,26 @@ public class SettingsController {
     private VersionCatalog versionCatalog;
     private final CacheManager cacheManager;
     private final CatalogImportService catalogImportService;
+    private final StructuredLogger logger;
 
     public SettingsController() {
         this(
                 UiServiceLocator.getVersionCatalog(),
                 UiServiceLocator.getCacheManager(),
-                UiServiceLocator.getStoreDao());
+                new CatalogImportService(
+                        UiServiceLocator.getStoreDao(),
+                        ServiceLocator.loggerFactory()),
+                ServiceLocator.loggerFactory().create(SettingsController.class));
     }
 
-    SettingsController(VersionCatalog versionCatalog, CacheManager cacheManager, StoreDao storeDao) {
+    SettingsController(VersionCatalog versionCatalog,
+                       CacheManager cacheManager,
+                       CatalogImportService catalogImportService,
+                       StructuredLogger logger) {
         this.versionCatalog = Objects.requireNonNull(versionCatalog, "versionCatalog");
         this.cacheManager = Objects.requireNonNull(cacheManager, "cacheManager");
-        this.catalogImportService = new CatalogImportService(Objects.requireNonNull(storeDao, "storeDao"));
+        this.catalogImportService = Objects.requireNonNull(catalogImportService, "catalogImportService");
+        this.logger = Objects.requireNonNull(logger, "logger");
     }
 
     @FXML
@@ -83,6 +89,7 @@ public class SettingsController {
         File file = window != null ? chooser.showOpenDialog(window) : chooser.showOpenDialog(null);
         if (file == null) {
             updateStatus("Jar selection cancelled.");
+            logger.debug("Jar selection cancelled by user");
             return;
         }
 
@@ -96,21 +103,28 @@ public class SettingsController {
             var catalog = ItemCatalogExtractor.extract(jarPath, file.getName(), versionLabel, false);
             catalogImportService.importCatalog(catalog);
             rebuildVersionCatalog(targetVersion);
+            int entryCount = scan.entries().size();
             updateStatus(String.format(Locale.ROOT,
                     "Imported %s with %d entries for %s.",
                     file.getName(),
-                    scan.entries().size(),
+                    entryCount,
                     versionLabel));
-            LOGGER.log(Level.INFO, "Imported JAR {0} containing {1} entries for version {2}",
-                    new Object[]{file.getAbsolutePath(), scan.entries().size(), versionLabel});
+            logger.info("Mod JAR imported",
+                    StructuredLogger.field("jar", file.getAbsolutePath()),
+                    StructuredLogger.field("entries", entryCount),
+                    StructuredLogger.field("version", versionLabel));
         } catch (IOException ex) {
             String message = "Failed to scan JAR: " + ex.getMessage();
             updateStatus(message);
-            LOGGER.log(Level.WARNING, message, ex);
+            logger.warn("Jar scan failed", ex,
+                    StructuredLogger.field("jar", file.getAbsolutePath()),
+                    StructuredLogger.field("version", versionLabel));
         } catch (RuntimeException ex) {
             String message = "Failed to import catalog: " + ex.getMessage();
             updateStatus(message);
-            LOGGER.log(Level.WARNING, message, ex);
+            logger.warn("Catalog import failed", ex,
+                    StructuredLogger.field("jar", file.getAbsolutePath()),
+                    StructuredLogger.field("version", versionLabel));
         }
     }
 
@@ -119,11 +133,11 @@ public class SettingsController {
         try {
             cacheManager.clearIcons();
             updateStatus("Icon cache cleared.");
-            LOGGER.info("Icon cache cleared via settings panel.");
+            logger.info("Icon cache cleared via settings panel");
         } catch (RuntimeException ex) {
             String message = "Failed to clear icon cache: " + ex.getMessage();
             updateStatus(message);
-            LOGGER.log(Level.WARNING, message, ex);
+            logger.warn("Icon cache clear failed", ex);
         }
     }
 
@@ -131,11 +145,12 @@ public class SettingsController {
         try {
             versionCatalog.setActiveVersion(newVersion);
             updateStatus("Active Minecraft version set to " + newVersion.getId() + ".");
-            LOGGER.log(Level.INFO, "Active Minecraft version changed to {0}", newVersion.getId());
+            logger.info("Active version changed", StructuredLogger.field("version", newVersion.getId()));
         } catch (RuntimeException ex) {
             String message = "Unable to switch version: " + ex.getMessage();
             updateStatus(message);
-            LOGGER.log(Level.WARNING, message, ex);
+            logger.warn("Unable to switch active version", ex,
+                    StructuredLogger.field("version", newVersion.getId()));
         }
     }
 
@@ -146,7 +161,8 @@ public class SettingsController {
             try {
                 versionCatalog.setActiveVersion(desiredVersion);
             } catch (RuntimeException ex) {
-                LOGGER.log(Level.WARNING, "Failed to restore active version after import", ex);
+                logger.warn("Failed to restore active version after import", ex,
+                        StructuredLogger.field("version", desiredVersion.getId()));
             }
         }
     }
@@ -155,7 +171,7 @@ public class SettingsController {
         try {
             return versionCatalog.getActiveVersion();
         } catch (RuntimeException ex) {
-            LOGGER.log(Level.WARNING, "Unable to read active Minecraft version", ex);
+            logger.warn("Unable to read active Minecraft version", ex);
             return null;
         }
     }

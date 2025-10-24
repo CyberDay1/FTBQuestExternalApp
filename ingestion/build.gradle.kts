@@ -7,6 +7,7 @@ plugins {
 dependencies {
     implementation(project(":core-domain"))
     implementation("com.fasterxml.jackson.core:jackson-databind:${rootProject.extra["jacksonVersion"]}")
+    implementation("org.slf4j:slf4j-api:${rootProject.extra["slf4jVersion"]}")
 }
 
 tasks.register<JavaExec>("vanillaBootstrap") {
