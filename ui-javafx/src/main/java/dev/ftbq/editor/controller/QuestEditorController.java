@@ -7,7 +7,10 @@ import dev.ftbq.editor.domain.Quest;
 import dev.ftbq.editor.domain.Reward;
 import dev.ftbq.editor.domain.Task;
 import dev.ftbq.editor.domain.Visibility;
-import dev.ftbq.editor.services.CommandBus;
+import dev.ftbq.editor.services.bus.CommandBus;
+import dev.ftbq.editor.services.bus.EventBus;
+import dev.ftbq.editor.services.bus.ServiceLocator;
+import dev.ftbq.editor.services.bus.UndoManager;
 import dev.ftbq.editor.viewmodel.QuestEditorViewModel;
 import dev.ftbq.editor.controller.ItemBrowserController;
 import javafx.fxml.FXML;
@@ -21,6 +24,8 @@ import javafx.scene.control.TextField;
 import javafx.scene.control.Tooltip;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.BorderPane;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyEvent;
 import javafx.scene.Scene;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
@@ -67,9 +72,11 @@ public class QuestEditorController {
 
     private final Tooltip iconTooltip = new Tooltip();
     private Consumer<String> lootTableLinkHandler = tableId -> { };
+    private UndoManager undoManager;
 
     public QuestEditorController() {
-        this(new QuestEditorViewModel(CommandBus.noop()));
+        this(new QuestEditorViewModel(ServiceLocator.commandBus(), ServiceLocator.eventBus(), ServiceLocator.undoManager()));
+        this.undoManager = ServiceLocator.undoManager();
     }
 
     QuestEditorController(QuestEditorViewModel viewModel) {
@@ -78,6 +85,15 @@ public class QuestEditorController {
 
     public void setCommandBus(CommandBus commandBus) {
         viewModel.setCommandBus(Objects.requireNonNull(commandBus, "commandBus"));
+    }
+
+    public void setEventBus(EventBus eventBus) {
+        viewModel.setEventBus(Objects.requireNonNull(eventBus, "eventBus"));
+    }
+
+    public void setUndoManager(UndoManager undoManager) {
+        this.undoManager = Objects.requireNonNull(undoManager, "undoManager");
+        viewModel.setUndoManager(undoManager);
     }
 
     public void setLootTableLinkHandler(Consumer<String> handler) {
@@ -90,6 +106,7 @@ public class QuestEditorController {
         attachStylesheet();
         bindFields();
         configureListViews();
+        installUndoRedoShortcuts();
         questDescriptionArea.setWrapText(true);
         chooseIconButton.setTooltip(iconTooltip);
         IconRef initialIcon = viewModel.iconProperty().get();
@@ -99,6 +116,27 @@ public class QuestEditorController {
             loadQuest(createDefaultQuest());
         } else {
             refreshFromViewModel();
+        }
+    }
+
+    private void installUndoRedoShortcuts() {
+        if (rootPane != null) {
+            rootPane.addEventFilter(KeyEvent.KEY_PRESSED, this::handleKeyPressed);
+        }
+    }
+
+    private void handleKeyPressed(KeyEvent event) {
+        if (!event.isShortcutDown()) {
+            return;
+        }
+        if (event.getCode() == KeyCode.Z) {
+            if (undoManager != null && undoManager.undo()) {
+                event.consume();
+            }
+        } else if (event.getCode() == KeyCode.Y) {
+            if (undoManager != null && undoManager.redo()) {
+                event.consume();
+            }
         }
     }
 

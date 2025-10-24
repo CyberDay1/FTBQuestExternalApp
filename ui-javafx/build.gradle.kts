@@ -19,4 +19,6 @@ dependencies {
     implementation(project(":core-domain"))
     implementation(project(":services"))
     implementation(project(":ingestion"))
+    val jacksonVersion: String by project
+    implementation("com.fasterxml.jackson.core:jackson-databind:$jacksonVersion")
 }

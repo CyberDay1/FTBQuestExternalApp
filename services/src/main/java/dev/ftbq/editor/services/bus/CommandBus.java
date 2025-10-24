@@ -13,6 +13,7 @@ import java.util.function.Consumer;
 public class CommandBus {
 
     private final Map<Class<? extends Command>, List<Consumer<? super Command>>> handlers = new HashMap<>();
+    private final List<Consumer<? super Command>> globalListeners = new ArrayList<>();
 
     /**
      * Registers a handler for the supplied command type.
@@ -39,17 +40,35 @@ public class CommandBus {
     public void dispatch(Command command) {
         Objects.requireNonNull(command, "command");
         List<Consumer<? super Command>> listeners;
+        List<Consumer<? super Command>> global;
         synchronized (this) {
             listeners = handlers.get(command.getClass());
             if (listeners != null) {
                 listeners = new ArrayList<>(listeners);
             }
+            if (globalListeners.isEmpty()) {
+                global = null;
+            } else {
+                global = new ArrayList<>(globalListeners);
+            }
         }
         if (listeners == null || listeners.isEmpty()) {
-            return;
+            listeners = List.of();
         }
         for (Consumer<? super Command> listener : listeners) {
             listener.accept(command);
+        }
+        if (global != null && !global.isEmpty()) {
+            for (Consumer<? super Command> listener : global) {
+                listener.accept(command);
+            }
+        }
+    }
+
+    public void subscribeAll(Consumer<? super Command> listener) {
+        Objects.requireNonNull(listener, "listener");
+        synchronized (this) {
+            globalListeners.add(listener);
         }
     }
 }
