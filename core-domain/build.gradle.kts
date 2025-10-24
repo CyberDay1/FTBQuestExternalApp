@@ -2,6 +2,10 @@ plugins {
     `java-library`
 }
 
+repositories {
+    mavenCentral()
+}
+
 val jacksonVersion: String by project
 
 dependencies {
