@@ -3,17 +3,22 @@ plugins {
 }
 
 repositories {
-    mavenCentral()  // Add this to resolve external dependencies
+    mavenCentral()
 }
 
 val sqliteVersion: String by project
-val junitVersion: String by project // Add JUnit version if not already in gradle.properties
+val jacksonVersion: String by project
+val slf4jVersion: String by project
+val junitVersion: String by project
 
 dependencies {
+    implementation(project(":core-domain"))
     implementation("org.xerial:sqlite-jdbc:$sqliteVersion")
-    testImplementation("org.junit.jupiter:junit-jupiter:$junitVersion") // Add JUnit dependency for tests
+    implementation("com.fasterxml.jackson.core:jackson-databind:$jacksonVersion")
+    implementation("org.slf4j:slf4j-api:$slf4jVersion")
+    testImplementation("org.junit.jupiter:junit-jupiter:$junitVersion")
 }
 
 tasks.test {
-    useJUnitPlatform() // Ensure tests use JUnit 5
+    useJUnitPlatform()
 }
