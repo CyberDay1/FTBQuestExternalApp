@@ -7,6 +7,8 @@ repositories {
 }
 
 val jacksonVersion: String by project
+val sqliteVersion: String by project
+
 
 dependencies {
     implementation("com.fasterxml.jackson.core:jackson-databind:$jacksonVersion")
