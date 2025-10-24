@@ -9,10 +9,11 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Locale;
 import java.util.Objects;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Command line utility that builds vanilla item catalogs from Minecraft JAR files.
@@ -21,6 +22,7 @@ public final class VanillaCatalogBootstrap {
 
     private static final ObjectMapper MAPPER = new ObjectMapper()
             .enable(SerializationFeature.INDENT_OUTPUT);
+    private static final Logger LOGGER = LoggerFactory.getLogger(VanillaCatalogBootstrap.class);
 
     private VanillaCatalogBootstrap() {
         throw new AssertionError("VanillaCatalogBootstrap cannot be instantiated");
@@ -35,6 +37,7 @@ public final class VanillaCatalogBootstrap {
             throw new IllegalStateException("Missing input directory: " + inputDir);
         }
 
+        LOGGER.info("Starting vanilla catalog bootstrap | inputDir={}", inputDir);
         List<Path> jars;
         try (Stream<Path> stream = Files.list(inputDir)) {
             jars = stream
@@ -61,7 +64,8 @@ public final class VanillaCatalogBootstrap {
             ItemCatalog catalog = ItemCatalogExtractor.extract(jar, fileName, version, true);
 
             int itemCount = catalog.items().size();
-            System.out.printf(Locale.ROOT, "Vanilla %s: %d items%n", version, itemCount);
+            LOGGER.info("Vanilla catalog extracted | version={} items={} jar={}"
+                    , version, itemCount, jar);
 
             if (itemCount < 1000) {
                 anyFailure = true;
@@ -73,12 +77,14 @@ public final class VanillaCatalogBootstrap {
             }
 
             // Simple sanity log for the scan as additional context.
-            System.out.printf(Locale.ROOT, "  -> %d jar entries scanned%n", scanResult.entries().size());
+            LOGGER.info("Jar scan summary | version={} entries={}", version, scanResult.entries().size());
         }
 
         if (anyFailure) {
             throw new IllegalStateException("One or more vanilla catalogs contained fewer than 1000 items");
         }
+
+        LOGGER.info("Vanilla catalog bootstrap complete | processedJars={}", jars.size());
     }
 
     private static String stripJarExtension(String fileName) {

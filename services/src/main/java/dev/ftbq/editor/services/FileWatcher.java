@@ -4,9 +4,8 @@ import dev.ftbq.editor.domain.QuestFile;
 import dev.ftbq.editor.io.importer.Importer;
 import dev.ftbq.editor.services.bus.EventBus;
 import dev.ftbq.editor.services.events.PackReloaded;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
+import dev.ftbq.editor.services.logging.AppLoggerFactory;
+import dev.ftbq.editor.services.logging.StructuredLogger;
 import java.io.IOException;
 import java.nio.file.ClosedWatchServiceException;
 import java.nio.file.FileSystems;
@@ -35,7 +34,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
  */
 public final class FileWatcher implements AutoCloseable {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(FileWatcher.class);
     private static final Duration DEFAULT_DEBOUNCE = Duration.ofMillis(500);
 
     private final Path packRoot;
@@ -48,14 +46,28 @@ public final class FileWatcher implements AutoCloseable {
     private final AtomicBoolean running;
     private final Thread watcherThread;
     private final Object reloadLock;
+    private final StructuredLogger logger;
 
     private volatile ScheduledFuture<?> pendingReload;
 
-    public FileWatcher(Path packRoot, Importer importer, EventBus eventBus) throws IOException {
-        this(packRoot, importer, eventBus, DEFAULT_DEBOUNCE);
+    public FileWatcher(Path packRoot, Importer importer, EventBus eventBus, AppLoggerFactory loggerFactory) throws IOException {
+        this(packRoot, importer, eventBus, DEFAULT_DEBOUNCE, loggerFactory);
     }
 
-    public FileWatcher(Path packRoot, Importer importer, EventBus eventBus, Duration debounce) throws IOException {
+    public FileWatcher(Path packRoot,
+                       Importer importer,
+                       EventBus eventBus,
+                       Duration debounce,
+                       AppLoggerFactory loggerFactory) throws IOException {
+        this(packRoot, importer, eventBus, debounce,
+                Objects.requireNonNull(loggerFactory, "loggerFactory").create(FileWatcher.class));
+    }
+
+    public FileWatcher(Path packRoot,
+                       Importer importer,
+                       EventBus eventBus,
+                       Duration debounce,
+                       StructuredLogger logger) throws IOException {
         this.packRoot = normalizeRoot(packRoot);
         this.importer = Objects.requireNonNull(importer, "importer");
         this.eventBus = Objects.requireNonNull(eventBus, "eventBus");
@@ -72,12 +84,13 @@ public final class FileWatcher implements AutoCloseable {
         });
         this.running = new AtomicBoolean(true);
         this.reloadLock = new Object();
+        this.logger = Objects.requireNonNull(logger, "logger");
 
         registerAll(this.packRoot);
         this.watcherThread = new Thread(this::processEvents, "quest-pack-file-watcher");
         this.watcherThread.setDaemon(true);
         this.watcherThread.start();
-        LOGGER.info("Watching quest pack at {}", this.packRoot);
+        this.logger.info("Watching quest pack", StructuredLogger.field("root", this.packRoot));
     }
 
     private static Path normalizeRoot(Path packRoot) throws IOException {
@@ -143,7 +156,8 @@ public final class FileWatcher implements AutoCloseable {
                                 registerAll(child);
                             }
                         } catch (IOException ex) {
-                            LOGGER.warn("Failed to register new directory {} for watching", child, ex);
+                            logger.warn("Failed to register new directory for watching", ex,
+                                    StructuredLogger.field("directory", child));
                         }
                     }
                     scheduleReload = true;
@@ -179,9 +193,9 @@ public final class FileWatcher implements AutoCloseable {
         try {
             QuestFile questFile = importer.importPack(packRoot);
             eventBus.publish(new PackReloaded(packRoot, questFile));
-            LOGGER.info("Reloaded quest pack from {}", packRoot);
+            logger.info("Reloaded quest pack", StructuredLogger.field("root", packRoot));
         } catch (IOException ex) {
-            LOGGER.warn("Failed to reload quest pack from {}", packRoot, ex);
+            logger.warn("Failed to reload quest pack", ex, StructuredLogger.field("root", packRoot));
         }
     }
 
@@ -196,5 +210,6 @@ public final class FileWatcher implements AutoCloseable {
         scheduler.shutdownNow();
         watcherThread.interrupt();
         watchService.close();
+        logger.info("Stopped quest pack watcher", StructuredLogger.field("root", packRoot));
     }
 }

@@ -9,7 +9,6 @@ import dev.ftbq.editor.domain.Quest;
 import dev.ftbq.editor.domain.QuestFile;
 import dev.ftbq.editor.io.LootTableJson;
 import dev.ftbq.editor.io.QuestFileJson;
-
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.InvalidPathException;
@@ -19,12 +18,20 @@ import java.util.HashSet;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public final class Exporter {
+    private static final Logger LOGGER = LoggerFactory.getLogger(Exporter.class);
+
     public void exportPack(QuestFile questFile, Path packRoot, Path targetRoot) throws IOException {
         Objects.requireNonNull(questFile, "questFile");
         Objects.requireNonNull(packRoot, "packRoot");
         Objects.requireNonNull(targetRoot, "targetRoot");
+
+        long start = System.currentTimeMillis();
+        LOGGER.info("Exporting quest pack | questId={} targetRoot={}", questFile.id(), targetRoot);
+
         String namespace = extractNamespace(questFile.id());
 
         Path dataNamespaceRoot = targetRoot.resolve("data").resolve(namespace);
@@ -36,7 +43,16 @@ public final class Exporter {
             LootTableJson.save(lootTable, lootTableRoot);
         }
 
-        copyAssets(questFile, packRoot, targetRoot.resolve("assets").resolve(namespace));
+        AssetCopySummary summary = copyAssets(questFile, packRoot, targetRoot.resolve("assets").resolve(namespace));
+        long duration = System.currentTimeMillis() - start;
+        LOGGER.info(
+                "Quest pack export complete | questId={} lootTables={} icons={} backgrounds={} durationMs={} targetRoot={}",
+                questFile.id(),
+                questFile.lootTables().size(),
+                summary.icons(),
+                summary.backgrounds(),
+                duration,
+                targetRoot);
     }
 
     private static String extractNamespace(String id) {
@@ -44,7 +60,7 @@ public final class Exporter {
         return colon >= 0 ? id.substring(0, colon) : id;
     }
 
-    private static void copyAssets(QuestFile questFile, Path packRoot, Path assetsRoot) throws IOException {
+    private static AssetCopySummary copyAssets(QuestFile questFile, Path packRoot, Path assetsRoot) throws IOException {
         Set<Path> iconPaths = new HashSet<>();
         Set<Path> backgroundPaths = new HashSet<>();
 
@@ -60,8 +76,10 @@ public final class Exporter {
             }
         }
 
-        copyFiles(iconPaths, assetsRoot.resolve("ftbquests").resolve("icons"));
-        copyFiles(backgroundPaths, assetsRoot.resolve("ftbquests").resolve("backgrounds"));
+        int iconsCopied = copyFiles(iconPaths, assetsRoot.resolve("ftbquests").resolve("icons"));
+        int backgroundsCopied = copyFiles(backgroundPaths, assetsRoot.resolve("ftbquests").resolve("backgrounds"));
+        LOGGER.info("Asset export summary | icons={} backgrounds={} targetRoot={}", iconsCopied, backgroundsCopied, assetsRoot);
+        return new AssetCopySummary(iconsCopied, backgroundsCopied);
     }
 
     private static void collectIconPath(Set<Path> iconPaths, IconRef icon, Path packRoot) throws IOException {
@@ -82,17 +100,20 @@ public final class Exporter {
         toExistingFile(background.texture()).ifPresent(backgroundPaths::add);
     }
 
-    private static void copyFiles(Set<Path> sources, Path targetRoot) throws IOException {
+    private static int copyFiles(Set<Path> sources, Path targetRoot) throws IOException {
         if (sources.isEmpty()) {
-            return;
+            return 0;
         }
         Files.createDirectories(targetRoot);
+        int copied = 0;
         for (Path source : sources) {
             if (Files.isRegularFile(source)) {
                 Path target = targetRoot.resolve(source.getFileName().toString());
                 Files.copy(source, target, StandardCopyOption.REPLACE_EXISTING);
+                copied++;
             }
         }
+        return copied;
     }
 
     private static Optional<Path> toExistingFile(String value) {
@@ -124,5 +145,8 @@ public final class Exporter {
             throw new IOException("Missing " + assetType + " asset at relative path: " + relative);
         }
         return Optional.of(resolved);
+    }
+
+    private record AssetCopySummary(int icons, int backgrounds) {
     }
 }

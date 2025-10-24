@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import dev.ftbq.editor.ingest.ItemCatalog;
 import dev.ftbq.editor.ingest.ItemMeta;
+import dev.ftbq.editor.services.logging.AppLoggerFactory;
 import dev.ftbq.editor.store.Jdbc;
 import dev.ftbq.editor.store.StoreDao;
 import java.sql.Connection;
@@ -19,7 +20,9 @@ class CatalogImportServiceTest {
     void importsCatalogIncludingModAndIconMetadata() throws Exception {
         try (Connection connection = Jdbc.openInMemory()) {
             StoreDao dao = new StoreDao(connection);
-            CatalogImportService importer = new CatalogImportService(dao);
+            CatalogImportService importer = new CatalogImportService(
+                    dao,
+                    AppLoggerFactory.create().create(CatalogImportService.class));
 
             ItemMeta vanillaStone = new ItemMeta(
                     "minecraft:stone",
