@@ -116,8 +116,24 @@ public class QuestEditorController {
         bindFields();
         configureListViews();
         installUndoRedoShortcuts();
-        questDescriptionArea.setWrapText(true);
-        chooseIconButton.setTooltip(iconTooltip);
+        if (questDescriptionArea != null) {
+            questDescriptionArea.setWrapText(true);
+        }
+        if (chooseIconButton != null) {
+            chooseIconButton.setTooltip(iconTooltip);
+            if (chooseIconButton.getAccessibleText() == null) {
+                chooseIconButton.setAccessibleText("Choose quest icon");
+            }
+        }
+        if (linkLootTableButton != null && linkLootTableButton.getAccessibleText() == null) {
+            linkLootTableButton.setAccessibleText("Link loot table");
+        }
+        if (saveButton != null && saveButton.getAccessibleText() == null) {
+            saveButton.setAccessibleText("Save quest");
+        }
+        if (cancelButton != null && cancelButton.getAccessibleText() == null) {
+            cancelButton.setAccessibleText("Cancel quest edits");
+        }
         IconRef initialIcon = viewModel.iconProperty().get();
         updateIconTooltip(initialIcon);
         viewModel.iconProperty().addListener((obs, oldIcon, newIcon) -> updateIconTooltip(newIcon));
@@ -161,37 +177,47 @@ public class QuestEditorController {
     }
 
     private void bindFields() {
-        questTitleField.textProperty().bindBidirectional(viewModel.titleProperty());
-        questDescriptionArea.textProperty().bindBidirectional(viewModel.descriptionProperty());
+        if (questTitleField != null) {
+            questTitleField.textProperty().bindBidirectional(viewModel.titleProperty());
+        }
+        if (questDescriptionArea != null) {
+            questDescriptionArea.textProperty().bindBidirectional(viewModel.descriptionProperty());
+        }
     }
 
     private void configureListViews() {
-        dependencyListView.setItems(viewModel.getDependencies());
-        dependencyListView.setCellFactory(list -> new ListCell<>() {
-            @Override
-            protected void updateItem(Dependency item, boolean empty) {
-                super.updateItem(item, empty);
-                setText(empty || item == null ? null : item.questId() + (item.required() ? " (required)" : ""));
-            }
-        });
+        if (dependencyListView != null) {
+            dependencyListView.setItems(viewModel.getDependencies());
+            dependencyListView.setCellFactory(list -> new ListCell<>() {
+                @Override
+                protected void updateItem(Dependency item, boolean empty) {
+                    super.updateItem(item, empty);
+                    setText(empty || item == null ? null : item.questId() + (item.required() ? " (required)" : ""));
+                }
+            });
+        }
 
-        taskListView.setItems(viewModel.getTasks());
-        taskListView.setCellFactory(list -> new ListCell<>() {
-            @Override
-            protected void updateItem(Task item, boolean empty) {
-                super.updateItem(item, empty);
-                setText(empty || item == null ? null : item.type());
-            }
-        });
+        if (taskListView != null) {
+            taskListView.setItems(viewModel.getTasks());
+            taskListView.setCellFactory(list -> new ListCell<>() {
+                @Override
+                protected void updateItem(Task item, boolean empty) {
+                    super.updateItem(item, empty);
+                    setText(empty || item == null ? null : item.type());
+                }
+            });
+        }
 
-        rewardListView.setItems(viewModel.getRewards());
-        rewardListView.setCellFactory(list -> new ListCell<>() {
-            @Override
-            protected void updateItem(Reward item, boolean empty) {
-                super.updateItem(item, empty);
-                setText(empty || item == null ? null : item.type());
-            }
-        });
+        if (rewardListView != null) {
+            rewardListView.setItems(viewModel.getRewards());
+            rewardListView.setCellFactory(list -> new ListCell<>() {
+                @Override
+                protected void updateItem(Reward item, boolean empty) {
+                    super.updateItem(item, empty);
+                    setText(empty || item == null ? null : item.type());
+                }
+            });
+        }
     }
 
     private void updateIconTooltip(IconRef icon) {
@@ -225,8 +251,12 @@ public class QuestEditorController {
     }
 
     private void refreshFromViewModel() {
-        questTitleField.positionCaret(questTitleField.getText().length());
-        questDescriptionArea.positionCaret(questDescriptionArea.getText().length());
+        if (questTitleField != null) {
+            questTitleField.positionCaret(questTitleField.getText().length());
+        }
+        if (questDescriptionArea != null) {
+            questDescriptionArea.positionCaret(questDescriptionArea.getText().length());
+        }
     }
 
     @FXML

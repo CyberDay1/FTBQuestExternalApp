@@ -18,6 +18,7 @@ import javafx.scene.control.TextField;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.stage.Stage;
+import javafx.stage.Window;
 
 import java.io.ByteArrayInputStream;
 import java.util.Optional;
@@ -70,11 +71,22 @@ public class ItemBrowserController {
         viewModel.loadFilterOptions();
         populateFilterBoxes();
         viewModel.refresh();
-        itemTable.setItems(viewModel.getItems());
-        selectButton.disableProperty().bind(itemTable.getSelectionModel().selectedItemProperty().isNull());
+        if (itemTable != null) {
+            itemTable.setItems(viewModel.getItems());
+        }
+        if (selectButton != null && itemTable != null) {
+            selectButton.disableProperty().bind(itemTable.getSelectionModel().selectedItemProperty().isNull());
+        }
+        if (cancelButton != null && cancelButton.getAccessibleText() == null) {
+            cancelButton.setAccessibleText("Cancel item selection");
+        }
     }
 
     private void setupTable() {
+        if (itemTable == null || iconColumn == null || idColumn == null || displayNameColumn == null
+                || modColumn == null || kindColumn == null) {
+            return;
+        }
         iconColumn.setCellValueFactory(data -> new ReadOnlyObjectWrapper<>(data.getValue()));
         iconColumn.setCellFactory(column -> new IconTableCell());
 
@@ -87,11 +99,17 @@ public class ItemBrowserController {
     }
 
     private void setupFilters() {
+        if (sortModeBox == null) {
+            return;
+        }
         sortModeBox.getItems().setAll(StoreDao.SortMode.values());
         sortModeBox.getSelectionModel().select(StoreDao.SortMode.NAME);
     }
 
     private void populateFilterBoxes() {
+        if (modFilterBox == null || tagFilterBox == null || kindFilterBox == null) {
+            return;
+        }
         ObservableList<ItemBrowserViewModel.ModOption> mods = viewModel.getAvailableMods();
         modFilterBox.getItems().setAll(mods);
         modFilterBox.setButtonCell(new javafx.scene.control.ListCell<>() {
@@ -117,6 +135,10 @@ public class ItemBrowserController {
     }
 
     private void setupListeners() {
+        if (searchField == null || modFilterBox == null || tagFilterBox == null || kindFilterBox == null
+                || vanillaOnlyCheck == null || sortModeBox == null) {
+            return;
+        }
         searchField.textProperty().addListener((obs, oldValue, newValue) -> {
             viewModel.searchTextProperty().set(newValue);
             viewModel.refresh();
@@ -149,6 +171,10 @@ public class ItemBrowserController {
 
     @FXML
     private void handleSelect() {
+        if (itemTable == null) {
+            closeWindow();
+            return;
+        }
         ItemBrowserViewModel.ItemRow selected = itemTable.getSelectionModel().getSelectedItem();
         if (selected != null && selectionHandler != null) {
             selectionHandler.accept(selected.entity());
@@ -166,7 +192,13 @@ public class ItemBrowserController {
     }
 
     private void closeWindow() {
-        Stage stage = (Stage) cancelButton.getScene().getWindow();
+        if (cancelButton == null || cancelButton.getScene() == null) {
+            return;
+        }
+        Window window = cancelButton.getScene().getWindow();
+        if (!(window instanceof Stage stage)) {
+            return;
+        }
         dispose();
         stage.close();
     }
