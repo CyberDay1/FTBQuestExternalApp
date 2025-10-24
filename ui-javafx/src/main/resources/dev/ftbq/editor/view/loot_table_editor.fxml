@@ -23,6 +23,7 @@
         <TableView fx:id="entryTable" prefHeight="250.0" prefWidth="400.0">
             <columns>
                 <TableColumn fx:id="iconColumn" text="Icon" prefWidth="100.0" />
+                <TableColumn fx:id='itemIdColumn' text='Item ID' prefWidth='300.0' />
             </columns>
         </TableView>
         <Button fx:id="addItemButton" text="Add Item" />
