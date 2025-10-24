@@ -43,3 +43,6 @@ tasks.test {
     useJUnitPlatform()
 }
 
+tasks.named<JavaExec>("run") {
+    systemProperty("ftbq.editor.forceLaunch", "true")
+}
