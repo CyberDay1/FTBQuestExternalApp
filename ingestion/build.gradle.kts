@@ -1,18 +1,19 @@
-import org.gradle.api.tasks.JavaExec
-
 plugins {
     `java-library`
 }
 
-dependencies {
-    implementation(project(":core-domain"))
-    implementation("com.fasterxml.jackson.core:jackson-databind:${rootProject.extra["jacksonVersion"]}")
-    implementation("org.slf4j:slf4j-api:${rootProject.extra["slf4jVersion"]}")
+repositories {
+    mavenCentral()  // Add this to resolve external dependencies
 }
 
-tasks.register<JavaExec>("vanillaBootstrap") {
-    group = "ingestion"
-    description = "Builds vanilla item catalogs from Minecraft JARs in artifacts/catalogs/input-jars."
-    mainClass.set("dev.ftbq.editor.ingest.VanillaCatalogBootstrap")
-    classpath = sourceSets["main"].runtimeClasspath
+val sqliteVersion: String by project
+val junitVersion: String by project // Add JUnit version if not already in gradle.properties
+
+dependencies {
+    implementation("org.xerial:sqlite-jdbc:$sqliteVersion")
+    testImplementation("org.junit.jupiter:junit-jupiter:$junitVersion") // Add JUnit dependency for tests
+}
+
+tasks.test {
+    useJUnitPlatform() // Ensure tests use JUnit 5
 }
