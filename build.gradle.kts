@@ -1,7 +1,7 @@
 plugins {
     java
     application
-    id("org.openjfx.javafxplugin") version "0.1.0" apply false
+    id("org.openjfx.javafxplugin") version "0.1.0"
 }
 
 java {
@@ -14,29 +14,21 @@ repositories {
     mavenCentral()
 }
 
-subprojects {
-    apply(plugin = "java")
+application {
+    mainClass.set("dev.ftbq.editor.HeadlessLauncher")
+}
 
-    repositories {
-        mavenCentral()
-    }
+tasks.named<JavaExec>("run") {
+    // Ensures the property is set at JVM runtime
+    systemProperty("ftbq.editor.forceLaunch", "true")
+}
 
-    extensions.configure<JavaPluginExtension> {
-        toolchain {
-            languageVersion.set(JavaLanguageVersion.of(21))
-        }
-    }
+dependencies {
+    implementation("org.openjfx:javafx-controls:21.0.2")
+    implementation("org.openjfx:javafx-fxml:21.0.2")
+    testImplementation("org.junit.jupiter:junit-jupiter:5.10.0")
+}
 
-    tasks.withType<JavaCompile> {
-        options.encoding = "UTF-8"
-    }
-
-    tasks.withType<Test> {
-        useJUnitPlatform()
-    }
-
-    val junitVersion: String by project
-    dependencies {
-        testImplementation("org.junit.jupiter:junit-jupiter:$junitVersion")
-    }
+tasks.test {
+    useJUnitPlatform()
 }
