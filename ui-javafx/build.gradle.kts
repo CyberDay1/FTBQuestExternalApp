@@ -5,7 +5,7 @@ plugins {
 }
 
 application {
-    mainClass.set("dev.ftbq.editor.MainApp")
+    mainClass.set("dev.ftbq.editor.HeadlessLauncher")
 }
 
 val javafxVersion = project.findProperty("javafxVersion") as String
