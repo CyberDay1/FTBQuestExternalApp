@@ -48,7 +48,7 @@ public class LootTableEditorController {
     @FXML
     private Button addPoolButton;
     @FXML
-    private ListView<LootPool> poolListView;
+    private ListView<LootPool> lootItemList;
     @FXML
     private TableView<LootEntryRow> entryTable;
     @FXML
@@ -89,19 +89,19 @@ public class LootTableEditorController {
     @FXML
     public void initialize() {
         tableNameField.textProperty().bindBidirectional(viewModel.tableNameProperty());
-        poolListView.setItems(viewModel.getPools());
-        poolListView.setCellFactory(list -> new ListCell<>() {
+        lootItemList.setItems(viewModel.getPools());
+        lootItemList.setCellFactory(list -> new ListCell<>() {
             @Override
             protected void updateItem(LootPool item, boolean empty) {
                 super.updateItem(item, empty);
                 setText(empty || item == null ? null : item.name());
             }
         });
-        poolListView.getSelectionModel().selectedItemProperty().addListener((obs, oldPool, newPool) ->
+        lootItemList.getSelectionModel().selectedItemProperty().addListener((obs, oldPool, newPool) ->
                 viewModel.selectedPoolProperty().set(newPool));
         viewModel.selectedPoolProperty().addListener((obs, oldPool, newPool) -> {
-            if (poolListView.getSelectionModel().getSelectedItem() != newPool) {
-                poolListView.getSelectionModel().select(newPool);
+            if (lootItemList.getSelectionModel().getSelectedItem() != newPool) {
+                lootItemList.getSelectionModel().select(newPool);
             }
         });
 
@@ -157,7 +157,7 @@ public class LootTableEditorController {
     @FXML
     private void onAddPool() {
         LootPool newPool = viewModel.addPool();
-        Platform.runLater(() -> poolListView.getSelectionModel().select(newPool));
+        Platform.runLater(() -> lootItemList.getSelectionModel().select(newPool));
     }
 
     @FXML
@@ -204,7 +204,7 @@ public class LootTableEditorController {
                 viewModel.tableNameProperty().set(tableId);
             }
             if (!viewModel.getPools().isEmpty()) {
-                poolListView.requestFocus();
+                lootItemList.requestFocus();
             }
             tableNameField.requestFocus();
             tableNameField.selectAll();
@@ -279,3 +279,4 @@ public class LootTableEditorController {
         }
     }
 }
+
