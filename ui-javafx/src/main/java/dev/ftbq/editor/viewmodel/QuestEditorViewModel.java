@@ -66,33 +66,13 @@ public class QuestEditorViewModel {
         registerUndoFactories();
     }
 
-    public StringProperty titleProperty() {
-        return title;
-    }
-
-    public StringProperty descriptionProperty() {
-        return description;
-    }
-
-    public ObjectProperty<IconRef> iconProperty() {
-        return icon;
-    }
-
-    public ObservableList<Task> getTasks() {
-        return tasks;
-    }
-
-    public ObservableList<Reward> getRewards() {
-        return rewards;
-    }
-
-    public ObservableList<Dependency> getDependencies() {
-        return dependencies;
-    }
-
-    public Quest getCurrentQuest() {
-        return currentQuest;
-    }
+    public StringProperty titleProperty() { return title; }
+    public StringProperty descriptionProperty() { return description; }
+    public ObjectProperty<IconRef> iconProperty() { return icon; }
+    public ObservableList<Task> getTasks() { return tasks; }
+    public ObservableList<Reward> getRewards() { return rewards; }
+    public ObservableList<Dependency> getDependencies() { return dependencies; }
+    public Quest getCurrentQuest() { return currentQuest; }
 
     public void loadQuest(Quest quest) {
         Objects.requireNonNull(quest, "quest");
@@ -125,14 +105,9 @@ public class QuestEditorViewModel {
                 .icon(currentIcon)
                 .visibility(visibility);
 
-        List<Task> updatedTasks = new ArrayList<>(tasks);
-        builder.tasks(updatedTasks);
-
-        List<Reward> updatedRewards = new ArrayList<>(rewards);
-        builder.rewards(updatedRewards);
-
-        List<Dependency> updatedDependencies = new ArrayList<>(dependencies);
-        builder.dependencies(updatedDependencies);
+        builder.tasks(new ArrayList<>(tasks));
+        builder.rewards(new ArrayList<>(rewards));
+        builder.dependencies(new ArrayList<>(dependencies));
 
         return builder.build();
     }
@@ -161,7 +136,8 @@ public class QuestEditorViewModel {
         if (commandBus == null || commandSubscriptionRegistered) {
             return;
         }
-        commandBus.subscribe(command -> {
+        // Updated for new CommandBus API
+        commandBus.subscribeAll(command -> {
             if (command instanceof QuestFieldChangeCommand changeCommand) {
                 handleFieldChangeCommand(changeCommand);
             }
@@ -176,16 +152,7 @@ public class QuestEditorViewModel {
     }
 
     private void onFieldChanged(Field field, String oldValue, String newValue) {
-        if (suppressRecording) {
-            return;
-        }
-        if (Objects.equals(oldValue, newValue)) {
-            return;
-        }
-        if (questId == null || questId.isBlank()) {
-            return;
-        }
-        if (commandBus == null) {
+        if (suppressRecording || Objects.equals(oldValue, newValue) || questId == null || questId.isBlank() || commandBus == null) {
             return;
         }
         QuestFieldChangeCommand command = new QuestFieldChangeCommand(questId, field, newValue, oldValue);

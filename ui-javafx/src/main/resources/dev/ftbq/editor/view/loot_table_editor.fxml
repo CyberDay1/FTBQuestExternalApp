@@ -21,7 +21,7 @@
         <SplitPane dividerPositions="0.3">
             <items>
                 <ListView fx:id="poolListView" prefWidth="200.0"/>
-                <VBox spacing="8" padding="10">
+                <VBox spacing="8" <padding><Insets top="10" right="10" bottom="10" left="10" /></padding>>
                     <children>
                         <TableView fx:id="entryTable" prefHeight="400.0" VBox.vgrow="ALWAYS">
                             <columns>
@@ -55,3 +55,4 @@
         </HBox>
     </bottom>
 </BorderPane>
+
