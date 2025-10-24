@@ -88,75 +88,107 @@ public class LootTableEditorController {
 
     @FXML
     public void initialize() {
-        tableNameField.textProperty().bindBidirectional(viewModel.tableNameProperty());
-        lootItemList.setItems(viewModel.getPools());
-        lootItemList.setCellFactory(list -> new ListCell<>() {
-            @Override
-            protected void updateItem(LootPool item, boolean empty) {
-                super.updateItem(item, empty);
-                setText(empty || item == null ? null : item.name());
-            }
-        });
-        lootItemList.getSelectionModel().selectedItemProperty().addListener((obs, oldPool, newPool) ->
-                viewModel.selectedPoolProperty().set(newPool));
+        if (tableNameField != null) {
+            tableNameField.textProperty().bindBidirectional(viewModel.tableNameProperty());
+        }
+        if (lootItemList != null) {
+            lootItemList.setItems(viewModel.getPools());
+            lootItemList.setCellFactory(list -> new ListCell<>() {
+                @Override
+                protected void updateItem(LootPool item, boolean empty) {
+                    super.updateItem(item, empty);
+                    setText(empty || item == null ? null : item.name());
+                }
+            });
+            lootItemList.getSelectionModel().selectedItemProperty().addListener((obs, oldPool, newPool) ->
+                    viewModel.selectedPoolProperty().set(newPool));
+        }
         viewModel.selectedPoolProperty().addListener((obs, oldPool, newPool) -> {
-            if (lootItemList.getSelectionModel().getSelectedItem() != newPool) {
+            if (lootItemList != null && lootItemList.getSelectionModel().getSelectedItem() != newPool) {
                 lootItemList.getSelectionModel().select(newPool);
             }
         });
 
-        entryTable.setItems(viewModel.getEntries());
-        entryTable.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
-        entryTable.setEditable(true);
+        if (entryTable != null) {
+            entryTable.setItems(viewModel.getEntries());
+            entryTable.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
+            entryTable.setEditable(true);
+        }
 
-        iconColumn.setCellValueFactory(data -> new ReadOnlyObjectWrapper<>(data.getValue()));
-        iconColumn.setCellFactory(column -> new IconTableCell());
+        if (entryTable != null && iconColumn != null) {
+            iconColumn.setCellValueFactory(data -> new ReadOnlyObjectWrapper<>(data.getValue()));
+            iconColumn.setCellFactory(column -> new IconTableCell());
+        }
 
-        itemIdColumn.setCellValueFactory(data -> new ReadOnlyObjectWrapper<>(data.getValue().itemId()));
-        displayNameColumn.setCellValueFactory(data -> new ReadOnlyObjectWrapper<>(data.getValue().displayName()));
-        conditionsColumn.setCellValueFactory(data -> new ReadOnlyObjectWrapper<>(data.getValue().conditionsSummary()));
+        if (entryTable != null && itemIdColumn != null) {
+            itemIdColumn.setCellValueFactory(data -> new ReadOnlyObjectWrapper<>(data.getValue().itemId()));
+        }
+        if (entryTable != null && displayNameColumn != null) {
+            displayNameColumn.setCellValueFactory(data -> new ReadOnlyObjectWrapper<>(data.getValue().displayName()));
+        }
+        if (entryTable != null && conditionsColumn != null) {
+            conditionsColumn.setCellValueFactory(data -> new ReadOnlyObjectWrapper<>(data.getValue().conditionsSummary()));
+        }
 
-        weightColumn.setCellValueFactory(data -> new ReadOnlyObjectWrapper<>(data.getValue().weight()));
-        weightColumn.setCellFactory(TextFieldTableCell.forTableColumn(new DoubleStringConverter()));
-        weightColumn.setOnEditCommit(event -> {
-            LootEntryRow row = event.getRowValue();
-            Double newValue = event.getNewValue();
-            if (row != null && newValue != null) {
-                viewModel.updateEntryWeight(row, newValue);
-            }
-        });
-
-        entryTable.setRowFactory(table -> new TableRow<>() {
-            @Override
-            protected void updateItem(LootEntryRow item, boolean empty) {
-                super.updateItem(item, empty);
-                if (empty || item == null) {
-                    setStyle("");
-                    setTooltip(null);
-                } else if (!item.validInActiveVersion()) {
-                    setStyle("-fx-background-color: rgba(255,0,0,0.15);");
-                    setTooltip(new Tooltip("Item missing in current version"));
-                } else {
-                    setStyle("");
-                    setTooltip(null);
+        if (entryTable != null && weightColumn != null) {
+            weightColumn.setCellValueFactory(data -> new ReadOnlyObjectWrapper<>(data.getValue().weight()));
+            weightColumn.setCellFactory(TextFieldTableCell.forTableColumn(new DoubleStringConverter()));
+            weightColumn.setOnEditCommit(event -> {
+                LootEntryRow row = event.getRowValue();
+                Double newValue = event.getNewValue();
+                if (row != null && newValue != null) {
+                    viewModel.updateEntryWeight(row, newValue);
                 }
-            }
-        });
+            });
+        }
 
-        addEntryButton.disableProperty().bind(viewModel.selectedPoolProperty().isNull());
-        removeEntryButton.disableProperty().bind(entryTable.getSelectionModel().selectedItemProperty().isNull());
-        previewButton.disableProperty().bind(viewModel.selectedPoolProperty().isNull());
+        if (entryTable != null) {
+            entryTable.setRowFactory(table -> new TableRow<>() {
+                @Override
+                protected void updateItem(LootEntryRow item, boolean empty) {
+                    super.updateItem(item, empty);
+                    if (empty || item == null) {
+                        setStyle("");
+                        setTooltip(null);
+                    } else if (!item.validInActiveVersion()) {
+                        setStyle("-fx-background-color: rgba(255,0,0,0.15);");
+                        setTooltip(new Tooltip("Item missing in current version"));
+                    } else {
+                        setStyle("");
+                        setTooltip(null);
+                    }
+                }
+            });
+            entryTable.sceneProperty().addListener((obs, oldScene, newScene) -> {
+                if (newScene == null) {
+                    dispose();
+                }
+            });
+        }
 
-        entryTable.sceneProperty().addListener((obs, oldScene, newScene) -> {
-            if (newScene == null) {
-                dispose();
+        if (addPoolButton != null && addPoolButton.getAccessibleText() == null) {
+            addPoolButton.setAccessibleText("Add loot pool");
+        }
+        if (addEntryButton != null) {
+            addEntryButton.disableProperty().bind(viewModel.selectedPoolProperty().isNull());
+            if (addEntryButton.getAccessibleText() == null) {
+                addEntryButton.setAccessibleText("Add loot entry");
             }
-        });
+        }
+        if (entryTable != null && removeEntryButton != null) {
+            removeEntryButton.disableProperty().bind(entryTable.getSelectionModel().selectedItemProperty().isNull());
+        }
+        if (previewButton != null) {
+            previewButton.disableProperty().bind(viewModel.selectedPoolProperty().isNull());
+        }
     }
 
     @FXML
     private void onAddPool() {
         LootPool newPool = viewModel.addPool();
+        if (lootItemList == null) {
+            return;
+        }
         Platform.runLater(() -> lootItemList.getSelectionModel().select(newPool));
     }
 
@@ -189,13 +221,18 @@ public class LootTableEditorController {
 
     @FXML
     private void onRemoveEntry() {
+        if (entryTable == null) {
+            return;
+        }
         List<LootEntryRow> selected = List.copyOf(entryTable.getSelectionModel().getSelectedItems());
         viewModel.removeSelectedEntries(selected);
     }
 
     @FXML
     private void onPreview() {
-        previewSummary.setText(viewModel.computePreview());
+        if (previewSummary != null) {
+            previewSummary.setText(viewModel.computePreview());
+        }
     }
 
     public void focusOnTable(String tableId) {
@@ -203,11 +240,13 @@ public class LootTableEditorController {
             if (tableId != null && !tableId.isBlank()) {
                 viewModel.tableNameProperty().set(tableId);
             }
-            if (!viewModel.getPools().isEmpty()) {
+            if (lootItemList != null && !viewModel.getPools().isEmpty()) {
                 lootItemList.requestFocus();
             }
-            tableNameField.requestFocus();
-            tableNameField.selectAll();
+            if (tableNameField != null) {
+                tableNameField.requestFocus();
+                tableNameField.selectAll();
+            }
         });
     }
 

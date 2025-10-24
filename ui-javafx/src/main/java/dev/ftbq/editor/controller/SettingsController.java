@@ -65,24 +65,35 @@ public class SettingsController {
 
     @FXML
     public void initialize() {
-        versionBox.getItems().setAll(Arrays.asList(MinecraftVersion.values()));
-        versionBox.getSelectionModel().selectedItemProperty().addListener((obs, oldVersion, newVersion) -> {
-            if (newVersion != null) {
-                onVersionChanged(newVersion);
-            }
-        });
+        if (versionBox != null) {
+            versionBox.getItems().setAll(Arrays.asList(MinecraftVersion.values()));
+            versionBox.getSelectionModel().selectedItemProperty().addListener((obs, oldVersion, newVersion) -> {
+                if (newVersion != null) {
+                    onVersionChanged(newVersion);
+                }
+            });
+        }
+
+        if (clearIconCacheButton != null && clearIconCacheButton.getAccessibleText() == null) {
+            clearIconCacheButton.setAccessibleText("Clear cached icons");
+        }
+        if (addJarButton != null && addJarButton.getAccessibleText() == null) {
+            addJarButton.setAccessibleText("Import Minecraft JAR");
+        }
 
         MinecraftVersion activeVersion = safeGetActiveVersion();
-        if (activeVersion != null) {
+        if (versionBox != null && activeVersion != null) {
             versionBox.getSelectionModel().select(activeVersion);
-        } else {
+        } else if (activeVersion == null) {
             updateStatus("Select a Minecraft version or import item catalogs.");
         }
     }
 
     @FXML
     private void onAddJar() {
-        Window window = addJarButton != null ? addJarButton.getScene().getWindow() : null;
+        Window window = addJarButton != null && addJarButton.getScene() != null
+                ? addJarButton.getScene().getWindow()
+                : null;
         FileChooser chooser = new FileChooser();
         chooser.setTitle("Select Minecraft JAR");
         chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("JAR Files", "*.jar"));
@@ -157,9 +168,10 @@ public class SettingsController {
     private void rebuildVersionCatalog(MinecraftVersion desiredVersion) {
         UiServiceLocator.rebuildVersionCatalog();
         versionCatalog = UiServiceLocator.getVersionCatalog();
-        if (desiredVersion != null) {
+        if (desiredVersion != null && versionBox != null) {
             try {
                 versionCatalog.setActiveVersion(desiredVersion);
+                versionBox.getSelectionModel().select(desiredVersion);
             } catch (RuntimeException ex) {
                 logger.warn("Failed to restore active version after import", ex,
                         StructuredLogger.field("version", desiredVersion.getId()));

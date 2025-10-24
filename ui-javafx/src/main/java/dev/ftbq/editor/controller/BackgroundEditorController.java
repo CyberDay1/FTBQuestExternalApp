@@ -76,6 +76,9 @@ public class BackgroundEditorController {
     public void initialize() {
         configureAlignmentCombo();
         configureRepeatCombo();
+        if (chooseImageButton != null && chooseImageButton.getAccessibleText() == null) {
+            chooseImageButton.setAccessibleText("Choose a background image");
+        }
         background.addListener((obs, oldValue, newValue) -> {
             BackgroundRef next = newValue == null ? new BackgroundRef("minecraft:textures/gui/default.png") : newValue;
             updatingFromModel = true;
@@ -127,6 +130,9 @@ public class BackgroundEditorController {
         if (updatingFromModel) {
             return;
         }
+        if (colorPicker == null) {
+            return;
+        }
         Color value = colorPicker.getValue();
         updateBackground(current -> new BackgroundRef(
                 current.texture(),
@@ -161,6 +167,9 @@ public class BackgroundEditorController {
     }
 
     private void configureAlignmentCombo() {
+        if (alignmentComboBox == null) {
+            return;
+        }
         ObservableList<BackgroundAlignment> items = FXCollections.observableArrayList(BackgroundAlignment.values());
         alignmentComboBox.setItems(items);
         alignmentComboBox.setButtonCell(new AlignmentCell());
@@ -181,6 +190,9 @@ public class BackgroundEditorController {
     }
 
     private void configureRepeatCombo() {
+        if (repeatComboBox == null) {
+            return;
+        }
         ObservableList<BackgroundRepeat> items = FXCollections.observableArrayList(BackgroundRepeat.values());
         repeatComboBox.setItems(items);
         repeatComboBox.setButtonCell(new RepeatCell());
