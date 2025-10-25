@@ -1,5 +1,7 @@
 package dev.ftbq.editor;
 
+import java.awt.GraphicsEnvironment;
+
 import javafx.application.Application;
 
 /**
@@ -32,9 +34,9 @@ public final class HeadlessLauncher {
     }
 
     private static boolean detectHeadlessEnvironment() {
-    // Use the Java AWT headless flag for cross-platform detection
-    return java.awt.GraphicsEnvironment.isHeadless();
-}
+        // Use the Java AWT headless flag for cross-platform detection
+        return GraphicsEnvironment.isHeadless();
+    }
 
     private static void applyHeadlessProperties() {
         System.setProperty("glass.platform", "Monocle");
