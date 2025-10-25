@@ -1,12 +1,14 @@
 package dev.ftbq.editor.controller;
 
 import dev.ftbq.editor.ThemeService;
+import dev.ftbq.editor.assets.CacheManager;
 import dev.ftbq.editor.domain.Dependency;
 import dev.ftbq.editor.domain.IconRef;
 import dev.ftbq.editor.domain.Quest;
 import dev.ftbq.editor.domain.Reward;
 import dev.ftbq.editor.domain.Task;
 import dev.ftbq.editor.domain.Visibility;
+import dev.ftbq.editor.services.UiServiceLocator;
 import dev.ftbq.editor.services.bus.CommandBus;
 import dev.ftbq.editor.services.bus.EventBus;
 import dev.ftbq.editor.services.bus.ServiceLocator;
@@ -17,24 +19,32 @@ import dev.ftbq.editor.controller.ItemBrowserController;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
+import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 import javafx.scene.control.Tooltip;
+import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
-import javafx.scene.layout.BorderPane;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
-import javafx.scene.Scene;
+import javafx.scene.layout.BorderPane;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.util.Objects;
 import java.util.function.Consumer;
 
+/**
+ * Updated quest editor controller.
+ *
+ * This version enhances the icon handling by loading the actual icon image
+ * from the cache into the ImageView and sets up accessible text properly.
+ */
 public class QuestEditorController {
     @FXML
     private BorderPane rootPane;
@@ -79,7 +89,8 @@ public class QuestEditorController {
     public QuestEditorController() {
         this(
                 new QuestEditorViewModel(ServiceLocator.commandBus(), ServiceLocator.eventBus(), ServiceLocator.undoManager()),
-                ServiceLocator.loggerFactory().create(QuestEditorController.class));
+                ServiceLocator.loggerFactory().create(QuestEditorController.class)
+        );
         this.undoManager = ServiceLocator.undoManager();
     }
 
@@ -220,6 +231,16 @@ public class QuestEditorController {
         }
     }
 
+    /**
+     * Updates the tooltip and icon view based on the provided icon reference.
+     *
+     * When an icon is selected, this method fetches the corresponding icon
+     * bytes from the cache using {@link CacheManager} and displays the image
+     * in the {@link ImageView}. It also updates the accessible text and
+     * visibility of the icon view.
+     *
+     * @param icon the selected icon, or null if none is selected
+     */
     private void updateIconTooltip(IconRef icon) {
         if (icon == null) {
             iconTooltip.setText("No icon selected");
@@ -227,6 +248,17 @@ public class QuestEditorController {
             iconTooltip.setText("Icon: " + icon.icon());
         }
         if (questIconView != null) {
+            // Load image from the cache if available
+            CacheManager cm = UiServiceLocator.cacheManager;
+            if (cm != null && icon != null) {
+                cm.fetchIcon(icon.icon()).ifPresent(bytes -> {
+                    questIconView.setImage(new Image(new ByteArrayInputStream(bytes)));
+                });
+            } else {
+                // Clear the image if no icon or cache manager is available
+                questIconView.setImage(null);
+            }
+            // Update accessibility and visibility
             questIconView.setAccessibleText(icon == null ? "No icon selected" : icon.icon());
             questIconView.setManaged(icon != null);
             questIconView.setVisible(icon != null);

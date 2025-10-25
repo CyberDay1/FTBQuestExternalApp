@@ -32,9 +32,9 @@ public final class HeadlessLauncher {
     }
 
     private static boolean detectHeadlessEnvironment() {
-        String display = System.getenv("DISPLAY");
-        return display == null || display.isBlank();
-    }
+    // Use the Java AWT headless flag for cross-platform detection
+    return java.awt.GraphicsEnvironment.isHeadless();
+}
 
     private static void applyHeadlessProperties() {
         System.setProperty("glass.platform", "Monocle");
@@ -57,3 +57,4 @@ public final class HeadlessLauncher {
         return false;
     }
 }
+

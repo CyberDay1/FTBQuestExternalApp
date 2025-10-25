@@ -1,5 +1,6 @@
 package dev.ftbq.editor.view.graph;
 
+import dev.ftbq.editor.controller.QuestEditorController;
 import dev.ftbq.editor.domain.BackgroundAlignment;
 import dev.ftbq.editor.domain.BackgroundRef;
 import dev.ftbq.editor.domain.BackgroundRepeat;
@@ -11,18 +12,20 @@ import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import javafx.fxml.FXMLLoader;
 import javafx.geometry.Point2D;
 import javafx.scene.Group;
+import javafx.scene.Parent;
+import javafx.scene.Scene;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
+import javafx.scene.control.Label;
 import javafx.scene.image.Image;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.input.ScrollEvent;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.StackPane;
-import javafx.scene.control.Label;
-import javafx.geometry.Pos;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.Paint;
 import javafx.scene.shape.Circle;
@@ -30,7 +33,11 @@ import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
 import javafx.scene.transform.Scale;
 import javafx.scene.transform.Translate;
+import javafx.stage.Modality;
+import javafx.stage.Stage;
+import javafx.geometry.Pos;
 
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
@@ -42,6 +49,10 @@ import java.util.Optional;
 
 /**
  * Canvas based quest graph with pan/zoom and node interaction support.
+ *
+ * This updated version adds a double‑click handler on each quest node to open
+ * the Quest Editor in a separate window. When the user double‑clicks a node,
+ * the corresponding quest is loaded into the quest editor.
  */
 public class GraphCanvas extends Pane {
 
@@ -236,6 +247,7 @@ public class GraphCanvas extends Pane {
     }
 
     private void installNodeHandlers(QuestNodeView view) {
+        // Handle mouse press to start dragging
         view.addEventFilter(MouseEvent.MOUSE_PRESSED, event -> {
             if (event.getButton() != MouseButton.PRIMARY) {
                 return;
@@ -245,6 +257,7 @@ public class GraphCanvas extends Pane {
             event.consume();
         });
 
+        // Handle mouse drag to reposition node
         view.addEventFilter(MouseEvent.MOUSE_DRAGGED, event -> {
             if (!event.isPrimaryButtonDown()) {
                 return;
@@ -262,9 +275,35 @@ public class GraphCanvas extends Pane {
             event.consume();
         });
 
+        // Handle mouse release to end dragging
         view.addEventFilter(MouseEvent.MOUSE_RELEASED, event -> {
             if (event.getButton() == MouseButton.PRIMARY) {
                 view.endDrag();
+                event.consume();
+            }
+        });
+
+        // Add double‑click handler to open the quest editor
+        view.addEventFilter(MouseEvent.MOUSE_CLICKED, event -> {
+            if (event.getButton() == MouseButton.PRIMARY && event.getClickCount() == 2) {
+                Quest quest = view.getModelNode().getQuest();
+                try {
+                    FXMLLoader loader = new FXMLLoader(getClass().getResource("/dev/ftbq/editor/view/quest_editor.fxml"));
+                    Parent root = loader.load();
+                    QuestEditorController controller = loader.getController();
+                    controller.loadQuest(quest);
+                    Stage stage = new Stage();
+                    stage.setTitle("Edit Quest: " + quest.title());
+                    stage.setScene(new Scene(root));
+                    // If this canvas is attached to a scene, set the owner for modality
+                    if (getScene() != null) {
+                        stage.initOwner(getScene().getWindow());
+                        stage.initModality(Modality.WINDOW_MODAL);
+                    }
+                    stage.show();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
                 event.consume();
             }
         });
@@ -418,8 +457,7 @@ public class GraphCanvas extends Pane {
         if (background == null) {
             return Optional.empty();
         }
-        Optional<Image> fromPath = background.path()
-                .flatMap(this::loadBackgroundImageFromPath);
+        Optional<Image> fromPath = background.path().flatMap(this::loadBackgroundImageFromPath);
         if (fromPath.isPresent()) {
             return fromPath;
         }
@@ -451,10 +489,10 @@ public class GraphCanvas extends Pane {
     }
 
     private Point2D alignmentOffset(Optional<BackgroundAlignment> alignment,
-                                     double canvasWidth,
-                                     double canvasHeight,
-                                     double tileWidth,
-                                     double tileHeight) {
+                                    double canvasWidth,
+                                    double canvasHeight,
+                                    double tileWidth,
+                                    double tileHeight) {
         if (alignment.isEmpty()) {
             return new Point2D(0, 0);
         }
@@ -586,7 +624,6 @@ public class GraphCanvas extends Pane {
         private final QuestGraphModel.Node modelNode;
         private final Circle badge = new Circle(9);
         private ValidationLevel currentLevel = ValidationLevel.OK;
-
         private Point2D dragAnchor = Point2D.ZERO;
         private Point2D initialLayout = Point2D.ZERO;
 
@@ -682,5 +719,4 @@ public class GraphCanvas extends Pane {
             return icon.substring(0, 4).toUpperCase(Locale.ENGLISH);
         }
     }
-
 }
