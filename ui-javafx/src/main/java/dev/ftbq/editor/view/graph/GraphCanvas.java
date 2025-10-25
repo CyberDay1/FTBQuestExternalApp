@@ -287,6 +287,12 @@ public class GraphCanvas extends Pane {
         view.addEventFilter(MouseEvent.MOUSE_CLICKED, event -> {
             if (event.getButton() == MouseButton.PRIMARY && event.getClickCount() == 2) {
                 Quest quest = view.getModelNode().getQuest();
+                if (quest == null) {
+                    logger.warn("Quest node missing quest model");
+                    event.consume();
+                    return;
+                }
+
                 try {
                     FXMLLoader loader = new FXMLLoader(getClass().getResource("/dev/ftbq/editor/view/quest_editor.fxml"));
                     Parent root = loader.load();
@@ -302,7 +308,8 @@ public class GraphCanvas extends Pane {
                     }
                     stage.show();
                 } catch (IOException e) {
-                    e.printStackTrace();
+                    logger.error("Failed to open quest editor window", e,
+                            StructuredLogger.field("questId", quest.id()));
                 }
                 event.consume();
             }
