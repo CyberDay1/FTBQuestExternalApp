@@ -35,6 +35,7 @@ public final class CacheManager {
     private final AtomicLong logicalClock = new AtomicLong();
 
     private final Set<String> missingIconHashes = new HashSet<>();
+    private final Set<String> missingBackgroundHashes = new HashSet<>();
 
     private final Object iconLock = new Object();
     private final Object backgroundLock = new Object();
@@ -100,6 +101,7 @@ public final class CacheManager {
             writeIfNecessary(backgroundPath, data);
             touch(backgroundPath);
             enforceLimit(backgroundDirectory, maxBackgroundEntries);
+            missingBackgroundHashes.remove(hash);
         }
         return hash;
     }
@@ -108,11 +110,16 @@ public final class CacheManager {
         Objects.requireNonNull(hash, "hash");
         Path backgroundPath = backgroundDirectory.resolve(hash + BACKGROUND_EXTENSION);
         synchronized (backgroundLock) {
+            if (missingBackgroundHashes.contains(hash)) {
+                return Optional.empty();
+            }
             if (!Files.exists(backgroundPath)) {
+                missingBackgroundHashes.add(hash);
                 return Optional.empty();
             }
             try {
                 byte[] data = Files.readAllBytes(backgroundPath);
+                missingBackgroundHashes.remove(hash);
                 touch(backgroundPath);
                 return Optional.of(data);
             } catch (IOException ex) {
