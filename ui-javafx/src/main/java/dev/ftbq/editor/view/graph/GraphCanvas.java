@@ -38,6 +38,7 @@ import javafx.scene.transform.Scale;
 import javafx.scene.transform.Translate;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
+import javafx.stage.Window;
 import javafx.geometry.Pos;
 
 import java.io.ByteArrayInputStream;
@@ -85,6 +86,8 @@ public class GraphCanvas extends Pane {
     private final ObservableList<GraphEdge> edges = FXCollections.observableArrayList();
     private final Map<String, ValidationLevel> validationStateByQuest = new HashMap<>();
     private final Map<String, Image> backgroundImages = new HashMap<>();
+    private Stage questEditorStage;
+    private QuestEditorController questEditorController;
     private QuestGraphModel model;
     private final StructuredLogger logger = ServiceLocator.loggerFactory().create(GraphCanvas.class);
 
@@ -298,19 +301,14 @@ public class GraphCanvas extends Pane {
                 }
 
                 try {
-                    FXMLLoader loader = new FXMLLoader(getClass().getResource("/dev/ftbq/editor/view/quest_editor.fxml"));
-                    Parent root = loader.load();
-                    QuestEditorController controller = loader.getController();
-                    controller.loadQuest(quest);
-                    Stage stage = new Stage();
-                    stage.setTitle("Edit Quest: " + quest.title());
-                    stage.setScene(new Scene(root));
-                    // If this canvas is attached to a scene, set the owner for modality
-                    if (getScene() != null) {
-                        stage.initOwner(getScene().getWindow());
-                        stage.initModality(Modality.WINDOW_MODAL);
+                    ensureQuestEditorStage();
+                    questEditorController.loadQuest(quest);
+                    questEditorStage.setTitle("Edit Quest: " + quest.title());
+                    if (!questEditorStage.isShowing()) {
+                        questEditorStage.show();
                     }
-                    stage.show();
+                    questEditorStage.toFront();
+                    questEditorStage.requestFocus();
                 } catch (IOException e) {
                     logger.error("Failed to open quest editor window", e,
                             StructuredLogger.field("questId", quest.id()));
@@ -318,6 +316,38 @@ public class GraphCanvas extends Pane {
                 event.consume();
             }
         });
+    }
+
+    private void ensureQuestEditorStage() throws IOException {
+        if (questEditorStage != null && questEditorController != null) {
+            updateQuestEditorOwner();
+            return;
+        }
+
+        FXMLLoader loader = new FXMLLoader(getClass().getResource("/dev/ftbq/editor/view/quest_editor.fxml"));
+        Parent root = loader.load();
+        questEditorController = loader.getController();
+        questEditorStage = new Stage();
+        questEditorStage.setScene(new Scene(root));
+        questEditorStage.setOnHidden(event -> {
+            questEditorStage = null;
+            questEditorController = null;
+        });
+        updateQuestEditorOwner();
+    }
+
+    private void updateQuestEditorOwner() {
+        if (questEditorStage == null || questEditorStage.getOwner() != null) {
+            return;
+        }
+        if (getScene() == null) {
+            return;
+        }
+        Window owner = getScene().getWindow();
+        if (owner != null) {
+            questEditorStage.initOwner(owner);
+            questEditorStage.initModality(Modality.WINDOW_MODAL);
+        }
     }
 
     private void handleMousePressed(MouseEvent event) {
