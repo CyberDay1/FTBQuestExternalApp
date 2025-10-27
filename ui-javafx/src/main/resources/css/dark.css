@@ -12,36 +12,34 @@
     -edge-optional: #a142f4;
     -node: #263238;
     -node-stroke: #8ab4f8;
+
+    -fx-background-color: var(-bg);
 }
 
-/* Apply variables using lookup() for valid Paint objects */
-.root {
-    -fx-background-color: lookup("-bg");
-}
-
-.label { -fx-text-fill: lookup("-fg"); }
-.text { -fx-fill: lookup("-fg"); }
+/* Common controls */
+.label { -fx-text-fill: var(-fg); }
+.text { -fx-fill: var(-fg); }
 .button {
-    -fx-background-color: lookup("-bg-elev");
-    -fx-text-fill: lookup("-fg");
+    -fx-background-color: var(-bg-elev);
+    -fx-text-fill: var(-fg);
 }
 .text-field, .combo-box, .choice-box, .list-view, .tree-view, .table-view {
-    -fx-background-color: lookup("-bg-elev");
-    -fx-text-fill: lookup("-fg");
-    -fx-prompt-text-fill: lookup("-fg-muted");
+    -fx-background-color: var(-bg-elev);
+    -fx-text-fill: var(-fg);
+    -fx-prompt-text-fill: var(-fg-muted);
 }
 
 /* Graph elements */
 .graph-canvas {
-    -graph-grid-color: lookup("-grid");
-    -graph-edge-required-color: lookup("-edge-required");
-    -graph-edge-optional-color: lookup("-edge-optional");
+    -graph-grid-color: var(-grid);
+    -graph-edge-required-color: var(-edge-required);
+    -graph-edge-optional-color: var(-edge-optional);
 }
 .quest-node {
-    -quest-node-fill: lookup("-node");
-    -quest-node-stroke: lookup("-node-stroke");
+    -quest-node-fill: var(-node);
+    -quest-node-stroke: var(-node-stroke);
 }
 .quest-node-label {
-    -fx-fill: lookup("-fg");
-    -fx-text-fill: lookup("-fg");
+    -fx-fill: var(-fg);
+    -fx-text-fill: var(-fg);
 }
