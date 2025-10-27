@@ -27,7 +27,6 @@ import java.util.Locale;
 import java.util.Optional;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.stream.Collectors;
 
 public final class StoreDao {
@@ -87,6 +86,9 @@ public final class StoreDao {
     private static final String DELETE_QUEST_TASKS_SQL = "DELETE FROM quest_tasks WHERE quest_id = ?";
     private static final String DELETE_QUEST_REWARDS_SQL = "DELETE FROM quest_rewards WHERE quest_id = ?";
     private static final String DELETE_QUEST_DEPENDENCIES_SQL = "DELETE FROM quest_dependencies WHERE quest_id = ?";
+    private static final String DELETE_DEPENDENCY_REFERENCES_SQL = "DELETE FROM quest_dependencies WHERE dependency_quest_id = ?";
+    private static final String DELETE_QUEST_SQL = "DELETE FROM quests WHERE id = ?";
+    private static final String DELETE_QUEST_POSITION_SQL = "DELETE FROM quest_positions WHERE quest_id = ?";
 
     private static final String INSERT_QUEST_TASK_SQL = """
             INSERT INTO quest_tasks (quest_id, task_index, type, item_id, item_count, consume, advancement_id, dimension, x, y, z, radius)
@@ -440,6 +442,43 @@ public final class StoreDao {
                 e.addSuppressed(rollbackException);
             }
             throw new UncheckedSqlException("Failed to save quest " + quest.id(), e);
+        } finally {
+            try {
+                connection.setAutoCommit(previousAutoCommit);
+            } catch (SQLException e) {
+                throw new UncheckedSqlException("Failed to restore auto-commit state", e);
+            }
+        }
+    }
+
+    public void deleteQuest(String questId) {
+        Objects.requireNonNull(questId, "questId");
+        boolean previousAutoCommit;
+        try {
+            previousAutoCommit = connection.getAutoCommit();
+        } catch (SQLException e) {
+            throw new UncheckedSqlException("Failed to determine auto-commit state", e);
+        }
+
+        try {
+            connection.setAutoCommit(false);
+            deleteRecords(DELETE_QUEST_TASKS_SQL, questId);
+            deleteRecords(DELETE_QUEST_REWARDS_SQL, questId);
+            deleteRecords(DELETE_QUEST_DEPENDENCIES_SQL, questId);
+            deleteRecords(DELETE_DEPENDENCY_REFERENCES_SQL, questId);
+            deleteRecords(DELETE_QUEST_POSITION_SQL, questId);
+            try (PreparedStatement statement = connection.prepareStatement(DELETE_QUEST_SQL)) {
+                statement.setString(1, questId);
+                statement.executeUpdate();
+            }
+            connection.commit();
+        } catch (SQLException e) {
+            try {
+                connection.rollback();
+            } catch (SQLException rollbackException) {
+                e.addSuppressed(rollbackException);
+            }
+            throw new UncheckedSqlException("Failed to delete quest " + questId, e);
         } finally {
             try {
                 connection.setAutoCommit(previousAutoCommit);
