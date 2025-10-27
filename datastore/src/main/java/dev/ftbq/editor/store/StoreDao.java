@@ -26,6 +26,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Types;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -214,6 +215,37 @@ public final class StoreDao {
         } catch (SQLException e) {
             throw new UncheckedSqlException("Failed to list items", e);
         }
+    }
+
+    /**
+     * Appends all items currently stored in the database to the supplied map, keyed by item id.
+     * Existing entries are preserved unless a matching id is encountered, in which case the
+     * database row overwrites the previous value.
+     *
+     * @param existingItems map to mutate with database contents
+     * @return the provided map instance for chaining
+     */
+    public Map<String, ItemEntity> appendItems(Map<String, ItemEntity> existingItems) {
+        Objects.requireNonNull(existingItems, "existingItems");
+
+        Map<String, ItemEntity> newItems = new LinkedHashMap<>();
+        try (PreparedStatement statement = connection.prepareStatement("""
+                SELECT id, display_name, is_vanilla, mod_id, mod_name, tags, texture_path, icon_hash, source_jar, version, kind
+                FROM items
+                ORDER BY id
+                """)) {
+            try (ResultSet resultSet = statement.executeQuery()) {
+                while (resultSet.next()) {
+                    ItemEntity entity = mapItem(resultSet);
+                    newItems.put(entity.id(), entity);
+                }
+            }
+        } catch (SQLException e) {
+            throw new UncheckedSqlException("Failed to append catalog items", e);
+        }
+
+        existingItems.putAll(newItems);
+        return existingItems;
     }
 
     public Optional<ItemEntity> findItemById(String id) {
