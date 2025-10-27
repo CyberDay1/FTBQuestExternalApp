@@ -2,7 +2,6 @@ package dev.ftbq.editor;
 
 import dev.ftbq.editor.controller.ChapterEditorController;
 import dev.ftbq.editor.controller.LootTableEditorController;
-import dev.ftbq.editor.controller.QuestEditorController;
 import dev.ftbq.editor.viewmodel.ChapterGroupBrowserViewModel;
 import dev.ftbq.editor.viewmodel.ChapterEditorViewModel;
 import dev.ftbq.editor.view.ChapterGroupBrowserController;
@@ -57,19 +56,11 @@ public class MainApp extends Application {
         lootTab.setClosable(false);
         tabPane.getTabs().add(lootTab);
 
+        // Quest editor removed — quests are now edited via Chapter Editor directly
         try {
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("/dev/ftbq/editor/view/quest_editor.fxml"));
-            Parent questRoot = loader.load();
-            QuestEditorController questController = loader.getController();
-            questController.setLootTableLinkHandler(tableId -> {
-                tabPane.getSelectionModel().select(lootTab);
-                lootTableController.focusOnTable(tableId);
-            });
-            Tab questTab = new Tab("Quest Editor", questRoot);
-            questTab.setClosable(false);
-            tabPane.getTabs().add(questTab);
+            logger.info("Quest editor deprecated — skipping quest_editor.fxml load");
         } catch (Exception e) {
-            logger.error("Failed to load quest editor UI", e);
+            logger.warn("Quest editor load skipped", e);
         }
 
         try {
