@@ -302,6 +302,9 @@ public class GraphCanvas extends Pane {
 
                 try {
                     ensureQuestEditorStage();
+                    logger.info("Opening quest editor",
+                            StructuredLogger.field("questId", quest.id()),
+                            StructuredLogger.field("questTitle", quest.title()));
                     questEditorController.loadQuest(quest);
                     questEditorStage.setTitle("Edit Quest: " + quest.title());
                     if (!questEditorStage.isShowing()) {
@@ -324,6 +327,7 @@ public class GraphCanvas extends Pane {
             return;
         }
 
+        logger.debug("Creating quest editor stage instance");
         FXMLLoader loader = new FXMLLoader(getClass().getResource("/dev/ftbq/editor/view/quest_editor.fxml"));
         Parent root = loader.load();
         questEditorController = loader.getController();
