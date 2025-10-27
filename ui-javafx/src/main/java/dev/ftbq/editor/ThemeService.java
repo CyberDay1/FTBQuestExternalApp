@@ -12,24 +12,25 @@ import javafx.stage.Stage;
 import javafx.stage.WindowEvent;
 
 import java.net.URL;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.EnumMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
-import java.util.WeakHashMap;
+import java.util.*;
 import java.util.prefs.Preferences;
 
+/**
+ * Manages dynamic theme switching across all registered JavaFX stages.
+ * Supports LIGHT, DARK, and HIGH_CONTRAST themes, with keyboard shortcuts:
+ *  - Ctrl+Alt+L = Light theme
+ *  - Ctrl+Alt+D = Dark theme
+ *  - Ctrl+Alt+H = High Contrast theme
+ */
 public final class ThemeService {
+
     private static final String PREFERENCE_KEY_THEME = "ui.theme";
-    private static final KeyCodeCombination LIGHT_COMBINATION = new KeyCodeCombination(
-            KeyCode.L, KeyCombination.CONTROL_DOWN, KeyCombination.ALT_DOWN);
-    private static final KeyCodeCombination DARK_COMBINATION = new KeyCodeCombination(
-            KeyCode.D, KeyCombination.CONTROL_DOWN, KeyCombination.ALT_DOWN);
-    private static final KeyCodeCombination HIGH_CONTRAST_COMBINATION = new KeyCodeCombination(
-            KeyCode.H, KeyCombination.CONTROL_DOWN, KeyCombination.ALT_DOWN);
+    private static final KeyCodeCombination LIGHT_COMBINATION =
+            new KeyCodeCombination(KeyCode.L, KeyCombination.CONTROL_DOWN, KeyCombination.ALT_DOWN);
+    private static final KeyCodeCombination DARK_COMBINATION =
+            new KeyCodeCombination(KeyCode.D, KeyCombination.CONTROL_DOWN, KeyCombination.ALT_DOWN);
+    private static final KeyCodeCombination HIGH_CONTRAST_COMBINATION =
+            new KeyCodeCombination(KeyCode.H, KeyCombination.CONTROL_DOWN, KeyCombination.ALT_DOWN);
 
     private final Map<Theme, String> stylesheetUrls;
     private final Set<String> allStylesheetUrls;
@@ -41,14 +42,15 @@ public final class ThemeService {
         this.preferences = Preferences.userNodeForPackage(ThemeService.class);
         this.stylesheetUrls = Collections.unmodifiableMap(loadStylesheetUrls());
         this.allStylesheetUrls = Collections.unmodifiableSet(new HashSet<>(stylesheetUrls.values()));
+
         Theme savedTheme = Theme.fromId(preferences.get(PREFERENCE_KEY_THEME, Theme.LIGHT.getId()));
         this.currentTheme = new SimpleObjectProperty<>(savedTheme);
+
         this.currentTheme.addListener((obs, oldTheme, newTheme) -> {
-            if (newTheme == null || newTheme == oldTheme) {
-                return;
+            if (newTheme != null && newTheme != oldTheme) {
+                preferences.put(PREFERENCE_KEY_THEME, newTheme.getId());
+                applyThemeToAll();
             }
-            preferences.put(PREFERENCE_KEY_THEME, newTheme.getId());
-            applyThemeToAll();
         });
     }
 
@@ -72,7 +74,6 @@ public final class ThemeService {
 
     public void registerStage(Stage stage) {
         Objects.requireNonNull(stage, "stage");
-
         ChangeListener<Scene> existing = stageListeners.remove(stage);
         if (existing != null) {
             stage.sceneProperty().removeListener(existing);
@@ -133,6 +134,13 @@ public final class ThemeService {
     private void applyStylesheet(Scene scene, Theme theme) {
         clearThemeStylesheet(scene);
         String stylesheet = stylesheetUrls.get(theme);
+
+        // Always include tokens.css for variable definitions
+        URL tokensUrl = ThemeService.class.getResource("/css/tokens.css");
+        if (tokensUrl != null && !scene.getStylesheets().contains(tokensUrl.toExternalForm())) {
+            scene.getStylesheets().add(tokensUrl.toExternalForm());
+        }
+
         if (stylesheet != null && !scene.getStylesheets().contains(stylesheet)) {
             scene.getStylesheets().add(stylesheet);
         }
@@ -145,13 +153,9 @@ public final class ThemeService {
     private void applyThemeToAll() {
         ArrayList<Stage> stages = new ArrayList<>(stageListeners.keySet());
         for (Stage stage : stages) {
-            if (stage == null) {
-                continue;
-            }
+            if (stage == null) continue;
             Scene scene = stage.getScene();
-            if (scene != null) {
-                configureScene(scene);
-            }
+            if (scene != null) configureScene(scene);
         }
     }
 
@@ -204,5 +208,3 @@ public final class ThemeService {
         }
     }
 }
-
-

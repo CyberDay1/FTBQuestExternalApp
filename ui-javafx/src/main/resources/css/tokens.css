@@ -1,23 +1,25 @@
-﻿.root {
-    /* base palette */
-    -bg: #141414;
-    -bg-elev: #1c1c1c;
-    -fg: #e6e6e6;
-    -fg-muted: #b6b6b6;
-    -accent: #6ea8fe;
-
-    /* graph/quest colors */
-    -grid: #3a3a3a;
-    -edge-required: #f6c744;
-    -edge-optional: #a78bfa;
-    -node: #2f4f4f;
+﻿:root {
+    /* Light Theme */
+    -bg: #f4f6fb;
+    -bg-elev: #ffffff;
+    -fg: #21252b;
+    -fg-muted: #5c6370;
+    -accent: #3564c2;
+    -grid: #d4d9e2;
+    -node: #ffffff;
     -node-stroke: #b0b0b0;
+    -edge-required: #3564c2;
+    -edge-optional: #7f9dd6;
 
-    /* aliases used by component styles */
-    -graph-grid-color: -grid;
-    -graph-edge-required-color: -edge-required;
-    -graph-edge-optional-color: -edge-optional;
-    -quest-node-fill: -node;
-    -quest-node-stroke: -node-stroke;
-    -quest-node-label: -fg;
+    /* Dark Theme */
+    -bg-dark: #1e1e2e;
+    -bg-elev-dark: #2b2b3b;
+    -fg-dark: #e6e6e6;
+    -fg-muted-dark: #9aa0b3;
+    -accent-dark: #6ea8fe;
+    -grid-dark: #444857;
+    -node-dark: #2b2b3b;
+    -node-stroke-dark: #6c6c6c;
+    -edge-required-dark: #6ea8fe;
+    -edge-optional-dark: #98b7ff;
 }

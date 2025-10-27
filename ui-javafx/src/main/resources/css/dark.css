@@ -1,7 +1,10 @@
 ﻿@import "tokens.css";
 
 /* Scene base */
-.root { -fx-background-color: -bg; -fx-text-fill: -fg; }
+.root {
+    -fx-background-color: derive(-bg, 0%); /* ensures conversion to Paint */
+}
+
 
 /* Common controls */
 .label { -fx-text-fill: -fg; }
@@ -15,10 +18,11 @@
 
 /* Graph-specific (read by code or style classes) */
 .graph-canvas {
-    -graph-grid-color: -grid;
-    -graph-edge-required-color: -edge-required;
-    -graph-edge-optional-color: -edge-optional;
+    -graph-grid-color: ladder(-grid, derive(-grid, 0%) 100%);
+    -graph-edge-required-color: ladder(-edge-required, derive(-edge-required, 0%) 100%);
+    -graph-edge-optional-color: ladder(-edge-optional, derive(-edge-optional, 0%) 100%);
 }
+
 .quest-node {
     -quest-node-fill: -node;
     -quest-node-stroke: -node-stroke;

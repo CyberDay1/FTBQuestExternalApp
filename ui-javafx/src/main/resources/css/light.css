@@ -15,7 +15,12 @@
 }
 
 /* Scene base */
-.root { -fx-background-color: -bg; -fx-text-fill: -fg; }
+.graph-canvas {
+    -graph-grid-color: ladder(-grid, derive(-grid, 0%) 100%);
+    -graph-edge-required-color: ladder(-edge-required, derive(-edge-required, 0%) 100%);
+    -graph-edge-optional-color: ladder(-edge-optional, derive(-edge-optional, 0%) 100%);
+}
+
 
 /* Common controls */
 .label { -fx-text-fill: -fg; }
