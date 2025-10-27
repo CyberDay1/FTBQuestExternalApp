@@ -54,6 +54,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.function.Consumer;
 
@@ -626,7 +627,46 @@ public class QuestEditorController {
             }
         }
 
+        if (quest.id() != null && UiServiceLocator.storeDao != null) {
+            for (Dependency dependency : quest.dependencies()) {
+                String dependencyId = dependency.questId();
+                try {
+                    Optional<Quest> dependencyQuest = UiServiceLocator.storeDao.findQuestById(dependencyId);
+                    if (dependencyQuest.isPresent() && isCircularDependency(quest.id(), dependencyQuest.get(), new HashSet<>())) {
+                        showValidationError("Circular dependency detected between quests: " + quest.id() + " and " + dependencyId);
+                        return false;
+                    }
+                } catch (Exception exception) {
+                    logger.error("Failed to check circular dependency for quest " + quest.id() + " and dependency " + dependencyId, exception);
+                }
+            }
+        }
+
         return true;
+    }
+
+    private boolean isCircularDependency(String rootQuestId, Quest currentQuest, Set<String> visitedQuestIds) {
+        if (rootQuestId.equals(currentQuest.id())) {
+            return true;
+        }
+        if (!visitedQuestIds.add(currentQuest.id())) {
+            return false;
+        }
+        if (currentQuest.dependencies().isEmpty()) {
+            return false;
+        }
+        for (Dependency dependency : currentQuest.dependencies()) {
+            if (rootQuestId.equals(dependency.questId())) {
+                return true;
+            }
+            Optional<Quest> nextQuest = UiServiceLocator.storeDao != null
+                    ? UiServiceLocator.storeDao.findQuestById(dependency.questId())
+                    : Optional.empty();
+            if (nextQuest.isPresent() && isCircularDependency(rootQuestId, nextQuest.get(), visitedQuestIds)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private void showValidationError(String message) {

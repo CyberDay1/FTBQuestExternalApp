@@ -1,11 +1,13 @@
 package dev.ftbq.editor.store;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import dev.ftbq.editor.domain.AdvancementTask;
 import dev.ftbq.editor.domain.CommandReward;
+import dev.ftbq.editor.domain.CustomReward;
 import dev.ftbq.editor.domain.Dependency;
 import dev.ftbq.editor.domain.IconRef;
 import dev.ftbq.editor.domain.ItemRef;
@@ -268,6 +270,47 @@ public final class StoreDao {
         }
     }
 
+    public Optional<Quest> findQuestById(String questId) {
+        Objects.requireNonNull(questId, "questId");
+        try (PreparedStatement statement = connection.prepareStatement("""
+                SELECT id, title, description, icon, icon_relative_path, visibility
+                FROM quests
+                WHERE id = ?
+                """)) {
+            statement.setString(1, questId);
+            try (ResultSet resultSet = statement.executeQuery()) {
+                if (!resultSet.next()) {
+                    return Optional.empty();
+                }
+
+                String id = resultSet.getString("id");
+                String title = resultSet.getString("title");
+                String description = resultSet.getString("description");
+                String iconId = resultSet.getString("icon");
+                String iconRelativePath = resultSet.getString("icon_relative_path");
+                Visibility visibility = Visibility.valueOf(resultSet.getString("visibility"));
+
+                List<Task> tasks = loadQuestTasks(id);
+                List<Reward> rewards = loadQuestRewards(id);
+                List<Dependency> dependencies = loadQuestDependencies(id);
+
+                Quest quest = Quest.builder()
+                        .id(id)
+                        .title(title)
+                        .description(description)
+                        .icon(new IconRef(iconId, Optional.ofNullable(iconRelativePath)))
+                        .visibility(visibility)
+                        .tasks(tasks)
+                        .rewards(rewards)
+                        .dependencies(dependencies)
+                        .build();
+                return Optional.of(quest);
+            }
+        } catch (SQLException e) {
+            throw new UncheckedSqlException("Failed to load quest " + questId, e);
+        }
+    }
+
     public void upsertLootTable(LootTableEntity lootTable) {
         try (PreparedStatement statement = connection.prepareStatement(UPSERT_LOOT_TABLE_SQL)) {
             statement.setString(1, lootTable.name());
@@ -506,6 +549,56 @@ public final class StoreDao {
         }
     }
 
+    private List<Task> loadQuestTasks(String questId) throws SQLException {
+        try (PreparedStatement statement = connection.prepareStatement("""
+                SELECT type, item_id, item_count, consume, advancement_id, dimension, x, y, z, radius
+                FROM quest_tasks
+                WHERE quest_id = ?
+                ORDER BY task_index
+                """)) {
+            statement.setString(1, questId);
+            try (ResultSet resultSet = statement.executeQuery()) {
+                List<Task> tasks = new ArrayList<>();
+                while (resultSet.next()) {
+                    String type = resultSet.getString("type");
+                    switch (type) {
+                        case "item" -> {
+                            String itemId = resultSet.getString("item_id");
+                            int count = resultSet.getInt("item_count");
+                            if (resultSet.wasNull() || count < 1) {
+                                count = 1;
+                            }
+                            boolean consume = resultSet.getInt("consume") != 0;
+                            if (itemId != null) {
+                                tasks.add(new ItemTask(new ItemRef(itemId, count), consume));
+                            }
+                        }
+                        case "advancement" -> {
+                            String advancementId = resultSet.getString("advancement_id");
+                            if (advancementId != null) {
+                                tasks.add(new AdvancementTask(advancementId));
+                            }
+                        }
+                        case "location" -> {
+                            String dimension = resultSet.getString("dimension");
+                            Double x = getNullableDouble(resultSet, "x");
+                            Double y = getNullableDouble(resultSet, "y");
+                            Double z = getNullableDouble(resultSet, "z");
+                            Double radius = getNullableDouble(resultSet, "radius");
+                            if (dimension != null && x != null && y != null && z != null && radius != null) {
+                                tasks.add(new LocationTask(dimension, x, y, z, radius));
+                            }
+                        }
+                        default -> {
+                            // Ignore unsupported task types
+                        }
+                    }
+                }
+                return tasks;
+            }
+        }
+    }
+
     private void insertQuestRewards(Quest quest) throws SQLException {
         if (quest.rewards().isEmpty()) {
             return;
@@ -549,6 +642,53 @@ public final class StoreDao {
         }
     }
 
+    private List<Reward> loadQuestRewards(String questId) throws SQLException {
+        try (PreparedStatement statement = connection.prepareStatement("""
+                SELECT type, item_id, item_count, amount, command, as_player, metadata
+                FROM quest_rewards
+                WHERE quest_id = ?
+                ORDER BY reward_index
+                """)) {
+            statement.setString(1, questId);
+            try (ResultSet resultSet = statement.executeQuery()) {
+                List<Reward> rewards = new ArrayList<>();
+                while (resultSet.next()) {
+                    String type = resultSet.getString("type");
+                    switch (type) {
+                        case "item" -> {
+                            String itemId = resultSet.getString("item_id");
+                            int count = resultSet.getInt("item_count");
+                            if (resultSet.wasNull() || count < 1) {
+                                count = 1;
+                            }
+                            if (itemId != null) {
+                                rewards.add(new ItemReward(new ItemRef(itemId, count)));
+                            }
+                        }
+                        case "xp" -> {
+                            int amount = resultSet.getInt("amount");
+                            if (!resultSet.wasNull()) {
+                                rewards.add(new XpReward(amount));
+                            }
+                        }
+                        case "command" -> {
+                            String command = resultSet.getString("command");
+                            boolean asPlayer = resultSet.getInt("as_player") != 0;
+                            if (command != null) {
+                                rewards.add(new CommandReward(command, asPlayer));
+                            }
+                        }
+                        default -> {
+                            Map<String, Object> metadata = deserializeMetadata(resultSet.getString("metadata"));
+                            rewards.add(new CustomReward(type, metadata));
+                        }
+                    }
+                }
+                return rewards;
+            }
+        }
+    }
+
     private void insertQuestDependencies(Quest quest) throws SQLException {
         if (quest.dependencies().isEmpty()) {
             return;
@@ -561,6 +701,26 @@ public final class StoreDao {
                 statement.addBatch();
             }
             statement.executeBatch();
+        }
+    }
+
+    private List<Dependency> loadQuestDependencies(String questId) throws SQLException {
+        try (PreparedStatement statement = connection.prepareStatement("""
+                SELECT dependency_quest_id, required
+                FROM quest_dependencies
+                WHERE quest_id = ?
+                ORDER BY dependency_quest_id
+                """)) {
+            statement.setString(1, questId);
+            try (ResultSet resultSet = statement.executeQuery()) {
+                List<Dependency> dependencies = new ArrayList<>();
+                while (resultSet.next()) {
+                    String dependencyQuestId = resultSet.getString("dependency_quest_id");
+                    boolean required = resultSet.getInt("required") != 0;
+                    dependencies.add(new Dependency(dependencyQuestId, required));
+                }
+                return dependencies;
+            }
         }
     }
 
@@ -589,6 +749,25 @@ public final class StoreDao {
         } catch (JsonProcessingException e) {
             throw new UncheckedSqlException("Failed to serialize reward metadata", e);
         }
+    }
+
+    private static Map<String, Object> deserializeMetadata(String metadataJson) {
+        if (metadataJson == null || metadataJson.isBlank()) {
+            return Map.of();
+        }
+        try {
+            return METADATA_MAPPER.readValue(metadataJson, new TypeReference<>() {});
+        } catch (JsonProcessingException e) {
+            throw new UncheckedSqlException("Failed to deserialize reward metadata", e);
+        }
+    }
+
+    private static Double getNullableDouble(ResultSet resultSet, String column) throws SQLException {
+        double value = resultSet.getDouble(column);
+        if (resultSet.wasNull()) {
+            return null;
+        }
+        return value;
     }
 
     private static ItemEntity mapItem(ResultSet resultSet) throws SQLException {
