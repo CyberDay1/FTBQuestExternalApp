@@ -25,7 +25,8 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 public class ItemBrowserViewModel {
-    private static final int PAGE_LIMIT = 512;
+    private static final int PAGE_SIZE = 1024;
+    private static final String MINECRAFT_MOD_ID = "minecraft";
     private static final Pattern TAG_PATTERN = Pattern.compile("\\\"([^\\\\\\\"]+)\\\"");
 
     private final StoreDao storeDao;
@@ -101,19 +102,17 @@ public class ItemBrowserViewModel {
                 .orElse(null);
         StoreDao.SortMode selectedSortMode = Optional.ofNullable(sortMode.get()).orElse(StoreDao.SortMode.NAME);
 
-        List<StoreDao.ItemEntity> entities = storeDao.listItems(
+        List<StoreDao.ItemEntity> entities = fetchAllItems(
                 filter,
                 tagFilters,
                 modFilter,
                 null,
                 kindFilter,
-                selectedSortMode,
-                PAGE_LIMIT,
-                0);
+                selectedSortMode);
 
         if (vanillaOnly.get()) {
             entities = entities.stream()
-                    .filter(e -> e.isVanilla() || (e.modId() != null && e.modId().equalsIgnoreCase("minecraft")))
+                    .filter(ItemBrowserViewModel::isVanillaEntity)
                     .toList();
         }
 
@@ -124,16 +123,13 @@ public class ItemBrowserViewModel {
     }
 
     public void loadFilterOptions() {
-        int filterPageSize = Math.max(PAGE_LIMIT, 2048);
-        List<StoreDao.ItemEntity> entities = storeDao.listItems(
+        List<StoreDao.ItemEntity> entities = fetchAllItems(
                 null,
                 List.of(),
                 null,
                 null,
                 null,
-                StoreDao.SortMode.NAME,
-                filterPageSize,
-                0);
+                StoreDao.SortMode.NAME);
 
         Map<String, ModOption> mods = new LinkedHashMap<>();
         Set<String> tags = new TreeSet<>(String.CASE_INSENSITIVE_ORDER);
@@ -150,22 +146,37 @@ public class ItemBrowserViewModel {
 
             String modId = entity.modId();
             String modName = entity.modName();
-            if ((modId == null || modId.isBlank()) && entity.isVanilla()) {
-                modId = "minecraft";
+            boolean vanillaEntity = isVanillaEntity(entity);
+            if ((modId == null || modId.isBlank()) && vanillaEntity) {
+                modId = MINECRAFT_MOD_ID;
             }
+
+            boolean isMinecraftMod = isMinecraftModId(modId);
+            boolean isVanilla = vanillaEntity || isMinecraftMod;
+
             String label = modName;
             if (label == null || label.isBlank()) {
-                if (modId != null && !modId.isBlank()) {
+                if (isVanilla) {
+                    label = "Minecraft";
+                } else if (modId != null && !modId.isBlank()) {
                     label = prettifyModId(modId);
-                    if ("minecraft".equalsIgnoreCase(modId)) {
-                        label = "Minecraft";
-                    }
-                } else if (entity.isVanilla()) {
+                }
+            }
+            if (label == null || label.isBlank()) {
+                if (modId != null && !modId.isBlank()) {
+                    label = modId;
+                } else {
                     label = "Minecraft";
                 }
             }
+
             if (modId != null && !modId.isBlank()) {
-                mods.putIfAbsent(modId.toLowerCase(Locale.ROOT), new ModOption(modId, label == null ? modId : label));
+                String key = modId.toLowerCase(Locale.ROOT);
+                ModOption existing = mods.get(key);
+                ModOption candidate = new ModOption(modId, label, isVanilla);
+                if (existing == null || (!existing.vanilla() && candidate.vanilla())) {
+                    mods.put(key, candidate);
+                }
             }
         }
 
@@ -198,6 +209,45 @@ public class ItemBrowserViewModel {
         return input.trim();
     }
 
+    private List<StoreDao.ItemEntity> fetchAllItems(
+            String filter,
+            List<String> tagFilters,
+            String modFilter,
+            String version,
+            String kindFilter,
+            StoreDao.SortMode sortMode) {
+        List<StoreDao.ItemEntity> allItems = new ArrayList<>();
+        int offset = 0;
+        while (true) {
+            List<StoreDao.ItemEntity> page = storeDao.listItems(
+                    filter,
+                    tagFilters,
+                    modFilter,
+                    version,
+                    kindFilter,
+                    sortMode,
+                    PAGE_SIZE,
+                    offset);
+            if (page.isEmpty()) {
+                break;
+            }
+            allItems.addAll(page);
+            if (page.size() < PAGE_SIZE) {
+                break;
+            }
+            offset += page.size();
+        }
+        return allItems;
+    }
+
+    private static boolean isMinecraftModId(String modId) {
+        return modId != null && modId.equalsIgnoreCase(MINECRAFT_MOD_ID);
+    }
+
+    private static boolean isVanillaEntity(StoreDao.ItemEntity entity) {
+        return entity != null && (entity.isVanilla() || isMinecraftModId(entity.modId()));
+    }
+
     private String prettifyModId(String modId) {
         String[] parts = modId.split("[_-]");
         return java.util.Arrays.stream(parts)
@@ -217,16 +267,22 @@ public class ItemBrowserViewModel {
 
         public String modDisplay() {
             if (entity.modName() != null && !entity.modName().isBlank()) {
+                if (isMinecraftModId(entity.modId())) {
+                    return "Minecraft";
+                }
                 return entity.modName();
             }
             if (entity.modId() != null && !entity.modId().isBlank()) {
+                if (isMinecraftModId(entity.modId())) {
+                    return "Minecraft";
+                }
                 return entity.modId();
             }
-            return entity.isVanilla() ? "Minecraft" : "Unknown";
+            return isVanillaEntity(entity) ? "Minecraft" : "Unknown";
         }
 
         public boolean isVanilla() {
-            return entity.isVanilla();
+            return isVanillaEntity(entity);
         }
 
         public String iconHash() {
@@ -238,7 +294,7 @@ public class ItemBrowserViewModel {
         }
     }
 
-    public record ModOption(String value, String label) {
+    public record ModOption(String value, String label, boolean vanilla) {
         @Override
         public String toString() {
             return label;
