@@ -5,6 +5,7 @@ import javafx.css.Styleable;
 import javafx.css.StyleableObjectProperty;
 import javafx.css.StyleableProperty;
 import javafx.css.converter.PaintConverter;
+import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.Pane;
 import javafx.scene.paint.Color;
@@ -128,6 +129,11 @@ public class QuestNodeView extends Pane {
     }
 
     private MoveListener onMove;
+    private EditListener onEdit;
+
+    public interface EditListener {
+        void edit(String questId);
+    }
 
     public QuestNodeView(String questId, String title, double worldX, double worldY) {
         this.questId = questId;
@@ -149,10 +155,15 @@ public class QuestNodeView extends Pane {
         setPickOnBounds(false);
         updateScreenPosition(worldX, worldY);
         enableDrag();
+        enableEdit();
     }
 
     public void setOnMove(MoveListener listener) {
         this.onMove = listener;
+    }
+
+    public void setOnEdit(EditListener listener) {
+        this.onEdit = listener;
     }
 
     public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
@@ -207,6 +218,14 @@ public class QuestNodeView extends Pane {
             double ny = getLayoutY() + body.getRadius();
             if (onMove != null) {
                 onMove.moved(questId, nx, ny);
+            }
+        });
+    }
+
+    private void enableEdit() {
+        addEventFilter(MouseEvent.MOUSE_CLICKED, e -> {
+            if (e.getButton() == MouseButton.PRIMARY && e.getClickCount() == 2 && onEdit != null) {
+                onEdit.edit(questId);
             }
         });
     }

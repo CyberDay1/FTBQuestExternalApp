@@ -168,6 +168,14 @@ public class GraphCanvas extends Canvas {
         return scale;
     }
 
+    public double getPanX() {
+        return translateX;
+    }
+
+    public double getPanY() {
+        return translateY;
+    }
+
     public void zoom(double factor, double pivotX, double pivotY) {
         double oldScale = scale;
         scale = Math.max(0.25, Math.min(4.0, scale * factor));
@@ -181,6 +189,17 @@ public class GraphCanvas extends Canvas {
         translateX += dx;
         translateY += dy;
         apply();
+    }
+
+    public void setState(double scale, double translateX, double translateY) {
+        this.scale = Math.max(0.25, Math.min(4.0, scale));
+        this.translateX = translateX;
+        this.translateY = translateY;
+        apply();
+    }
+
+    public void resetView() {
+        setState(1.0, 0.0, 0.0);
     }
 
     public double snap(double v) {
