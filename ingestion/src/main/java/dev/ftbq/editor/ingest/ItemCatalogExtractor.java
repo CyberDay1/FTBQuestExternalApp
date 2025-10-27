@@ -11,8 +11,6 @@ import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -149,9 +147,12 @@ public final class ItemCatalogExtractor {
             for (ItemMeta meta : baseItems) {
                 ResourceId itemId = ResourceId.fromString(meta.id());
                 String texturePath = modelTextures.get(itemId);
-                String iconHash = null;
+                String iconReference = null;
                 if (texturePath != null) {
-                    iconHash = cacheTexture(iconCacheDirectory, texturePath, zipFile);
+                    iconReference = cacheTexture(iconCacheDirectory, itemId, texturePath, zipFile);
+                }
+                if (iconReference == null) {
+                    iconReference = cacheDefaultIcon(iconCacheDirectory, itemId);
                 }
                 enrichedItems.add(new ItemMeta(
                         meta.id(),
@@ -160,7 +161,7 @@ public final class ItemCatalogExtractor {
                         meta.kind(),
                         meta.isVanilla(),
                         texturePath,
-                        iconHash,
+                        iconReference,
                         meta.modId(),
                         meta.modName(),
                         meta.modVersion()
@@ -252,45 +253,40 @@ public final class ItemCatalogExtractor {
         return namespace + ':' + texture;
     }
 
-    private static String cacheTexture(Path iconCacheDirectory, String textureResource, ZipFile zipFile) throws IOException {
+    private static String cacheTexture(Path iconCacheDirectory, ResourceId itemId, String textureResource,
+            ZipFile zipFile) throws IOException {
         ResourceId textureId = ResourceId.fromString(textureResource);
         String entryPath = "assets/" + textureId.namespace() + "/textures/" + textureId.path() + ".png";
         ZipEntry textureEntry = zipFile.getEntry(entryPath);
         if (textureEntry == null) {
             return null;
         }
-        byte[] data;
+        Path namespaceDirectory = iconCacheDirectory.resolve(itemId.namespace());
+        Files.createDirectories(namespaceDirectory);
+        Path target = namespaceDirectory.resolve(itemId.path() + ".png");
         try (InputStream input = zipFile.getInputStream(textureEntry)) {
-            data = input.readAllBytes();
-        }
-        String hash = hashBytes(data);
-        Path target = iconCacheDirectory.resolve(hash + ".png");
-        if (!Files.exists(target)) {
-            Files.createDirectories(iconCacheDirectory);
+            byte[] data = input.readAllBytes();
             Files.write(target, data);
         }
-        return hash;
-    }
-
-    private static String hashBytes(byte[] data) {
-        try {
-            MessageDigest digest = MessageDigest.getInstance("SHA-256");
-            byte[] hash = digest.digest(data);
-            StringBuilder builder = new StringBuilder(hash.length * 2);
-            for (byte b : hash) {
-                builder.append(String.format("%02x", b));
-            }
-            return builder.toString();
-        } catch (NoSuchAlgorithmException e) {
-            throw new IllegalStateException("SHA-256 not available", e);
-        }
+        return itemId.toString();
     }
 
     private static Path ensureIconCacheDirectory() throws IOException {
-        Path cacheRoot = Path.of("cache");
+        Path cacheRoot = Path.of(".cache");
         Path iconsDir = cacheRoot.resolve("icons");
         Files.createDirectories(iconsDir);
         return iconsDir;
+    }
+
+    private static String cacheDefaultIcon(Path iconCacheDirectory, ResourceId itemId) throws IOException {
+        Path namespaceDirectory = iconCacheDirectory.resolve(itemId.namespace());
+        Files.createDirectories(namespaceDirectory);
+        Path target = namespaceDirectory.resolve(itemId.path() + ".png");
+        if (Files.exists(target)) {
+            return itemId.toString();
+        }
+        Files.write(target, IconAssets.DEFAULT_ICON_BYTES);
+        return itemId.toString();
     }
 
     private static Optional<ItemMeta> parseLangEntry(String namespaceFromPath, String key, String value, boolean isVanilla,
