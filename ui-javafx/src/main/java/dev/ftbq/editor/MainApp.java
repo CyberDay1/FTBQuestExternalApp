@@ -45,7 +45,7 @@ public class MainApp extends Application {
         ChapterEditorController chapterEditorController = chapterEditorLoader.getController();
         ChapterEditorViewModel chapterEditorViewModel = new ChapterEditorViewModel();
         chapterEditorController.setViewModel(chapterEditorViewModel);
-        chapterEditorViewModel.loadSampleChapter();
+        chapterEditorViewModel.loadSampleChapters();
         Tab chapterEditorTab = new Tab("Chapter Editor", chapterEditorRoot);
         chapterEditorTab.setClosable(false);
         tabPane.getTabs().add(chapterEditorTab);
