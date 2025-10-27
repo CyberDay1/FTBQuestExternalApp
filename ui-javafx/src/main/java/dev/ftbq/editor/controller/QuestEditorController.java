@@ -248,14 +248,18 @@ public class QuestEditorController {
             iconTooltip.setText("Icon: " + icon.icon());
         }
         if (questIconView != null) {
-            // Load image from the cache if available
-            CacheManager cm = UiServiceLocator.cacheManager;
-            if (cm != null && icon != null) {
-                cm.fetchIcon(icon.icon()).ifPresent(bytes -> {
-                    questIconView.setImage(new Image(new ByteArrayInputStream(bytes)));
-                });
-            } else {
+            if (icon == null) {
                 questIconView.setImage(null);
+            } else {
+                CacheManager cacheManager = UiServiceLocator.cacheManager;
+                if (cacheManager != null) {
+                    cacheManager.fetchIcon(icon.icon()).ifPresentOrElse(
+                            bytes -> questIconView.setImage(new Image(new ByteArrayInputStream(bytes))),
+                            () -> questIconView.setImage(null)
+                    );
+                } else {
+                    questIconView.setImage(null);
+                }
             }
             // Update accessibility and visibility
             questIconView.setAccessibleText(icon == null ? "No icon selected" : icon.icon());
