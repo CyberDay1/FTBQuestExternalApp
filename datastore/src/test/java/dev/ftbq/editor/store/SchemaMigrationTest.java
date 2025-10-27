@@ -16,10 +16,13 @@ class SchemaMigrationTest {
     void appliesChapterQuestSchemaMigration() throws Exception {
         try (Connection connection = Jdbc.openInMemory()) {
             assertTrue(tableExists(connection, "chapters"), "chapters table should exist");
+            assertTrue(columnExists(connection, "chapters", "icon"), "chapters table should include icon column");
+            assertTrue(tableExists(connection, "chapter_quests"), "chapter_quests table should exist");
             assertTrue(tableExists(connection, "quests"), "quests table should exist");
             assertTrue(columnExists(connection, "quests", "chapter_id"), "quests table should have chapter_id column");
             assertTrue(tableExists(connection, "quest_details"), "legacy quest details table should exist");
-            assertTrue(migrationRecorded(connection, "001_create_quest_schema.sql"), "migration marker should be recorded");
+            assertTrue(migrationRecorded(connection, "001_create_quest_schema.sql"), "initial migration marker should be recorded");
+            assertTrue(migrationRecorded(connection, "002_add_chapter_tables.sql"), "chapter migration marker should be recorded");
         }
     }
 

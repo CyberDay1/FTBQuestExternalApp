@@ -6,12 +6,20 @@ import dev.ftbq.editor.domain.Dependency;
 import dev.ftbq.editor.domain.IconRef;
 import dev.ftbq.editor.domain.Quest;
 import dev.ftbq.editor.domain.Visibility;
+import dev.ftbq.editor.services.UiServiceLocator;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
+import javafx.beans.property.SimpleStringProperty;
+import javafx.beans.property.StringProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import javafx.collections.transformation.FilteredList;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Locale;
 import java.util.Objects;
+import java.util.Optional;
 
 /**
  * View model that exposes the currently selected quest chapter for the editor UI.
@@ -19,6 +27,13 @@ import java.util.Objects;
 public class ChapterEditorViewModel {
     private final ObjectProperty<Chapter> chapter = new SimpleObjectProperty<>();
     private final ObservableList<Chapter> chapters = FXCollections.observableArrayList();
+    private final FilteredList<Chapter> filteredChapters = new FilteredList<>(chapters, ignored -> true);
+    private final StringProperty chapterFilter = new SimpleStringProperty("");
+
+    public ChapterEditorViewModel() {
+        chapterFilter.addListener((obs, oldValue, newValue) -> applyFilter(newValue));
+        applyFilter(chapterFilter.get());
+    }
 
     public ObjectProperty<Chapter> chapterProperty() {
         return chapter;
@@ -33,11 +48,99 @@ public class ChapterEditorViewModel {
     }
 
     public ObservableList<Chapter> getChapters() {
-        return chapters;
+        return filteredChapters;
     }
 
     public void loadChapter(Chapter chapter) {
         setChapter(Objects.requireNonNull(chapter, "chapter"));
+    }
+
+    public StringProperty chapterFilterProperty() {
+        return chapterFilter;
+    }
+
+    public void loadChaptersFromStore() {
+        if (UiServiceLocator.storeDao == null) {
+            return;
+        }
+        List<Chapter> loaded = UiServiceLocator.storeDao.loadChapters();
+        setChapters(loaded);
+    }
+
+    public void setChapters(List<Chapter> newChapters) {
+        Objects.requireNonNull(newChapters, "newChapters");
+        String selectedId = Optional.ofNullable(getChapter()).map(Chapter::id).orElse(null);
+        chapters.setAll(newChapters);
+        Chapter selected = chapters.stream()
+                .filter(chapter -> Objects.equals(chapter.id(), selectedId))
+                .findFirst()
+                .orElseGet(() -> chapters.isEmpty() ? null : chapters.get(0));
+        setChapter(selected);
+    }
+
+    public void reorderChapter(Chapter chapter, int filteredTargetIndex) {
+        Objects.requireNonNull(chapter, "chapter");
+        if (filteredChapters.isEmpty()) {
+            return;
+        }
+        int sourceIndex = chapters.indexOf(chapter);
+        if (sourceIndex < 0) {
+            return;
+        }
+        int targetIndex = filteredTargetIndex;
+        if (targetIndex < 0) {
+            targetIndex = 0;
+        } else if (targetIndex >= filteredChapters.size()) {
+            targetIndex = filteredChapters.size() - 1;
+        }
+        int destinationIndex = filteredChapters.getSourceIndex(targetIndex);
+        if (destinationIndex < 0) {
+            destinationIndex = chapters.size() - 1;
+        }
+        if (destinationIndex == sourceIndex) {
+            return;
+        }
+        Chapter removed = chapters.remove(sourceIndex);
+        if (destinationIndex > sourceIndex) {
+            destinationIndex--;
+        }
+        chapters.add(destinationIndex, removed);
+        if (UiServiceLocator.storeDao != null) {
+            UiServiceLocator.storeDao.reorderChapter(chapter.id(), destinationIndex);
+        }
+    }
+
+    public void moveQuestToChapter(String questId, Chapter targetChapter) {
+        Objects.requireNonNull(questId, "questId");
+        Objects.requireNonNull(targetChapter, "targetChapter");
+        Chapter activeChapter = getChapter();
+        if (activeChapter == null || Objects.equals(activeChapter.id(), targetChapter.id())) {
+            return;
+        }
+        Quest quest = activeChapter.quests().stream()
+                .filter(q -> questId.equals(q.id()))
+                .findFirst()
+                .orElse(null);
+        if (quest == null) {
+            return;
+        }
+        Chapter updatedSource = rebuildChapter(activeChapter, removeQuest(activeChapter, questId));
+        Chapter resolvedTarget = findChapterById(targetChapter.id()).orElse(targetChapter);
+        Chapter updatedTarget = rebuildChapter(resolvedTarget, appendQuest(resolvedTarget, quest));
+
+        replaceChapter(activeChapter, updatedSource);
+        replaceChapter(resolvedTarget, updatedTarget);
+
+        if (Objects.equals(getChapter(), activeChapter)) {
+            setChapter(updatedSource);
+        }
+        if (Objects.equals(getChapter(), resolvedTarget)) {
+            setChapter(updatedTarget);
+        }
+
+        if (UiServiceLocator.storeDao != null) {
+            UiServiceLocator.storeDao.moveQuestToChapter(questId, targetChapter.id());
+        }
     }
 
     public void loadSampleChapters() {
@@ -45,8 +148,53 @@ public class ChapterEditorViewModel {
         Chapter exploration = createExplorationChapter();
         Chapter technology = createTechnologyChapter();
 
-        chapters.setAll(gettingStarted, exploration, technology);
-        setChapter(gettingStarted);
+        setChapters(List.of(gettingStarted, exploration, technology));
+    }
+
+    private void applyFilter(String filterText) {
+        if (filterText == null || filterText.isBlank()) {
+            filteredChapters.setPredicate(chapter -> true);
+            return;
+        }
+        String normalized = filterText.toLowerCase(Locale.ROOT);
+        filteredChapters.setPredicate(chapter ->
+                chapter != null && chapter.title().toLowerCase(Locale.ROOT).contains(normalized));
+    }
+
+    private Optional<Chapter> findChapterById(String id) {
+        return chapters.stream()
+                .filter(chapter -> Objects.equals(chapter.id(), id))
+                .findFirst();
+    }
+
+    private void replaceChapter(Chapter original, Chapter updated) {
+        int index = chapters.indexOf(original);
+        if (index >= 0) {
+            chapters.set(index, updated);
+        }
+    }
+
+    private List<Quest> removeQuest(Chapter chapter, String questId) {
+        List<Quest> quests = new ArrayList<>(chapter.quests());
+        quests.removeIf(quest -> questId.equals(quest.id()));
+        return quests;
+    }
+
+    private List<Quest> appendQuest(Chapter chapter, Quest quest) {
+        List<Quest> quests = new ArrayList<>(chapter.quests());
+        quests.add(quest);
+        return quests;
+    }
+
+    private Chapter rebuildChapter(Chapter original, List<Quest> quests) {
+        return Chapter.builder()
+                .id(original.id())
+                .title(original.title())
+                .icon(original.icon())
+                .background(original.background())
+                .visibility(original.visibility())
+                .quests(quests)
+                .build();
     }
 
     private Chapter createGettingStartedChapter() {
