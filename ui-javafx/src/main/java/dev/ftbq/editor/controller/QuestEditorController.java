@@ -251,17 +251,10 @@ public class QuestEditorController {
             // Load image from the cache if available
             CacheManager cm = UiServiceLocator.cacheManager;
             if (cm != null && icon != null) {
-                boolean iconLoaded = cm.fetchIcon(icon.icon())
-                        .map(bytes -> {
-                            questIconView.setImage(new Image(new ByteArrayInputStream(bytes)));
-                            return true;
-                        })
-                        .orElse(false);
-                if (!iconLoaded) {
-                    questIconView.setImage(null);
-                }
+                cm.fetchIcon(icon.icon()).ifPresent(bytes -> {
+                    questIconView.setImage(new Image(new ByteArrayInputStream(bytes)));
+                });
             } else {
-                // Clear the image if no icon or cache manager is available
                 questIconView.setImage(null);
             }
             // Update accessibility and visibility
