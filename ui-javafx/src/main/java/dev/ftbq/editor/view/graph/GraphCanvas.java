@@ -14,8 +14,11 @@ import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import javafx.collections.ObservableSet;
 import javafx.css.PseudoClass;
+import javafx.geometry.Bounds;
 import javafx.geometry.Point2D;
+import javafx.geometry.Rectangle2D;
 import javafx.scene.Group;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
@@ -30,8 +33,10 @@ import javafx.scene.layout.StackPane;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.Paint;
 import javafx.scene.shape.Circle;
+import javafx.scene.shape.Rectangle;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
+import javafx.scene.transform.Affine;
 import javafx.scene.transform.Scale;
 import javafx.scene.transform.Translate;
 import javafx.geometry.Pos;
@@ -41,6 +46,8 @@ import java.nio.file.Files;
 import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
 import java.util.HashMap;
+import java.util.Collection;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -69,9 +76,14 @@ public class GraphCanvas extends Pane {
     private final ObjectProperty<Chapter> chapter = new SimpleObjectProperty<>();
     private static final BackgroundRef DEFAULT_BACKGROUND = new BackgroundRef("minecraft:textures/gui/default.png");
 
+    private static final double MINIMAP_WIDTH = 200;
+    private static final double MINIMAP_HEIGHT = 120;
+
     private final Canvas backgroundLayer = new Canvas();
     private final Canvas edgeLayer = new Canvas();
     private final Pane nodeLayer = new Pane();
+    private final Canvas minimapLayer = new Canvas(MINIMAP_WIDTH, MINIMAP_HEIGHT);
+    private final Pane overlayLayer = new Pane();
     private final Group contentGroup = new Group();
     private final Scale scaleTransform = new Scale(1, 1);
     private final Translate translateTransform = new Translate();
@@ -84,13 +96,18 @@ public class GraphCanvas extends Pane {
     private QuestGraphModel model;
     private final StructuredLogger logger = ServiceLocator.loggerFactory().create(GraphCanvas.class);
     private final ObjectProperty<QuestGraphModel.Node> selectedNode = new SimpleObjectProperty<>();
-    private QuestNodeView selectedNodeView;
+    private final ObservableSet<QuestNodeView> selectedNodes = FXCollections.observableSet(new LinkedHashSet<>());
+    private QuestNodeView primarySelection;
     private Consumer<QuestGraphModel.Node> nodeDoubleClickHandler;
 
     private double currentScale = 1.0;
     private boolean panning;
     private Point2D panAnchor;
     private Point2D panStartTranslate;
+    private boolean bandSelecting;
+    private boolean bandExtending;
+    private Point2D bandAnchor = Point2D.ZERO;
+    private final Rectangle selectionRectangle = new Rectangle();
 
     public GraphCanvas() {
         getStyleClass().add("quest-graph-canvas");
@@ -103,6 +120,21 @@ public class GraphCanvas extends Pane {
         contentGroup.getChildren().addAll(backgroundLayer, edgeLayer, nodeLayer);
         contentGroup.getTransforms().addAll(scaleTransform, translateTransform);
         getChildren().add(contentGroup);
+
+        minimapLayer.setManaged(false);
+        minimapLayer.setMouseTransparent(true);
+        minimapLayer.getGraphicsContext2D().setFill(Color.color(0, 0, 0, 0.6));
+
+        overlayLayer.setManaged(false);
+        overlayLayer.setMouseTransparent(true);
+        overlayLayer.setPickOnBounds(false);
+        selectionRectangle.setManaged(false);
+        selectionRectangle.setVisible(false);
+        selectionRectangle.setStroke(Color.web("#4a90e2"));
+        selectionRectangle.setFill(Color.color(0.29, 0.56, 0.91, 0.2));
+        selectionRectangle.getStrokeDashArray().setAll(6.0, 4.0);
+        overlayLayer.getChildren().addAll(minimapLayer, selectionRectangle);
+        getChildren().add(overlayLayer);
 
         widthProperty().addListener((obs, oldV, newV) -> resizeLayers());
         heightProperty().addListener((obs, oldV, newV) -> resizeLayers());
@@ -154,11 +186,25 @@ public class GraphCanvas extends Pane {
         }
     }
 
-    public void clearSelection() {
-        if (selectedNodeView != null) {
-            selectedNodeView.setSelected(false);
-            selectedNodeView = null;
+    public void selectQuests(Collection<String> questIds) {
+        clearSelection();
+        if (questIds == null) {
+            return;
         }
+        boolean makePrimary = true;
+        for (String questId : questIds) {
+            QuestNodeView view = nodeViews.get(questId);
+            if (view != null) {
+                addToSelection(view, makePrimary);
+                makePrimary = false;
+            }
+        }
+    }
+
+    public void clearSelection() {
+        selectedNodes.forEach(node -> node.setSelected(false));
+        selectedNodes.clear();
+        primarySelection = null;
         selectedNode.set(null);
     }
 
@@ -171,16 +217,106 @@ public class GraphCanvas extends Pane {
             clearSelection();
             return;
         }
-        if (selectedNodeView == view) {
-            selectedNode.set(view.getModelNode());
+        clearSelection();
+        addToSelection(view, true);
+    }
+
+    private void addToSelection(QuestNodeView view, boolean makePrimary) {
+        if (view == null) {
             return;
         }
-        if (selectedNodeView != null) {
-            selectedNodeView.setSelected(false);
+        if (selectedNodes.add(view)) {
+            view.setSelected(true);
         }
-        selectedNodeView = view;
-        selectedNode.set(view.getModelNode());
-        view.setSelected(true);
+        if (makePrimary || primarySelection == null) {
+            primarySelection = view;
+            selectedNode.set(view.getModelNode());
+        }
+    }
+
+    private void removeFromSelection(QuestNodeView view) {
+        if (view == null) {
+            return;
+        }
+        if (selectedNodes.remove(view)) {
+            view.setSelected(false);
+        }
+        if (view == primarySelection) {
+            primarySelection = selectedNodes.stream().findFirst().orElse(null);
+            selectedNode.set(primarySelection != null ? primarySelection.getModelNode() : null);
+        }
+    }
+
+    private void toggleSelection(QuestNodeView view) {
+        if (view == null) {
+            return;
+        }
+        if (selectedNodes.contains(view)) {
+            removeFromSelection(view);
+        } else {
+            addToSelection(view, true);
+        }
+    }
+
+    public void alignSelectionLeft() {
+        if (selectedNodes.isEmpty()) {
+            return;
+        }
+        double target = selectedNodes.stream()
+                .mapToDouble(QuestNodeView::getLayoutX)
+                .min()
+                .orElse(0);
+        selectedNodes.forEach(node -> updateNodePosition(node, target, node.getLayoutY()));
+        drawEdges();
+        updateMinimap();
+    }
+
+    public void alignSelectionRight() {
+        if (selectedNodes.isEmpty()) {
+            return;
+        }
+        double target = selectedNodes.stream()
+                .mapToDouble(node -> node.getLayoutX() + NODE_SIZE)
+                .max()
+                .orElse(0);
+        selectedNodes.forEach(node -> updateNodePosition(node, target - NODE_SIZE, node.getLayoutY()));
+        drawEdges();
+        updateMinimap();
+    }
+
+    public void alignSelectionTop() {
+        if (selectedNodes.isEmpty()) {
+            return;
+        }
+        double target = selectedNodes.stream()
+                .mapToDouble(QuestNodeView::getLayoutY)
+                .min()
+                .orElse(0);
+        selectedNodes.forEach(node -> updateNodePosition(node, node.getLayoutX(), target));
+        drawEdges();
+        updateMinimap();
+    }
+
+    public void alignSelectionCenter() {
+        if (selectedNodes.isEmpty()) {
+            return;
+        }
+        double target = selectedNodes.stream()
+                .mapToDouble(node -> node.getLayoutX() + NODE_SIZE / 2.0)
+                .average()
+                .orElse(0);
+        selectedNodes.forEach(node -> updateNodePosition(node, target - NODE_SIZE / 2.0, node.getLayoutY()));
+        drawEdges();
+        updateMinimap();
+    }
+
+    private void updateNodePosition(QuestNodeView node, double newX, double newY) {
+        node.relocate(newX, newY);
+        node.getModelNode().setPosition(newX, newY);
+        if (model != null) {
+            model.moveNode(node.getModelNode().getQuest().id(), newX, newY);
+        }
+        persistQuestPosition(node.getModelNode().getQuest().id(), newX, newY);
     }
 
     public ObjectProperty<BackgroundRef> backgroundRefProperty() {
@@ -247,6 +383,7 @@ public class GraphCanvas extends Pane {
         }
         drawEdges();
         persistQuestPosition(questId, layoutX, layoutY);
+        updateMinimap();
     }
 
     private void resizeLayers() {
@@ -256,8 +393,11 @@ public class GraphCanvas extends Pane {
         backgroundLayer.setHeight(height);
         edgeLayer.setWidth(width);
         edgeLayer.setHeight(height);
+        overlayLayer.resizeRelocate(0, 0, width, height);
+        minimapLayer.relocate(width - MINIMAP_WIDTH - 16, height - MINIMAP_HEIGHT - 16);
         drawBackground();
         drawEdges();
+        updateMinimap();
     }
 
     public void rebuildGraph() {
@@ -298,6 +438,7 @@ public class GraphCanvas extends Pane {
 
         drawBackground();
         drawEdges();
+        updateMinimap();
     }
 
     private Map<String, Point2D> loadPersistedPositions(Chapter activeChapter) {
@@ -351,14 +492,25 @@ public class GraphCanvas extends Pane {
             if (event.getButton() != MouseButton.PRIMARY) {
                 return;
             }
-            setSelectedNode(view);
+            if (event.isControlDown() || event.isMetaDown()) {
+                toggleSelection(view);
+            } else if (event.isShiftDown()) {
+                addToSelection(view, true);
+            } else {
+                setSelectedNode(view);
+            }
             view.requestFocus();
-            view.startDrag(contentGroup.sceneToLocal(event.getSceneX(), event.getSceneY()));
+            if (selectedNodes.contains(view)) {
+                view.startDrag(contentGroup.sceneToLocal(event.getSceneX(), event.getSceneY()));
+            }
             event.consume();
         });
 
         view.setOnMouseDragged(event -> {
             if (!event.isPrimaryButtonDown()) {
+                return;
+            }
+            if (!selectedNodes.contains(view)) {
                 return;
             }
             Point2D current = contentGroup.sceneToLocal(event.getSceneX(), event.getSceneY());
@@ -372,6 +524,7 @@ public class GraphCanvas extends Pane {
             }
             drawEdges();
             persistQuestPosition(view.getModelNode().getQuest().id(), newX, newY);
+            updateMinimap();
             event.consume();
         });
 
@@ -411,17 +564,26 @@ public class GraphCanvas extends Pane {
         if (event.getTarget() instanceof QuestNodeView) {
             return;
         }
-        if (event.getButton() != MouseButton.PRIMARY) {
+        if (event.getButton() == MouseButton.PRIMARY) {
+            boolean extend = event.isShiftDown() || event.isControlDown() || event.isMetaDown();
+            beginBandSelection(event.getX(), event.getY(), extend);
+            event.consume();
             return;
         }
-        clearSelection();
-        panning = true;
-        panAnchor = new Point2D(event.getX(), event.getY());
-        panStartTranslate = new Point2D(translateTransform.getX(), translateTransform.getY());
-        event.consume();
+        if (event.getButton() == MouseButton.SECONDARY || event.getButton() == MouseButton.MIDDLE) {
+            panning = true;
+            panAnchor = new Point2D(event.getX(), event.getY());
+            panStartTranslate = new Point2D(translateTransform.getX(), translateTransform.getY());
+            event.consume();
+        }
     }
 
     private void handleMouseDragged(MouseEvent event) {
+        if (bandSelecting) {
+            updateBandSelection(event.getX(), event.getY());
+            event.consume();
+            return;
+        }
         if (!panning) {
             return;
         }
@@ -429,14 +591,67 @@ public class GraphCanvas extends Pane {
         Point2D delta = current.subtract(panAnchor);
         translateTransform.setX(panStartTranslate.getX() + delta.getX());
         translateTransform.setY(panStartTranslate.getY() + delta.getY());
+        updateMinimap();
         event.consume();
     }
 
     private void handleMouseReleased(MouseEvent event) {
-        if (panning && event.getButton() == MouseButton.PRIMARY) {
+        if (bandSelecting && event.getButton() == MouseButton.PRIMARY) {
+            completeBandSelection();
+            event.consume();
+            return;
+        }
+        if (panning && (event.getButton() == MouseButton.SECONDARY || event.getButton() == MouseButton.MIDDLE)) {
             panning = false;
             event.consume();
         }
+    }
+
+    private void beginBandSelection(double x, double y, boolean extend) {
+        bandSelecting = true;
+        bandExtending = extend;
+        bandAnchor = new Point2D(x, y);
+        selectionRectangle.setLayoutX(x);
+        selectionRectangle.setLayoutY(y);
+        selectionRectangle.setWidth(0);
+        selectionRectangle.setHeight(0);
+        selectionRectangle.setVisible(true);
+        if (!extend) {
+            clearSelection();
+        }
+    }
+
+    private void updateBandSelection(double x, double y) {
+        double minX = Math.min(bandAnchor.getX(), x);
+        double minY = Math.min(bandAnchor.getY(), y);
+        double width = Math.abs(x - bandAnchor.getX());
+        double height = Math.abs(y - bandAnchor.getY());
+        selectionRectangle.setLayoutX(minX);
+        selectionRectangle.setLayoutY(minY);
+        selectionRectangle.setWidth(width);
+        selectionRectangle.setHeight(height);
+    }
+
+    private void completeBandSelection() {
+        bandSelecting = false;
+        selectionRectangle.setVisible(false);
+        double width = selectionRectangle.getWidth();
+        double height = selectionRectangle.getHeight();
+        if (width < 2 && height < 2) {
+            return;
+        }
+        double minX = selectionRectangle.getLayoutX();
+        double minY = selectionRectangle.getLayoutY();
+        for (QuestNodeView node : nodeViews.values()) {
+            Bounds sceneBounds = node.localToScene(node.getBoundsInLocal());
+            Bounds localBounds = sceneToLocal(sceneBounds);
+            if (localBounds != null && localBounds.intersects(minX, minY, width, height)) {
+                addToSelection(node, true);
+            } else if (!bandExtending && selectedNodes.contains(node)) {
+                removeFromSelection(node);
+            }
+        }
+        bandExtending = false;
     }
 
     private void handleScroll(ScrollEvent event) {
@@ -454,6 +669,7 @@ public class GraphCanvas extends Pane {
         currentScale = newScale;
         scaleTransform.setX(currentScale);
         scaleTransform.setY(currentScale);
+        updateMinimap();
         event.consume();
     }
 
@@ -467,10 +683,97 @@ public class GraphCanvas extends Pane {
             Point2D end = edge.getTarget().getCenter();
             edge.setStart(start);
             edge.setEnd(end);
-            gc.setStroke(edge.isRequired() ? Color.web("#ffcc33") : Color.web("#66aaff"));
+            gc.setStroke(edge.isRequired() ? Color.web("#ffcc33") : Color.web("#a366ff"));
             gc.strokeLine(start.getX(), start.getY(), end.getX(), end.getY());
             drawArrow(gc, start, end);
         }
+    }
+
+    private void updateMinimap() {
+        GraphicsContext gc = minimapLayer.getGraphicsContext2D();
+        gc.setTransform(new Affine());
+        gc.clearRect(0, 0, MINIMAP_WIDTH, MINIMAP_HEIGHT);
+
+        if (nodeViews.isEmpty()) {
+            return;
+        }
+
+        Rectangle2D bounds = computeGraphBounds();
+        if (bounds.getWidth() <= 0 || bounds.getHeight() <= 0) {
+            return;
+        }
+
+        double scale = Math.min(MINIMAP_WIDTH / bounds.getWidth(), MINIMAP_HEIGHT / bounds.getHeight());
+        double offsetX = (MINIMAP_WIDTH - bounds.getWidth() * scale) / 2.0;
+        double offsetY = (MINIMAP_HEIGHT - bounds.getHeight() * scale) / 2.0;
+
+        gc.setFill(Color.color(0.07, 0.07, 0.07, 0.85));
+        gc.fillRect(0, 0, MINIMAP_WIDTH, MINIMAP_HEIGHT);
+
+        gc.setLineWidth(1);
+        gc.setStroke(Color.color(1, 1, 1, 0.2));
+        for (GraphEdge edge : edges) {
+            Point2D start = edge.getSource().getCenter();
+            Point2D end = edge.getTarget().getCenter();
+            double sx = (start.getX() - bounds.getMinX()) * scale + offsetX;
+            double sy = (start.getY() - bounds.getMinY()) * scale + offsetY;
+            double ex = (end.getX() - bounds.getMinX()) * scale + offsetX;
+            double ey = (end.getY() - bounds.getMinY()) * scale + offsetY;
+            gc.strokeLine(sx, sy, ex, ey);
+        }
+
+        for (QuestNodeView node : nodeViews.values()) {
+            double nx = (node.getLayoutX() - bounds.getMinX()) * scale + offsetX;
+            double ny = (node.getLayoutY() - bounds.getMinY()) * scale + offsetY;
+            double size = Math.max(4, NODE_SIZE * scale * 0.4);
+            gc.setFill(selectedNodes.contains(node) ? Color.web("#4a90e2") : Color.web("#d8d8d8"));
+            gc.fillOval(nx, ny, size, size);
+        }
+
+        Point2D topLeft = toGraphCoordinates(0, 0);
+        Point2D bottomRight = toGraphCoordinates(getWidth(), getHeight());
+        if (topLeft != null && bottomRight != null) {
+            double viewX = (topLeft.getX() - bounds.getMinX()) * scale + offsetX;
+            double viewY = (topLeft.getY() - bounds.getMinY()) * scale + offsetY;
+            double viewWidth = (bottomRight.getX() - topLeft.getX()) * scale;
+            double viewHeight = (bottomRight.getY() - topLeft.getY()) * scale;
+            gc.setStroke(Color.web("#f5f5f5"));
+            gc.setLineWidth(1.5);
+            gc.strokeRect(viewX, viewY, viewWidth, viewHeight);
+        }
+    }
+
+    private Rectangle2D computeGraphBounds() {
+        double minX = Double.POSITIVE_INFINITY;
+        double minY = Double.POSITIVE_INFINITY;
+        double maxX = Double.NEGATIVE_INFINITY;
+        double maxY = Double.NEGATIVE_INFINITY;
+
+        for (QuestNodeView node : nodeViews.values()) {
+            minX = Math.min(minX, node.getLayoutX());
+            minY = Math.min(minY, node.getLayoutY());
+            maxX = Math.max(maxX, node.getLayoutX() + NODE_SIZE);
+            maxY = Math.max(maxY, node.getLayoutY() + NODE_SIZE);
+        }
+
+        if (Double.isInfinite(minX) || Double.isInfinite(minY) || Double.isInfinite(maxX) || Double.isInfinite(maxY)) {
+            return new Rectangle2D(0, 0, 1, 1);
+        }
+
+        double width = Math.max(1, maxX - minX);
+        double height = Math.max(1, maxY - minY);
+        return new Rectangle2D(minX, minY, width, height);
+    }
+
+    private Point2D toGraphCoordinates(double x, double y) {
+        if (getScene() == null) {
+            return null;
+        }
+        Point2D scenePoint = localToScene(x, y);
+        if (scenePoint == null) {
+            return null;
+        }
+        return contentGroup.sceneToLocal(scenePoint);
     }
 
     private void drawArrow(GraphicsContext gc, Point2D start, Point2D end) {
