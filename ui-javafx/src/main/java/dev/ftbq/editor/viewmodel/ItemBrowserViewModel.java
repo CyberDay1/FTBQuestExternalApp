@@ -113,7 +113,7 @@ public class ItemBrowserViewModel {
 
         if (vanillaOnly.get()) {
             entities = entities.stream()
-                    .filter(StoreDao.ItemEntity::isVanilla)
+                    .filter(e -> e.isVanilla() || (e.modId() != null && e.modId().equalsIgnoreCase("minecraft")))
                     .toList();
         }
 
@@ -157,6 +157,9 @@ public class ItemBrowserViewModel {
             if (label == null || label.isBlank()) {
                 if (modId != null && !modId.isBlank()) {
                     label = prettifyModId(modId);
+                    if ("minecraft".equalsIgnoreCase(modId)) {
+                        label = "Minecraft";
+                    }
                 } else if (entity.isVanilla()) {
                     label = "Minecraft";
                 }
