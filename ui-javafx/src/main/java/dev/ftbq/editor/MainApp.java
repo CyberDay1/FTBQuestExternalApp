@@ -1,8 +1,10 @@
 package dev.ftbq.editor;
 
+import dev.ftbq.editor.controller.ChapterEditorController;
 import dev.ftbq.editor.controller.LootTableEditorController;
 import dev.ftbq.editor.controller.QuestEditorController;
 import dev.ftbq.editor.viewmodel.ChapterGroupBrowserViewModel;
+import dev.ftbq.editor.viewmodel.ChapterEditorViewModel;
 import dev.ftbq.editor.view.ChapterGroupBrowserController;
 import dev.ftbq.editor.services.bus.ServiceLocator;
 import dev.ftbq.editor.services.logging.StructuredLogger;
@@ -37,6 +39,16 @@ public class MainApp extends Application {
         chapterTab.setClosable(false);
 
         tabPane.getTabs().add(chapterTab);
+
+        FXMLLoader chapterEditorLoader = new FXMLLoader(getClass().getResource("/dev/ftbq/editor/view/chapter_editor.fxml"));
+        Parent chapterEditorRoot = chapterEditorLoader.load();
+        ChapterEditorController chapterEditorController = chapterEditorLoader.getController();
+        ChapterEditorViewModel chapterEditorViewModel = new ChapterEditorViewModel();
+        chapterEditorController.setViewModel(chapterEditorViewModel);
+        chapterEditorViewModel.loadSampleChapter();
+        Tab chapterEditorTab = new Tab("Chapter Editor", chapterEditorRoot);
+        chapterEditorTab.setClosable(false);
+        tabPane.getTabs().add(chapterEditorTab);
 
         FXMLLoader lootLoader = new FXMLLoader(getClass().getResource("/dev/ftbq/editor/view/loot_table_editor.fxml"));
         Parent lootRoot = lootLoader.load();
