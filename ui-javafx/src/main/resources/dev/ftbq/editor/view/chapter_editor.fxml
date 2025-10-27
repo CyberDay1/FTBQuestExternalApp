@@ -2,10 +2,10 @@
 
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.Button?>
-<?import javafx.scene.control.ComboBox?>
 <?import javafx.scene.control.Label?>
 <?import javafx.scene.control.MenuButton?>
 <?import javafx.scene.control.ListView?>
+<?import javafx.scene.control.TextField?>
 <?import javafx.scene.layout.AnchorPane?>
 <?import javafx.scene.layout.BorderPane?>
 <?import javafx.scene.layout.HBox?>
@@ -17,7 +17,6 @@
         <HBox alignment="CENTER_LEFT" spacing="12" BorderPane.alignment="CENTER_LEFT">
             <children>
                 <Label text="Chapter" />
-                <ComboBox fx:id="chapterSelector" prefWidth="240" onAction="#onChapterSelected" />
                 <Label fx:id="chapterTitleLabel" text="" />
             </children>
             <BorderPane.margin>
@@ -25,6 +24,17 @@
             </BorderPane.margin>
         </HBox>
     </top>
+    <left>
+        <VBox spacing="8" prefWidth="240" BorderPane.alignment="CENTER_LEFT">
+            <children>
+                <TextField fx:id="chapterSearchField" promptText="Search chapters" />
+                <ListView fx:id="chapterList" VBox.vgrow="ALWAYS" />
+            </children>
+            <BorderPane.margin>
+                <Insets top="12" right="12" bottom="12" left="12" />
+            </BorderPane.margin>
+        </VBox>
+    </left>
     <center>
         <AnchorPane fx:id="canvasHost" prefWidth="800" prefHeight="600" />
     </center>

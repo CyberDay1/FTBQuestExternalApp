@@ -12,7 +12,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import dev.ftbq.editor.domain.BackgroundRef;
+import dev.ftbq.editor.domain.Chapter;
+import dev.ftbq.editor.domain.IconRef;
 import dev.ftbq.editor.domain.Quest;
+import dev.ftbq.editor.domain.Visibility;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -208,6 +212,68 @@ class StoreDaoTest {
 
             assertEquals(updatedQuest.toString(), loadQuestData(connection, "quest-1"));
         }
+    }
+
+    @Test
+    void moveQuestToChapterUpdatesMembership() throws Exception {
+        try (Connection connection = Jdbc.openInMemory()) {
+            StoreDao dao = new StoreDao(connection);
+            dao.upsertChapter(chapterEntity("chapter-alpha", "Alpha", 0));
+            dao.upsertChapter(chapterEntity("chapter-beta", "Beta", 1));
+
+            Quest quest = Quest.builder()
+                    .id("quest-a")
+                    .title("Quest A")
+                    .description("Original chapter")
+                    .icon(new IconRef("minecraft:book"))
+                    .visibility(Visibility.VISIBLE)
+                    .build();
+            dao.saveQuest(quest);
+            dao.replaceChapterQuests("chapter-alpha", List.of(quest.id()));
+
+            dao.moveQuestToChapter(quest.id(), "chapter-beta");
+
+            List<Chapter> chapters = dao.loadChapters();
+            Chapter alpha = chapters.stream()
+                    .filter(ch -> ch.id().equals("chapter-alpha"))
+                    .findFirst()
+                    .orElseThrow();
+            Chapter beta = chapters.stream()
+                    .filter(ch -> ch.id().equals("chapter-beta"))
+                    .findFirst()
+                    .orElseThrow();
+
+            assertTrue(alpha.quests().isEmpty(), "Original chapter should be empty after move");
+            assertEquals(List.of(quest.id()), beta.quests().stream().map(Quest::id).toList());
+        }
+    }
+
+    @Test
+    void reorderChapterAdjustsOrdering() throws Exception {
+        try (Connection connection = Jdbc.openInMemory()) {
+            StoreDao dao = new StoreDao(connection);
+            dao.upsertChapter(chapterEntity("chapter-one", "One", 0));
+            dao.upsertChapter(chapterEntity("chapter-two", "Two", 1));
+            dao.upsertChapter(chapterEntity("chapter-three", "Three", 2));
+
+            dao.reorderChapter("chapter-three", 0);
+
+            List<StoreDao.ChapterEntity> ordered = dao.listChapterEntities();
+            assertEquals(
+                    List.of("chapter-three", "chapter-one", "chapter-two"),
+                    ordered.stream().map(StoreDao.ChapterEntity::id).toList());
+            assertEquals(List.of(0, 1, 2), ordered.stream().map(StoreDao.ChapterEntity::order).toList());
+        }
+    }
+
+    private StoreDao.ChapterEntity chapterEntity(String id, String title, int order) {
+        return new StoreDao.ChapterEntity(
+                id,
+                title,
+                new IconRef("minecraft:book"),
+                new BackgroundRef("minecraft:textures/gui/default.png"),
+                Visibility.VISIBLE,
+                order);
     }
 
     private static String loadQuestData(Connection connection, String questId) throws Exception {

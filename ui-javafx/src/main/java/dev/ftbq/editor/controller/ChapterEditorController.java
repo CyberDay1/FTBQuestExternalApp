@@ -23,10 +23,10 @@ import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.control.ButtonBar;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.CheckBox;
-import javafx.scene.control.ComboBox;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.Dialog;
 import javafx.scene.control.Label;
+import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
 import javafx.scene.control.Menu;
 import javafx.scene.control.MenuButton;
@@ -37,9 +37,11 @@ import javafx.scene.control.TextField;
 import javafx.scene.control.TextInputDialog;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.MouseButton;
+import javafx.scene.input.ClipboardContent;
+import javafx.scene.input.Dragboard;
+import javafx.scene.input.TransferMode;
 import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.GridPane;
-import javafx.util.StringConverter;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -62,7 +64,10 @@ public class ChapterEditorController {
     private AnchorPane canvasHost;
 
     @FXML
-    private ComboBox<Chapter> chapterSelector;
+    private ListView<Chapter> chapterList;
+
+    @FXML
+    private TextField chapterSearchField;
 
     @FXML
     private Label chapterTitleLabel;
@@ -86,23 +91,6 @@ public class ChapterEditorController {
     private final ObservableList<String> tasks = FXCollections.observableArrayList();
     private final ObservableList<String> rewards = FXCollections.observableArrayList();
     private final ObservableList<String> dependencies = FXCollections.observableArrayList();
-    private final StringConverter<Chapter> chapterStringConverter = new StringConverter<>() {
-        @Override
-        public String toString(Chapter chapter) {
-            return chapter != null ? chapter.title() : EMPTY_TITLE;
-        }
-
-        @Override
-        public Chapter fromString(String string) {
-            if (string == null || string.isBlank() || chapterSelector == null) {
-                return null;
-            }
-            Optional<Chapter> match = chapterSelector.getItems().stream()
-                    .filter(chapter -> string.equals(chapter.title()))
-                    .findFirst();
-            return match.orElse(null);
-        }
-    };
     private final Map<String, QuestNodeView> nodes = new HashMap<>();
     private final Map<String, Point2D> questPositions = new HashMap<>();
     private final AnchorPane nodeLayer = new AnchorPane();
@@ -116,11 +104,13 @@ public class ChapterEditorController {
     private String selectedQuestId;
     private double contextX;
     private double contextY;
+    private String draggingChapterId;
 
     @FXML
     public void initialize() {
         setupCanvas();
-        configureChapterSelector();
+        configureChapterList();
+        configureChapterSearch();
         configureDetailLists();
         configureAddMenus();
         if (viewModel != null && viewModel.getChapter() != null) {
@@ -131,9 +121,22 @@ public class ChapterEditorController {
     public void setViewModel(ChapterEditorViewModel viewModel) {
         this.viewModel = Objects.requireNonNull(viewModel, "viewModel");
         this.viewModel.chapterProperty().addListener((obs, oldChapter, newChapter) -> applyChapter(newChapter));
-        if (chapterSelector != null) {
-            chapterSelector.setItems(viewModel.getChapters());
+        if (chapterList != null) {
+            chapterList.setItems(viewModel.getChapters());
+            chapterList.getSelectionModel().selectedItemProperty().addListener((obs, oldValue, newValue) -> {
+                if (!programmaticChapterSelection && viewModel != null && newValue != null && !newValue.equals(viewModel.getChapter())) {
+                    viewModel.loadChapter(newValue);
+                }
+            });
             selectChapter(viewModel.getChapter());
+        }
+        if (chapterSearchField != null) {
+            chapterSearchField.setText(viewModel.chapterFilterProperty().get());
+            viewModel.chapterFilterProperty().addListener((obs, oldValue, newValue) -> {
+                if (chapterSearchField != null && !Objects.equals(chapterSearchField.getText(), newValue)) {
+                    chapterSearchField.setText(newValue);
+                }
+            });
         }
         if (newChapterAvailable()) {
             applyChapter(viewModel.getChapter());
@@ -339,7 +342,21 @@ public class ChapterEditorController {
         if (connectMenu.getItems().isEmpty()) {
             connectMenu.setDisable(true);
         }
-        menu.getItems().addAll(delete, connectMenu);
+        Menu moveMenu = new Menu("Move to Chapter");
+        if (viewModel != null) {
+            for (Chapter chapter : viewModel.getChapters()) {
+                if (chapter == null || (currentChapter != null && Objects.equals(chapter.id(), currentChapter.id()))) {
+                    continue;
+                }
+                MenuItem target = new MenuItem(chapter.title());
+                target.setOnAction(evt -> moveQuestToChapter(questId, chapter));
+                moveMenu.getItems().add(target);
+            }
+        }
+        if (moveMenu.getItems().isEmpty()) {
+            moveMenu.setDisable(true);
+        }
+        menu.getItems().addAll(delete, connectMenu, moveMenu);
         return menu;
     }
 
@@ -376,30 +393,84 @@ public class ChapterEditorController {
         updateSelectionVisuals();
     }
 
-    private void configureChapterSelector() {
-        if (chapterSelector == null) {
+    private void moveQuestToChapter(String questId, Chapter targetChapter) {
+        if (viewModel == null || targetChapter == null) {
             return;
         }
-        chapterSelector.setConverter(chapterStringConverter);
-        chapterSelector.setCellFactory(listView -> new ChapterListCell());
-        chapterSelector.setButtonCell(new ChapterListCell());
+        viewModel.moveQuestToChapter(questId, targetChapter);
+        pendingSelectionQuestId = null;
+        selectedQuestId = null;
+        applyChapter(viewModel.getChapter());
+    }
+
+    private void configureChapterList() {
+        if (chapterList == null) {
+            return;
+        }
+        chapterList.setCellFactory(listView -> new ChapterListCell());
+        chapterList.getSelectionModel().setSelectionMode(SelectionMode.SINGLE);
+        chapterList.setOnDragOver(event -> {
+            if (draggingChapterId != null) {
+                event.acceptTransferModes(TransferMode.MOVE);
+            }
+            event.consume();
+        });
+        chapterList.setOnDragDropped(event -> {
+            if (draggingChapterId == null || viewModel == null) {
+                event.setDropCompleted(false);
+                event.consume();
+                return;
+            }
+            Optional<Chapter> source = findChapterById(draggingChapterId);
+            if (source.isEmpty()) {
+                event.setDropCompleted(false);
+                event.consume();
+                return;
+            }
+            int targetIndex = chapterList.getItems().isEmpty() ? 0 : chapterList.getItems().size() - 1;
+            viewModel.reorderChapter(source.get(), targetIndex);
+            chapterList.getSelectionModel().select(source.get());
+            event.setDropCompleted(true);
+            draggingChapterId = null;
+            event.consume();
+        });
+    }
+
+    private void configureChapterSearch() {
+        if (chapterSearchField == null) {
+            return;
+        }
+        chapterSearchField.textProperty().addListener((obs, oldValue, newValue) -> {
+            if (viewModel != null && !Objects.equals(viewModel.chapterFilterProperty().get(), newValue)) {
+                viewModel.chapterFilterProperty().set(newValue);
+            }
+        });
     }
 
     private void selectChapter(Chapter chapter) {
-        if (chapterSelector == null) {
+        if (chapterList == null) {
             return;
         }
         try {
             programmaticChapterSelection = true;
             if (chapter == null) {
-                chapterSelector.getSelectionModel().clearSelection();
-                chapterSelector.setValue(null);
+                chapterList.getSelectionModel().clearSelection();
             } else {
-                chapterSelector.getSelectionModel().select(chapter);
+                chapterList.getSelectionModel().select(chapter);
+                chapterList.scrollTo(chapter);
             }
         } finally {
             programmaticChapterSelection = false;
         }
+    }
+
+    private Optional<Chapter> findChapterById(String chapterId) {
+        if (viewModel == null || chapterId == null) {
+            return Optional.empty();
+        }
+        return viewModel.getChapters().stream()
+                .filter(chapter -> chapter != null && chapterId.equals(chapter.id()))
+                .findFirst();
     }
 
     private void configureDetailLists() {
@@ -601,17 +672,6 @@ public class ChapterEditorController {
     }
 
     @FXML
-    private void onChapterSelected() {
-        if (chapterSelector == null || programmaticChapterSelection || viewModel == null) {
-            return;
-        }
-        Chapter selected = chapterSelector.getSelectionModel().getSelectedItem();
-        if (selected != null && !selected.equals(viewModel.getChapter())) {
-            viewModel.loadChapter(selected);
-        }
-    }
-
-    @FXML
     private void onRemoveQuest() {
         if (currentChapter == null || selectedQuestId == null) {
             return;
@@ -723,7 +783,55 @@ public class ChapterEditorController {
         }
     }
 
-    private static final class ChapterListCell extends javafx.scene.control.ListCell<Chapter> {
+    private final class ChapterListCell extends ListCell<Chapter> {
+
+        private ChapterListCell() {
+            setOnDragDetected(event -> {
+                Chapter item = getItem();
+                if (item == null) {
+                    return;
+                }
+                draggingChapterId = item.id();
+                Dragboard dragboard = startDragAndDrop(TransferMode.MOVE);
+                ClipboardContent content = new ClipboardContent();
+                content.putString(draggingChapterId);
+                dragboard.setContent(content);
+                event.consume();
+            });
+            setOnDragOver(event -> {
+                Chapter item = getItem();
+                if (draggingChapterId != null && item != null && !draggingChapterId.equals(item.id())) {
+                    event.acceptTransferModes(TransferMode.MOVE);
+                }
+                event.consume();
+            });
+            setOnDragDropped(event -> {
+                if (draggingChapterId == null || viewModel == null) {
+                    event.setDropCompleted(false);
+                    event.consume();
+                    return;
+                }
+                Chapter target = getItem();
+                if (target == null || draggingChapterId.equals(target.id())) {
+                    event.setDropCompleted(false);
+                    event.consume();
+                    return;
+                }
+                Optional<Chapter> source = findChapterById(draggingChapterId);
+                if (source.isEmpty()) {
+                    event.setDropCompleted(false);
+                    event.consume();
+                    return;
+                }
+                viewModel.reorderChapter(source.get(), getIndex());
+                chapterList.getSelectionModel().select(source.get());
+                event.setDropCompleted(true);
+                draggingChapterId = null;
+                event.consume();
+            });
+            setOnDragDone(event -> draggingChapterId = null);
+        }
+
         @Override
         protected void updateItem(Chapter chapter, boolean empty) {
             super.updateItem(chapter, empty);

@@ -18,7 +18,8 @@ public final class Jdbc {
     private static final String SCHEMA_RESOURCE = "/dev/ftbq/editor/store/schema.sql";
     private static final String MIGRATIONS_BASE = "/dev/ftbq/editor/store/migrations/";
     private static final List<String> MIGRATIONS = List.of(
-            "001_create_quest_schema.sql"
+            "001_create_quest_schema.sql",
+            "002_add_chapter_tables.sql"
     );
 
     private Jdbc() {

@@ -1,6 +1,10 @@
 package dev.ftbq.editor.store;
 
 import dev.ftbq.editor.domain.AdvancementTask;
+import dev.ftbq.editor.domain.BackgroundAlignment;
+import dev.ftbq.editor.domain.BackgroundRef;
+import dev.ftbq.editor.domain.BackgroundRepeat;
+import dev.ftbq.editor.domain.Chapter;
 import dev.ftbq.editor.domain.CommandReward;
 import dev.ftbq.editor.domain.Dependency;
 import dev.ftbq.editor.domain.IconRef;
@@ -109,6 +113,50 @@ public final class StoreDao {
             INSERT INTO quest_dependencies (quest_id, dependency_quest_id, required)
             VALUES (?, ?, ?)
             """;
+
+    private static final String UPSERT_CHAPTER_SQL = """
+            INSERT INTO chapters (
+                id, title, icon, icon_relative_path, background_texture,
+                background_relative_path, background_path, background_color_hex,
+                background_alignment, background_repeat, visibility, ord
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(id) DO UPDATE SET
+                title = excluded.title,
+                icon = excluded.icon,
+                icon_relative_path = excluded.icon_relative_path,
+                background_texture = excluded.background_texture,
+                background_relative_path = excluded.background_relative_path,
+                background_path = excluded.background_path,
+                background_color_hex = excluded.background_color_hex,
+                background_alignment = excluded.background_alignment,
+                background_repeat = excluded.background_repeat,
+                visibility = excluded.visibility,
+                ord = excluded.ord
+            """;
+
+    private static final String INSERT_CHAPTER_QUEST_SQL = """
+            INSERT INTO chapter_quests (chapter_id, quest_id, ord)
+            VALUES (?, ?, ?)
+            ON CONFLICT(chapter_id, quest_id) DO UPDATE SET ord = excluded.ord
+            """;
+
+    private static final String DELETE_CHAPTER_QUESTS_SQL = "DELETE FROM chapter_quests WHERE chapter_id = ?";
+    private static final String DELETE_QUEST_MEMBERSHIP_SQL = "DELETE FROM chapter_quests WHERE quest_id = ?";
+    private static final String SELECT_CHAPTER_ORDER_SQL = "SELECT ord FROM chapters WHERE id = ?";
+    private static final String SELECT_CHAPTERS_SQL = """
+            SELECT id, title, icon, icon_relative_path, background_texture, background_relative_path,
+                   background_path, background_color_hex, background_alignment, background_repeat, visibility, ord
+            FROM chapters
+            ORDER BY ord ASC, id ASC
+            """;
+    private static final String SELECT_CHAPTER_MEMBERS_SQL = """
+            SELECT chapter_id, quest_id, ord
+            FROM chapter_quests
+            ORDER BY chapter_id ASC, ord ASC, quest_id ASC
+            """;
+    private static final String SELECT_MAX_CHAPTER_ORDER_SQL = "SELECT COALESCE(MAX(ord), -1) FROM chapters";
+    private static final String SELECT_MAX_CHAPTER_QUEST_ORDER_SQL = "SELECT COALESCE(MAX(ord), -1) FROM chapter_quests WHERE chapter_id = ?";
+    private static final String UPDATE_CHAPTER_ORDER_SQL = "UPDATE chapters SET ord = ? WHERE id = ?";
 
     private final Connection connection;
 
@@ -309,6 +357,184 @@ public final class StoreDao {
             return quests;
         } catch (SQLException e) {
             throw new UncheckedSqlException("Failed to list quests", e);
+        }
+    }
+
+    public void upsertChapter(ChapterEntity chapter) {
+        Objects.requireNonNull(chapter, "chapter");
+        int order = chapter.order();
+        try {
+            if (order < 0) {
+                order = nextChapterOrder();
+            }
+        } catch (SQLException e) {
+            throw new UncheckedSqlException("Failed to compute next chapter order", e);
+        }
+
+        try (PreparedStatement statement = connection.prepareStatement(UPSERT_CHAPTER_SQL)) {
+            statement.setString(1, chapter.id());
+            statement.setString(2, chapter.title());
+            statement.setString(3, chapter.icon().icon());
+            setStringOrNull(statement, 4, chapter.icon().relativePath().orElse(null));
+            statement.setString(5, chapter.background().texture());
+            setStringOrNull(statement, 6, chapter.background().relativePath().orElse(null));
+            setStringOrNull(statement, 7, chapter.background().path().orElse(null));
+            setStringOrNull(statement, 8, chapter.background().colorHex().orElse(null));
+            setStringOrNull(statement, 9, chapter.background().alignment().map(Enum::name).orElse(null));
+            setStringOrNull(statement, 10, chapter.background().repeat().map(Enum::name).orElse(null));
+            statement.setString(11, chapter.visibility().name());
+            statement.setInt(12, order);
+            statement.executeUpdate();
+        } catch (SQLException e) {
+            throw new UncheckedSqlException("Failed to upsert chapter " + chapter.id(), e);
+        }
+    }
+
+    public void replaceChapterQuests(String chapterId, List<String> questIds) {
+        Objects.requireNonNull(chapterId, "chapterId");
+        Objects.requireNonNull(questIds, "questIds");
+        boolean previousAutoCommit = getAutoCommit();
+        try {
+            connection.setAutoCommit(false);
+            try (PreparedStatement delete = connection.prepareStatement(DELETE_CHAPTER_QUESTS_SQL)) {
+                delete.setString(1, chapterId);
+                delete.executeUpdate();
+            }
+            if (!questIds.isEmpty()) {
+                try (PreparedStatement insert = connection.prepareStatement(INSERT_CHAPTER_QUEST_SQL)) {
+                    for (int index = 0; index < questIds.size(); index++) {
+                        String questId = questIds.get(index);
+                        if (questId == null) {
+                            continue;
+                        }
+                        insert.setString(1, chapterId);
+                        insert.setString(2, questId);
+                        insert.setInt(3, index);
+                        insert.addBatch();
+                    }
+                    insert.executeBatch();
+                }
+            }
+            connection.commit();
+        } catch (SQLException e) {
+            rollbackQuietly();
+            throw new UncheckedSqlException("Failed to replace quests for chapter " + chapterId, e);
+        } finally {
+            restoreAutoCommit(previousAutoCommit);
+        }
+    }
+
+    public List<ChapterEntity> listChapterEntities() {
+        try (PreparedStatement statement = connection.prepareStatement(SELECT_CHAPTERS_SQL)) {
+            List<ChapterEntity> chapters = new ArrayList<>();
+            try (ResultSet resultSet = statement.executeQuery()) {
+                while (resultSet.next()) {
+                    chapters.add(mapChapterEntity(resultSet));
+                }
+            }
+            return chapters;
+        } catch (SQLException e) {
+            throw new UncheckedSqlException("Failed to list chapters", e);
+        }
+    }
+
+    public List<Chapter> loadChapters() {
+        List<ChapterEntity> entities = listChapterEntities();
+        Map<String, List<String>> members;
+        try {
+            members = loadChapterMembership();
+        } catch (SQLException e) {
+            throw new UncheckedSqlException("Failed to load chapter membership", e);
+        }
+
+        List<Chapter> chapters = new ArrayList<>(entities.size());
+        for (ChapterEntity entity : entities) {
+            List<String> questIds = members.getOrDefault(entity.id(), List.of());
+            List<Quest> quests = new ArrayList<>(questIds.size());
+            for (String questId : questIds) {
+                findQuestById(questId).ifPresent(quests::add);
+            }
+            Chapter chapter = Chapter.builder()
+                    .id(entity.id())
+                    .title(entity.title())
+                    .icon(entity.icon())
+                    .background(entity.background())
+                    .visibility(entity.visibility())
+                    .quests(quests)
+                    .build();
+            chapters.add(chapter);
+        }
+        return chapters;
+    }
+
+    public void moveQuestToChapter(String questId, String targetChapterId) {
+        Objects.requireNonNull(questId, "questId");
+        Objects.requireNonNull(targetChapterId, "targetChapterId");
+        boolean previousAutoCommit = getAutoCommit();
+        try {
+            connection.setAutoCommit(false);
+            try (PreparedStatement delete = connection.prepareStatement(DELETE_QUEST_MEMBERSHIP_SQL)) {
+                delete.setString(1, questId);
+                delete.executeUpdate();
+            }
+            int nextOrder = nextQuestOrder(targetChapterId);
+            try (PreparedStatement insert = connection.prepareStatement(INSERT_CHAPTER_QUEST_SQL)) {
+                insert.setString(1, targetChapterId);
+                insert.setString(2, questId);
+                insert.setInt(3, nextOrder);
+                insert.executeUpdate();
+            }
+            connection.commit();
+        } catch (SQLException e) {
+            rollbackQuietly();
+            throw new UncheckedSqlException(
+                    "Failed to move quest " + questId + " to chapter " + targetChapterId,
+                    e);
+        } finally {
+            restoreAutoCommit(previousAutoCommit);
+        }
+    }
+
+    public void reorderChapter(String chapterId, int newIndex) {
+        Objects.requireNonNull(chapterId, "chapterId");
+        List<ChapterEntity> chapters = listChapterEntities();
+        if (chapters.isEmpty()) {
+            return;
+        }
+        int currentIndex = -1;
+        for (int index = 0; index < chapters.size(); index++) {
+            if (chapters.get(index).id().equals(chapterId)) {
+                currentIndex = index;
+                break;
+            }
+        }
+        if (currentIndex < 0) {
+            throw new IllegalArgumentException("Chapter not found: " + chapterId);
+        }
+        int boundedIndex = Math.max(0, Math.min(newIndex, chapters.size() - 1));
+        if (currentIndex == boundedIndex) {
+            return;
+        }
+        ChapterEntity moved = chapters.remove(currentIndex);
+        chapters.add(boundedIndex, moved);
+
+        boolean previousAutoCommit = getAutoCommit();
+        try {
+            connection.setAutoCommit(false);
+            try (PreparedStatement update = connection.prepareStatement(UPDATE_CHAPTER_ORDER_SQL)) {
+                for (int index = 0; index < chapters.size(); index++) {
+                    update.setInt(1, index);
+                    update.setString(2, chapters.get(index).id());
+                    update.addBatch();
+                }
+                update.executeBatch();
+            }
+            connection.commit();
+        } catch (SQLException e) {
+            rollbackQuietly();
+            throw new UncheckedSqlException("Failed to reorder chapter " + chapterId, e);
+        } finally {
+            restoreAutoCommit(previousAutoCommit);
         }
     }
 
@@ -884,6 +1110,103 @@ public final class StoreDao {
         }
     }
 
+    private boolean getAutoCommit() {
+        try {
+            return connection.getAutoCommit();
+        } catch (SQLException e) {
+            throw new UncheckedSqlException("Failed to determine auto-commit state", e);
+        }
+    }
+
+    private void restoreAutoCommit(boolean autoCommit) {
+        try {
+            connection.setAutoCommit(autoCommit);
+        } catch (SQLException e) {
+            throw new UncheckedSqlException("Failed to restore auto-commit state", e);
+        }
+    }
+
+    private void rollbackQuietly() {
+        try {
+            connection.rollback();
+        } catch (SQLException ignored) {
+            // best-effort rollback
+        }
+    }
+
+    private int nextChapterOrder() throws SQLException {
+        try (PreparedStatement statement = connection.prepareStatement(SELECT_MAX_CHAPTER_ORDER_SQL);
+             ResultSet resultSet = statement.executeQuery()) {
+            int max = -1;
+            if (resultSet.next()) {
+                max = resultSet.getInt(1);
+            }
+            return max + 1;
+        }
+    }
+
+    private int nextQuestOrder(String chapterId) throws SQLException {
+        try (PreparedStatement statement = connection.prepareStatement(SELECT_MAX_CHAPTER_QUEST_ORDER_SQL)) {
+            statement.setString(1, chapterId);
+            try (ResultSet resultSet = statement.executeQuery()) {
+                int max = -1;
+                if (resultSet.next()) {
+                    max = resultSet.getInt(1);
+                }
+                return max + 1;
+            }
+        }
+    }
+
+    private Map<String, List<String>> loadChapterMembership() throws SQLException {
+        Map<String, List<String>> membership = new LinkedHashMap<>();
+        try (PreparedStatement statement = connection.prepareStatement(SELECT_CHAPTER_MEMBERS_SQL);
+             ResultSet resultSet = statement.executeQuery()) {
+            while (resultSet.next()) {
+                String chapterId = resultSet.getString("chapter_id");
+                String questId = resultSet.getString("quest_id");
+                membership.computeIfAbsent(chapterId, key -> new ArrayList<>()).add(questId);
+            }
+        }
+        return membership;
+    }
+
+    private ChapterEntity mapChapterEntity(ResultSet resultSet) throws SQLException {
+        IconRef icon = new IconRef(
+                resultSet.getString("icon"),
+                Optional.ofNullable(resultSet.getString("icon_relative_path")));
+        BackgroundRef background = new BackgroundRef(
+                resultSet.getString("background_texture"),
+                Optional.ofNullable(resultSet.getString("background_relative_path")),
+                Optional.ofNullable(resultSet.getString("background_path")),
+                Optional.ofNullable(resultSet.getString("background_color_hex")),
+                parseAlignment(resultSet.getString("background_alignment")),
+                parseRepeat(resultSet.getString("background_repeat")));
+        Visibility visibility = Visibility.valueOf(resultSet.getString("visibility"));
+        int ord = resultSet.getInt("ord");
+        return new ChapterEntity(
+                resultSet.getString("id"),
+                resultSet.getString("title"),
+                icon,
+                background,
+                visibility,
+                ord);
+    }
+
+    private static Optional<BackgroundAlignment> parseAlignment(String value) {
+        if (value == null || value.isBlank()) {
+            return Optional.empty();
+        }
+        return Optional.of(BackgroundAlignment.valueOf(value));
+    }
+
+    private static Optional<BackgroundRepeat> parseRepeat(String value) {
+        if (value == null || value.isBlank()) {
+            return Optional.empty();
+        }
+        return Optional.of(BackgroundRepeat.valueOf(value));
+    }
+
     private static void setIntegerOrNull(PreparedStatement statement, int index, Integer value) throws SQLException {
         if (value == null) {
             statement.setNull(index, Types.INTEGER);
@@ -928,6 +1251,23 @@ public final class StoreDao {
             statement.setNull(index, Types.VARCHAR);
         } else {
             statement.setString(index, value);
+        }
+    }
+
+    public record ChapterEntity(
+            String id,
+            String title,
+            IconRef icon,
+            BackgroundRef background,
+            Visibility visibility,
+            int order
+    ) {
+        public ChapterEntity {
+            Objects.requireNonNull(id, "id");
+            Objects.requireNonNull(title, "title");
+            Objects.requireNonNull(icon, "icon");
+            Objects.requireNonNull(background, "background");
+            Objects.requireNonNull(visibility, "visibility");
         }
     }
 
