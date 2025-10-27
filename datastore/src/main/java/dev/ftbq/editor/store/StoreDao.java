@@ -1,5 +1,6 @@
 package dev.ftbq.editor.store;
 
+import dev.ftbq.editor.domain.Quest;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -9,6 +10,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
+import java.util.Objects;
 
 public final class StoreDao {
     private static final String UPSERT_ITEM_SQL = """
@@ -25,6 +27,12 @@ public final class StoreDao {
                 source_jar = excluded.source_jar,
                 version = excluded.version,
                 kind = excluded.kind
+            """;
+
+    private static final String UPSERT_QUEST_SQL = """
+            INSERT INTO quests (id, data)
+            VALUES (?, ?)
+            ON CONFLICT(id) DO UPDATE SET data = excluded.data
             """;
 
     private static final String UPSERT_LOOT_TABLE_SQL = """
@@ -171,6 +179,22 @@ public final class StoreDao {
             }
         } catch (SQLException e) {
             throw new UncheckedSqlException("Failed to load item " + id, e);
+        }
+    }
+
+    /**
+     * Saves or updates the given quest into the underlying store.
+     *
+     * @param quest the quest to save or update
+     */
+    public void saveQuest(Quest quest) {
+        Objects.requireNonNull(quest, "quest");
+        try (PreparedStatement statement = connection.prepareStatement(UPSERT_QUEST_SQL)) {
+            statement.setString(1, quest.id());
+            statement.setString(2, quest.toString());
+            statement.executeUpdate();
+        } catch (SQLException e) {
+            throw new UncheckedSqlException("Failed to upsert quest " + quest.id(), e);
         }
     }
 

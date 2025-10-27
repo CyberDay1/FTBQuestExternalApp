@@ -21,6 +21,11 @@ CREATE TABLE IF NOT EXISTS loot_tables (
     data TEXT
 );
 
+CREATE TABLE IF NOT EXISTS quests (
+    id TEXT PRIMARY KEY,
+    data TEXT
+);
+
 CREATE TABLE IF NOT EXISTS settings (
     key TEXT PRIMARY KEY,
     value TEXT
