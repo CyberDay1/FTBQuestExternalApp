@@ -1,11 +1,43 @@
 package dev.ftbq.editor.domain;
 
+import java.util.Locale;
+
 /**
  * Distinguishes the available kinds of quest rewards.
  */
 public enum RewardType {
-    ITEM,
-    LOOT_TABLE,
-    EXPERIENCE,
-    COMMAND
+    ITEM("item", "Item"),
+    LOOT_TABLE("loot_table", "Loot Table"),
+    XP_LEVELS("xp_levels", "XP Levels"),
+    XP_AMOUNT("xp_amount", "XP Amount"),
+    COMMAND("command", "Command");
+
+    private final String id;
+    private final String displayName;
+
+    RewardType(String id, String displayName) {
+        this.id = id;
+        this.displayName = displayName;
+    }
+
+    public String id() {
+        return id;
+    }
+
+    public String displayName() {
+        return displayName;
+    }
+
+    public static RewardType fromId(String id) {
+        if (id == null) {
+            throw new IllegalArgumentException("id must not be null");
+        }
+        String normalized = id.trim().toLowerCase(Locale.ROOT);
+        for (RewardType type : values()) {
+            if (type.id.equals(normalized)) {
+                return type;
+            }
+        }
+        throw new IllegalArgumentException("Unknown reward type id: " + id);
+    }
 }

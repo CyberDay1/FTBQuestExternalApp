@@ -59,7 +59,7 @@ class ExporterImporterTest {
                 ),
                 List.of(
                         Reward.item(new ItemRef("minecraft:diamond", 2)),
-                        Reward.experience(15),
+                        Reward.xpAmount(15),
                         Reward.command(new RewardCommand("/say exported", false)),
                         Reward.lootTable("mod:loot/bonus")
                 ),
