@@ -9,6 +9,7 @@ import dev.ftbq.editor.domain.IconRef;
 import dev.ftbq.editor.domain.ItemRef;
 import dev.ftbq.editor.domain.ItemTask;
 import dev.ftbq.editor.domain.Quest;
+import dev.ftbq.editor.domain.QuestIO;
 import dev.ftbq.editor.domain.Reward;
 import dev.ftbq.editor.domain.RewardCommand;
 import dev.ftbq.editor.domain.RewardType;
@@ -50,11 +51,13 @@ import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.GridPane;
+import javafx.stage.FileChooser;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 import javafx.stage.Window;
 
 import java.io.ByteArrayInputStream;
+import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -111,6 +114,12 @@ public class QuestEditorController {
 
     @FXML
     private Button cancelButton;
+
+    @FXML
+    private Button exportButton;
+
+    @FXML
+    private Button importButton;
 
     @FXML
     private Button undoButton;
@@ -191,6 +200,12 @@ public class QuestEditorController {
         }
         if (cancelButton != null && cancelButton.getAccessibleText() == null) {
             cancelButton.setAccessibleText("Cancel quest edits");
+        }
+        if (exportButton != null && exportButton.getAccessibleText() == null) {
+            exportButton.setAccessibleText("Export quests to JSON");
+        }
+        if (importButton != null && importButton.getAccessibleText() == null) {
+            importButton.setAccessibleText("Import quests from JSON");
         }
         if (undoButton != null && undoButton.getAccessibleText() == null) {
             undoButton.setAccessibleText("Undo last change");
@@ -405,6 +420,89 @@ public class QuestEditorController {
         logger.info("Quest edits reverted", StructuredLogger.field("questId", viewModel.getCurrentQuest() != null ? viewModel.getCurrentQuest().id() : ""));
         refreshFromViewModel();
         updateUndoRedoButtons();
+    }
+
+    @FXML
+    private void handleExportQuests() {
+        if (UiServiceLocator.storeDao == null) {
+            showAlert("Quest storage is unavailable. Cannot export quests.");
+            return;
+        }
+
+        FileChooser chooser = new FileChooser();
+        chooser.setTitle("Export quests");
+        chooser.getExtensionFilters().addAll(
+                new FileChooser.ExtensionFilter("JSON files", "*.json"),
+                new FileChooser.ExtensionFilter("All files", "*.*")
+        );
+        chooser.setInitialFileName("quests.json");
+
+        File target = chooser.showSaveDialog(resolveWindow());
+        if (target == null) {
+            return;
+        }
+
+        try {
+            List<Quest> headers = UiServiceLocator.storeDao.listQuests();
+            if (headers == null) {
+                headers = List.of();
+            }
+            List<Quest> questsToExport = new ArrayList<>();
+            for (Quest quest : headers) {
+                Optional<Quest> fullQuest = UiServiceLocator.storeDao.findQuestById(quest.id());
+                questsToExport.add(fullQuest.orElse(quest));
+            }
+            QuestIO.exportQuests(questsToExport, target.toPath());
+            logger.info("Quests exported", StructuredLogger.field("questCount", questsToExport.size()));
+            showInformation("Exported " + questsToExport.size() + " quests to " + target.getAbsolutePath());
+        } catch (Exception ex) {
+            logger.error("Failed to export quests", ex);
+            showAlert("Failed to export quests: " + ex.getMessage());
+        }
+    }
+
+    @FXML
+    private void handleImportQuests() {
+        if (UiServiceLocator.storeDao == null) {
+            showAlert("Quest storage is unavailable. Cannot import quests.");
+            return;
+        }
+
+        FileChooser chooser = new FileChooser();
+        chooser.setTitle("Import quests");
+        chooser.getExtensionFilters().addAll(
+                new FileChooser.ExtensionFilter("JSON files", "*.json"),
+                new FileChooser.ExtensionFilter("All files", "*.*")
+        );
+
+        File source = chooser.showOpenDialog(resolveWindow());
+        if (source == null) {
+            return;
+        }
+
+        try {
+            List<Quest> imported = QuestIO.importQuests(source.toPath());
+            if (imported == null || imported.isEmpty()) {
+                showInformation("No quests found in " + source.getAbsolutePath());
+                return;
+            }
+            int count = 0;
+            for (Quest quest : imported) {
+                UiServiceLocator.storeDao.saveQuest(quest);
+                count++;
+            }
+            logger.info("Quests imported", StructuredLogger.field("questCount", count));
+            showInformation("Imported " + count + " quests from " + source.getAbsolutePath());
+            if (count > 0 && viewModel != null) {
+                Quest current = viewModel.getCurrentQuest();
+                if (current != null) {
+                    UiServiceLocator.storeDao.findQuestById(current.id()).ifPresent(viewModel::loadQuest);
+                }
+            }
+        } catch (Exception ex) {
+            logger.error("Failed to import quests", ex);
+            showAlert("Failed to import quests: " + ex.getMessage());
+        }
     }
 
     @FXML
@@ -717,13 +815,18 @@ public class QuestEditorController {
         };
     }
 
-    private void configureDialogOwner(Dialog<?> dialog) {
+    private Window resolveWindow() {
         if (rootPane != null && rootPane.getScene() != null) {
-            Window owner = rootPane.getScene().getWindow();
-            if (owner != null) {
-                dialog.initOwner(owner);
-                dialog.initModality(Modality.WINDOW_MODAL);
-            }
+            return rootPane.getScene().getWindow();
+        }
+        return null;
+    }
+
+    private void configureDialogOwner(Dialog<?> dialog) {
+        Window owner = resolveWindow();
+        if (owner != null) {
+            dialog.initOwner(owner);
+            dialog.initModality(Modality.WINDOW_MODAL);
         }
     }
 
@@ -852,8 +955,21 @@ public class QuestEditorController {
         alert.setTitle("Validation Error");
         alert.setHeaderText(null);
         alert.setContentText(message);
-        if (rootPane != null && rootPane.getScene() != null) {
-            alert.initOwner(rootPane.getScene().getWindow());
+        Window owner = resolveWindow();
+        if (owner != null) {
+            alert.initOwner(owner);
+        }
+        alert.showAndWait();
+    }
+
+    private void showInformation(String message) {
+        Alert alert = new Alert(Alert.AlertType.INFORMATION);
+        alert.setTitle("Quest Editor");
+        alert.setHeaderText(null);
+        alert.setContentText(message);
+        Window owner = resolveWindow();
+        if (owner != null) {
+            alert.initOwner(owner);
         }
         alert.showAndWait();
     }
