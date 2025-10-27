@@ -49,8 +49,9 @@ class ItemCatalogExtractorIconTest {
             assertEquals("test:item/example", meta.texturePath());
             assertNotNull(meta.iconHash());
             assertFalse(meta.iconHash().isBlank());
+            assertEquals("test:example", meta.iconHash());
 
-            Path cachedIcon = Path.of("cache", "icons", meta.iconHash() + ".png");
+            Path cachedIcon = Path.of(".cache", "icons", "test", "example.png");
             assertTrue(Files.exists(cachedIcon), "Icon cache file should exist");
         } finally {
             clearCache();
@@ -137,7 +138,7 @@ class ItemCatalogExtractorIconTest {
     }
 
     private static void clearCache() throws IOException {
-        Path cacheRoot = Path.of("cache");
+        Path cacheRoot = Path.of(".cache");
         if (!Files.exists(cacheRoot)) {
             return;
         }
