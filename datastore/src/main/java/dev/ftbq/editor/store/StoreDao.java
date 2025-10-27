@@ -379,7 +379,7 @@ public final class StoreDao {
      * @param id quest identifier to look up
      * @return the quest if present, otherwise an empty optional
      */
-    public Optional<Quest> findQuestById(String id) {
+    public Optional<Quest> findQuestHeaderById(String id) {
         Objects.requireNonNull(id, "id");
         try (PreparedStatement statement = connection.prepareStatement("""
                 SELECT id, title, description, icon, icon_relative_path, visibility

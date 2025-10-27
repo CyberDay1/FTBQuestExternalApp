@@ -631,7 +631,7 @@ public class QuestEditorController {
             for (Dependency dependency : quest.dependencies()) {
                 String dependencyId = dependency.questId();
                 try {
-                    Optional<Quest> dependencyQuest = UiServiceLocator.storeDao.findQuestById(dependencyId);
+                    Optional<Quest> dependencyQuest = UiServiceLocator.storeDao.findQuestHeaderById(dependencyId);
                     if (dependencyQuest.isPresent() && isCircularDependency(quest.id(), dependencyQuest.get(), new HashSet<>())) {
                         showValidationError("Circular dependency detected between quests: " + quest.id() + " and " + dependencyId);
                         return false;
@@ -660,7 +660,7 @@ public class QuestEditorController {
                 return true;
             }
             Optional<Quest> nextQuest = UiServiceLocator.storeDao != null
-                    ? UiServiceLocator.storeDao.findQuestById(dependency.questId())
+                    ? UiServiceLocator.storeDao.findQuestHeaderById(dependency.questId())
                     : Optional.empty();
             if (nextQuest.isPresent() && isCircularDependency(rootQuestId, nextQuest.get(), visitedQuestIds)) {
                 return true;
