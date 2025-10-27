@@ -21,17 +21,12 @@ CREATE TABLE IF NOT EXISTS loot_tables (
     data TEXT
 );
 
-CREATE TABLE IF NOT EXISTS quests (
-    id TEXT PRIMARY KEY,
-    data TEXT
-);
-
 CREATE TABLE IF NOT EXISTS settings (
     key TEXT PRIMARY KEY,
     value TEXT
 );
 
-CREATE TABLE IF NOT EXISTS quests (
+CREATE TABLE IF NOT EXISTS quest_details (
     id TEXT PRIMARY KEY,
     title TEXT NOT NULL,
     description TEXT NOT NULL,
@@ -54,7 +49,7 @@ CREATE TABLE IF NOT EXISTS quest_tasks (
     z REAL,
     radius REAL,
     PRIMARY KEY (quest_id, task_index),
-    FOREIGN KEY (quest_id) REFERENCES quests(id) ON DELETE CASCADE
+    FOREIGN KEY (quest_id) REFERENCES quest_details(id) ON DELETE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS quest_rewards (
@@ -68,7 +63,7 @@ CREATE TABLE IF NOT EXISTS quest_rewards (
     command TEXT,
     run_as_server INTEGER,
     PRIMARY KEY (quest_id, reward_index),
-    FOREIGN KEY (quest_id) REFERENCES quests(id) ON DELETE CASCADE
+    FOREIGN KEY (quest_id) REFERENCES quest_details(id) ON DELETE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS quest_dependencies (
@@ -76,12 +71,12 @@ CREATE TABLE IF NOT EXISTS quest_dependencies (
     dependency_quest_id TEXT NOT NULL,
     required INTEGER NOT NULL,
     PRIMARY KEY (quest_id, dependency_quest_id),
-    FOREIGN KEY (quest_id) REFERENCES quests(id) ON DELETE CASCADE
+    FOREIGN KEY (quest_id) REFERENCES quest_details(id) ON DELETE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS quest_positions (
     quest_id TEXT PRIMARY KEY,
     x REAL NOT NULL,
     y REAL NOT NULL,
-    FOREIGN KEY (quest_id) REFERENCES quests(id) ON DELETE CASCADE
+    FOREIGN KEY (quest_id) REFERENCES quest_details(id) ON DELETE CASCADE
 );

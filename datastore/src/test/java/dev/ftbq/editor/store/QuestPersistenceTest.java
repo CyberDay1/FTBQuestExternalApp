@@ -56,7 +56,7 @@ class QuestPersistenceTest {
             dao.saveQuest(quest);
 
             try (PreparedStatement questStatement = connection.prepareStatement(
-                    "SELECT title, description, icon, icon_relative_path, visibility FROM quests WHERE id = ?")) {
+                    "SELECT title, description, icon, icon_relative_path, visibility FROM quest_details WHERE id = ?")) {
                 questStatement.setString(1, quest.id());
                 try (ResultSet resultSet = questStatement.executeQuery()) {
                     assertTrue(resultSet.next());
@@ -203,7 +203,7 @@ class QuestPersistenceTest {
             dao.saveQuest(updated);
 
             try (PreparedStatement questStatement = connection.prepareStatement(
-                    "SELECT title, description, icon, visibility FROM quests WHERE id = ?")) {
+                    "SELECT title, description, icon, visibility FROM quest_details WHERE id = ?")) {
                 questStatement.setString(1, updated.id());
                 try (ResultSet resultSet = questStatement.executeQuery()) {
                     assertTrue(resultSet.next());

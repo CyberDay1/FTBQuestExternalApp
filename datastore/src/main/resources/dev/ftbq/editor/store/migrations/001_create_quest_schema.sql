@@ -1,0 +1,43 @@
+CREATE TABLE IF NOT EXISTS chapters(
+  id TEXT PRIMARY KEY,
+  title TEXT NOT NULL,
+  ord INTEGER DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS quests(
+  id TEXT PRIMARY KEY,
+  chapter_id TEXT NOT NULL REFERENCES chapters(id) ON DELETE CASCADE,
+  title TEXT NOT NULL,
+  icon_ref TEXT,
+  x REAL DEFAULT 0,
+  y REAL DEFAULT 0,
+  shape TEXT DEFAULT 'circle',
+  size REAL DEFAULT 1.0
+);
+
+CREATE TABLE IF NOT EXISTS dependencies(
+  src_id TEXT NOT NULL REFERENCES quests(id) ON DELETE CASCADE,
+  dst_id TEXT NOT NULL REFERENCES quests(id) ON DELETE CASCADE,
+  optional INTEGER DEFAULT 0,
+  PRIMARY KEY (src_id, dst_id)
+);
+
+CREATE TABLE IF NOT EXISTS tasks(
+  id TEXT PRIMARY KEY,
+  quest_id TEXT NOT NULL REFERENCES quests(id) ON DELETE CASCADE,
+  type TEXT NOT NULL,
+  payload_json TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS rewards(
+  id TEXT PRIMARY KEY,
+  quest_id TEXT NOT NULL REFERENCES quests(id) ON DELETE CASCADE,
+  type TEXT NOT NULL,
+  payload_json TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS icons(
+  key TEXT PRIMARY KEY, -- ns:item
+  ns TEXT NOT NULL,
+  path TEXT NOT NULL
+);

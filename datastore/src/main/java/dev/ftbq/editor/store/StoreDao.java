@@ -59,7 +59,7 @@ public final class StoreDao {
             """;
 
     private static final String UPSERT_QUEST_SQL = """
-            INSERT INTO quests (id, title, description, icon, icon_relative_path, visibility)
+            INSERT INTO quest_details (id, title, description, icon, icon_relative_path, visibility)
             VALUES (?, ?, ?, ?, ?, ?)
             ON CONFLICT(id) DO UPDATE SET
                 title = excluded.title,
@@ -87,7 +87,7 @@ public final class StoreDao {
     private static final String DELETE_QUEST_REWARDS_SQL = "DELETE FROM quest_rewards WHERE quest_id = ?";
     private static final String DELETE_QUEST_DEPENDENCIES_SQL = "DELETE FROM quest_dependencies WHERE quest_id = ?";
     private static final String DELETE_DEPENDENCY_REFERENCES_SQL = "DELETE FROM quest_dependencies WHERE dependency_quest_id = ?";
-    private static final String DELETE_QUEST_SQL = "DELETE FROM quests WHERE id = ?";
+    private static final String DELETE_QUEST_SQL = "DELETE FROM quest_details WHERE id = ?";
     private static final String DELETE_QUEST_POSITION_SQL = "DELETE FROM quest_positions WHERE quest_id = ?";
 
     private static final String INSERT_QUEST_TASK_SQL = """
@@ -280,7 +280,7 @@ public final class StoreDao {
      */
     public List<Quest> listQuests() {
         try (PreparedStatement statement = connection.prepareStatement(
-                "SELECT id, title, description, icon, icon_relative_path, visibility FROM quests ORDER BY id"
+                "SELECT id, title, description, icon, icon_relative_path, visibility FROM quest_details ORDER BY id"
         )) {
             List<Quest> quests = new ArrayList<>();
             try (ResultSet resultSet = statement.executeQuery()) {
@@ -311,7 +311,7 @@ public final class StoreDao {
         Objects.requireNonNull(questId, "questId");
         try (PreparedStatement statement = connection.prepareStatement("""
                 SELECT id, title, description, icon, icon_relative_path, visibility
-                FROM quests
+                FROM quest_details
                 WHERE id = ?
                 """)) {
             statement.setString(1, questId);
@@ -521,7 +521,7 @@ public final class StoreDao {
         Objects.requireNonNull(id, "id");
         try (PreparedStatement statement = connection.prepareStatement("""
                 SELECT id, title, description, icon, icon_relative_path, visibility
-                FROM quests
+                FROM quest_details
                 WHERE id = ?
                 """)) {
             statement.setString(1, id);
