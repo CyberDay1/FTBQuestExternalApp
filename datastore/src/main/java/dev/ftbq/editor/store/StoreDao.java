@@ -1,6 +1,5 @@
 package dev.ftbq.editor.store;
 
-import dev.ftbq.editor.domain.Quest;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
@@ -8,6 +7,7 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import dev.ftbq.editor.domain.AdvancementTask;
 import dev.ftbq.editor.domain.CommandReward;
 import dev.ftbq.editor.domain.Dependency;
+import dev.ftbq.editor.domain.IconRef;
 import dev.ftbq.editor.domain.ItemRef;
 import dev.ftbq.editor.domain.ItemReward;
 import dev.ftbq.editor.domain.ItemTask;
@@ -15,6 +15,7 @@ import dev.ftbq.editor.domain.LocationTask;
 import dev.ftbq.editor.domain.Quest;
 import dev.ftbq.editor.domain.Reward;
 import dev.ftbq.editor.domain.Task;
+import dev.ftbq.editor.domain.Visibility;
 import dev.ftbq.editor.domain.XpReward;
 
 import java.sql.Connection;
@@ -26,7 +27,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.Objects;
 
@@ -235,6 +235,42 @@ public final class StoreDao {
             }
         } catch (SQLException e) {
             throw new UncheckedSqlException("Failed to load item " + id, e);
+        }
+    }
+
+    /**
+     * Lists all quests from the database. Only basic quest fields are loaded
+     * (id, title, description, icon and visibility). Tasks, rewards and dependencies
+     * are not loaded by this method. Use this to populate dependency selectors in the UI.
+     *
+     * @return list of all quests ordered by id
+     */
+    public List<Quest> listQuests() {
+        try (PreparedStatement statement = connection.prepareStatement(
+                "SELECT id, title, description, icon, icon_relative_path, visibility FROM quests ORDER BY id"
+        )) {
+            List<Quest> quests = new ArrayList<>();
+            try (ResultSet resultSet = statement.executeQuery()) {
+                while (resultSet.next()) {
+                    String id = resultSet.getString("id");
+                    String title = resultSet.getString("title");
+                    String description = resultSet.getString("description");
+                    String iconId = resultSet.getString("icon");
+                    String iconRelPath = resultSet.getString("icon_relative_path");
+                    IconRef icon = new IconRef(iconId, Optional.ofNullable(iconRelPath));
+                    Visibility visibility = Visibility.valueOf(resultSet.getString("visibility"));
+                    quests.add(Quest.builder()
+                            .id(id)
+                            .title(title)
+                            .description(description)
+                            .icon(icon)
+                            .visibility(visibility)
+                            .build());
+                }
+            }
+            return quests;
+        } catch (SQLException e) {
+            throw new UncheckedSqlException("Failed to list quests", e);
         }
     }
 
