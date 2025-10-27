@@ -33,7 +33,6 @@ import javafx.scene.input.KeyCode;
 import javafx.scene.input.MouseButton;
 import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.GridPane;
-import javafx.scene.paint.Color;
 import javafx.util.StringConverter;
 
 import java.util.ArrayList;
@@ -264,7 +263,7 @@ public class ChapterEditorController {
 
     private void drawEdges(GraphicsContext gc) {
         gc.setTransform(canvas.getWorld());
-        gc.setStroke(Color.web("#6ea0ff"));
+        gc.setStroke(canvas.getEdgeRequiredColor());
         gc.setLineWidth(1.6 / Math.max(canvas.getScale(), 0.1));
         gc.setLineDashes(0);
         gc.beginPath();

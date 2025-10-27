@@ -1,0 +1,88 @@
+:root {
+    -bg: #f4f6fb;
+    -bg-elev: #ffffff;
+    -fg: #21252b;
+    -fg-muted: #5c6370;
+    -accent: #3564c2;
+    -grid: #d4d9e2;
+    -node: #ffffff;
+    -node-stroke: #b0b0b0;
+    -edge-required: #3564c2;
+    -edge-optional: #7f9dd6;
+}
+
+.root {
+    -fx-background-color: -bg;
+    -fx-text-fill: -fg;
+    -fx-control-inner-background: -bg-elev;
+    -fx-base: -bg-elev;
+    -fx-accent: -accent;
+    -fx-focus-color: -accent;
+    -fx-faint-focus-color: rgba(53, 100, 194, 0.25);
+}
+
+.label,
+.text {
+    -fx-fill: -fg;
+    -fx-text-fill: -fg;
+}
+
+.button,
+.toggle-button,
+.choice-box,
+.combo-box-base,
+.text-field,
+.text-area,
+.list-view,
+.tree-view,
+.table-view,
+.tab-pane {
+    -fx-background-color: -bg-elev;
+    -fx-text-fill: -fg;
+}
+
+.text-field,
+.combo-box,
+.choice-box {
+    -fx-prompt-text-fill: -fg-muted;
+}
+
+.table-view {
+    -fx-table-cell-border-color: derive(-bg, -10%);
+    -fx-selection-bar: -accent;
+    -fx-selection-bar-non-focused: derive(-accent, 30%);
+}
+
+.list-view:focused,
+.table-view:focused,
+.tree-view:focused {
+    -fx-border-color: -accent;
+}
+
+.menu-bar,
+.tool-bar {
+    -fx-background-color: linear-gradient(-bg-elev, derive(-bg, -5%));
+}
+
+.scroll-bar:vertical .thumb,
+.scroll-bar:horizontal .thumb {
+    -fx-background-color: rgba(53, 100, 194, 0.55);
+    -fx-background-insets: 0;
+    -fx-background-radius: 4;
+}
+
+.graph-canvas {
+    -graph-grid-color: -grid;
+    -graph-edge-required-color: -edge-required;
+    -graph-edge-optional-color: -edge-optional;
+}
+
+.quest-node {
+    -quest-node-fill: -node;
+    -quest-node-stroke: -node-stroke;
+    -quest-node-label: -fg;
+}
+
+.quest-node-label {
+    -fx-fill: -fg;
+}

@@ -1,6 +1,7 @@
 package dev.ftbq.editor;
 
 import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.scene.Scene;
@@ -57,6 +58,10 @@ public final class ThemeService {
 
     public Theme getTheme() {
         return currentTheme.get();
+    }
+
+    public ReadOnlyObjectProperty<Theme> themeProperty() {
+        return currentTheme;
     }
 
     public void setTheme(Theme theme) {
@@ -153,7 +158,7 @@ public final class ThemeService {
     private Map<Theme, String> loadStylesheetUrls() {
         EnumMap<Theme, String> map = new EnumMap<>(Theme.class);
         for (Theme theme : Theme.values()) {
-            URL url = ThemeService.class.getResource("/dev/ftbq/editor/theme/" + theme.getStylesheet());
+            URL url = ThemeService.class.getResource(theme.getStylesheetResource());
             if (url == null) {
                 throw new IllegalStateException("Missing stylesheet for theme: " + theme);
             }
@@ -167,24 +172,24 @@ public final class ThemeService {
     }
 
     public enum Theme {
-        LIGHT("light", "light.css"),
-        DARK("dark", "dark.css"),
-        HIGH_CONTRAST("high_contrast", "high_contrast.css");
+        LIGHT("light", "/css/light.css"),
+        DARK("dark", "/css/dark.css"),
+        HIGH_CONTRAST("high_contrast", "/css/high_contrast.css");
 
         private final String id;
-        private final String stylesheet;
+        private final String stylesheetResource;
 
-        Theme(String id, String stylesheet) {
+        Theme(String id, String stylesheetResource) {
             this.id = id;
-            this.stylesheet = stylesheet;
+            this.stylesheetResource = stylesheetResource;
         }
 
         public String getId() {
             return id;
         }
 
-        public String getStylesheet() {
-            return stylesheet;
+        public String getStylesheetResource() {
+            return stylesheetResource;
         }
 
         static Theme fromId(String id) {
