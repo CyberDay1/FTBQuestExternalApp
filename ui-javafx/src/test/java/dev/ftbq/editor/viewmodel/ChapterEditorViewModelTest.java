@@ -9,13 +9,13 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 class ChapterEditorViewModelTest {
 
     @Test
-    void loadSampleChapterProvidesGraphData() {
+    void loadSampleChaptersProvidesGraphData() {
         ChapterEditorViewModel viewModel = new ChapterEditorViewModel();
-        viewModel.loadSampleChapter();
+        viewModel.loadSampleChapters();
 
         Chapter chapter = viewModel.getChapter();
         assertNotNull(chapter, "Expected a chapter to be loaded");
-        assertEquals("chapter_demo", chapter.id());
+        assertEquals("chapter_getting_started", chapter.id());
         assertEquals(4, chapter.quests().size(), "Sample chapter should contain four quests");
     }
 }

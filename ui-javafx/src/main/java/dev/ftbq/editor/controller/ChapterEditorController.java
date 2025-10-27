@@ -12,12 +12,20 @@ import dev.ftbq.editor.viewmodel.ChapterEditorViewModel;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
+import javafx.geometry.Insets;
+import javafx.scene.Node;
+import javafx.scene.control.ButtonBar;
+import javafx.scene.control.ButtonType;
 import javafx.scene.control.ComboBox;
+import javafx.scene.control.Dialog;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListView;
 import javafx.scene.control.SelectionMode;
-import javafx.scene.layout.StackPane;
+import javafx.scene.control.TextArea;
+import javafx.scene.control.TextField;
 import javafx.scene.input.KeyCode;
+import javafx.scene.layout.GridPane;
+import javafx.scene.layout.StackPane;
 import javafx.util.StringConverter;
 
 import java.util.ArrayList;
@@ -91,6 +99,10 @@ public class ChapterEditorController {
             graphCanvas.prefHeightProperty().bind(graphContainer.heightProperty());
             graphContainer.getChildren().add(graphCanvas);
         }
+        graphCanvas.setOnNodeDoubleClick(node -> {
+            Quest quest = node.getQuest();
+            showQuestEditDialog(quest);
+        });
         graphCanvas.rebuildGraph();
         configureChapterSelector();
         configureDetailLists();
@@ -271,6 +283,8 @@ public class ChapterEditorController {
                 setText(chapter.title());
             }
         }
+    }
+
     private void onAddQuest() {
         if (currentChapter == null) {
             return;
@@ -325,6 +339,90 @@ public class ChapterEditorController {
         if (dao != null) {
             dao.deleteQuest(selectedQuest.id());
             questsToPersist.forEach(dao::saveQuest);
+        }
+    }
+
+    private void showQuestEditDialog(Quest quest) {
+        if (quest == null) {
+            return;
+        }
+
+        Dialog<Quest> dialog = new Dialog<>();
+        dialog.setTitle("Edit Quest");
+        dialog.setHeaderText("Update quest details");
+
+        ButtonType saveButtonType = new ButtonType("Save", ButtonBar.ButtonData.OK_DONE);
+        dialog.getDialogPane().getButtonTypes().addAll(saveButtonType, ButtonType.CANCEL);
+
+        TextField titleField = new TextField(quest.title());
+        TextArea descriptionArea = new TextArea(quest.description());
+        descriptionArea.setPrefRowCount(5);
+
+        GridPane grid = new GridPane();
+        grid.setHgap(12);
+        grid.setVgap(8);
+        grid.setPadding(new Insets(10));
+        grid.add(new Label("Title"), 0, 0);
+        grid.add(titleField, 1, 0);
+        grid.add(new Label("Description"), 0, 1);
+        grid.add(descriptionArea, 1, 1);
+
+        dialog.getDialogPane().setContent(grid);
+
+        Node saveButton = dialog.getDialogPane().lookupButton(saveButtonType);
+        saveButton.setDisable(titleField.getText() == null || titleField.getText().isBlank());
+        titleField.textProperty().addListener((obs, oldValue, newValue) ->
+                saveButton.setDisable(newValue == null || newValue.isBlank()));
+
+        dialog.setResultConverter(button -> {
+            if (button == saveButtonType) {
+                String title = titleField.getText() == null ? "" : titleField.getText().trim();
+                String description = descriptionArea.getText() == null ? "" : descriptionArea.getText().trim();
+                return Quest.builder()
+                        .id(quest.id())
+                        .title(title)
+                        .description(description)
+                        .icon(quest.icon())
+                        .visibility(quest.visibility())
+                        .tasks(quest.tasks())
+                        .rewards(quest.rewards())
+                        .dependencies(quest.dependencies())
+                        .build();
+            }
+            return null;
+        });
+
+        Optional<Quest> result = dialog.showAndWait();
+        result.ifPresent(this::saveEditedQuest);
+    }
+
+    private void saveEditedQuest(Quest updatedQuest) {
+        if (currentChapter == null || updatedQuest == null) {
+            return;
+        }
+
+        List<Quest> quests = new ArrayList<>(currentChapter.quests().size());
+        boolean replaced = false;
+        for (Quest quest : currentChapter.quests()) {
+            if (quest.id().equals(updatedQuest.id())) {
+                quests.add(updatedQuest);
+                replaced = true;
+            } else {
+                quests.add(quest);
+            }
+        }
+
+        if (!replaced) {
+            quests.add(updatedQuest);
+        }
+
+        Chapter updatedChapter = rebuildChapter(currentChapter, quests);
+        applyUpdatedChapter(updatedChapter);
+        graphCanvas.selectQuest(updatedQuest.id());
+
+        StoreDao dao = UiServiceLocator.storeDao;
+        if (dao != null) {
+            dao.saveQuest(updatedQuest);
         }
     }
 
