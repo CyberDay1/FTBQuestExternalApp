@@ -7,30 +7,40 @@ import dev.ftbq.editor.domain.Reward;
 import dev.ftbq.editor.domain.Task;
 import dev.ftbq.editor.services.UiServiceLocator;
 import dev.ftbq.editor.store.StoreDao;
-import dev.ftbq.editor.view.graph.GraphCanvas;
+import dev.ftbq.editor.ui.graph.GraphCanvas;
+import dev.ftbq.editor.ui.graph.QuestNodeView;
 import dev.ftbq.editor.viewmodel.ChapterEditorViewModel;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
 import javafx.geometry.Insets;
+import javafx.geometry.Point2D;
 import javafx.scene.Node;
+import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.control.ButtonBar;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.ComboBox;
+import javafx.scene.control.ContextMenu;
 import javafx.scene.control.Dialog;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListView;
+import javafx.scene.control.Menu;
+import javafx.scene.control.MenuItem;
 import javafx.scene.control.SelectionMode;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 import javafx.scene.input.KeyCode;
+import javafx.scene.input.MouseButton;
+import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.GridPane;
-import javafx.scene.layout.StackPane;
+import javafx.scene.paint.Color;
 import javafx.util.StringConverter;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
@@ -44,7 +54,7 @@ public class ChapterEditorController {
     private static final String EMPTY_TITLE = "";
 
     @FXML
-    private StackPane graphContainer;
+    private AnchorPane canvasHost;
 
     @FXML
     private ComboBox<Chapter> chapterSelector;
@@ -61,7 +71,7 @@ public class ChapterEditorController {
     @FXML
     private ListView<String> dependencyList;
 
-    private final GraphCanvas graphCanvas = new GraphCanvas();
+    private GraphCanvas canvas;
     private final ObservableList<String> tasks = FXCollections.observableArrayList();
     private final ObservableList<String> rewards = FXCollections.observableArrayList();
     private final ObservableList<String> dependencies = FXCollections.observableArrayList();
@@ -82,6 +92,9 @@ public class ChapterEditorController {
             return match.orElse(null);
         }
     };
+    private final Map<String, QuestNodeView> nodes = new HashMap<>();
+    private final Map<String, Point2D> questPositions = new HashMap<>();
+    private final AnchorPane nodeLayer = new AnchorPane();
     private int taskCounter = 1;
     private int rewardCounter = 1;
     private int dependencyCounter = 1;
@@ -89,21 +102,13 @@ public class ChapterEditorController {
     private boolean programmaticChapterSelection;
     private Chapter currentChapter;
     private String pendingSelectionQuestId;
+    private String selectedQuestId;
+    private double contextX;
+    private double contextY;
 
     @FXML
     public void initialize() {
-        if (graphContainer != null) {
-            graphCanvas.setMinSize(0, 0);
-            graphCanvas.setPrefSize(StackPane.USE_COMPUTED_SIZE, StackPane.USE_COMPUTED_SIZE);
-            graphCanvas.prefWidthProperty().bind(graphContainer.widthProperty());
-            graphCanvas.prefHeightProperty().bind(graphContainer.heightProperty());
-            graphContainer.getChildren().add(graphCanvas);
-        }
-        graphCanvas.setOnNodeDoubleClick(node -> {
-            Quest quest = node.getQuest();
-            showQuestEditDialog(quest);
-        });
-        graphCanvas.rebuildGraph();
+        setupCanvas();
         configureChapterSelector();
         configureDetailLists();
         if (viewModel != null && viewModel.getChapter() != null) {
@@ -123,6 +128,49 @@ public class ChapterEditorController {
         }
     }
 
+    private void setupCanvas() {
+        if (canvasHost == null) {
+            return;
+        }
+        canvas = new GraphCanvas(1600, 900);
+        canvas.widthProperty().bind(canvasHost.widthProperty());
+        canvas.heightProperty().bind(canvasHost.heightProperty());
+        nodeLayer.setPickOnBounds(false);
+        canvasHost.getChildren().setAll(canvas, nodeLayer);
+        AnchorPane.setTopAnchor(canvas, 0.0);
+        AnchorPane.setBottomAnchor(canvas, 0.0);
+        AnchorPane.setLeftAnchor(canvas, 0.0);
+        AnchorPane.setRightAnchor(canvas, 0.0);
+        AnchorPane.setTopAnchor(nodeLayer, 0.0);
+        AnchorPane.setBottomAnchor(nodeLayer, 0.0);
+        AnchorPane.setLeftAnchor(nodeLayer, 0.0);
+        AnchorPane.setRightAnchor(nodeLayer, 0.0);
+        canvas.setOnRedraw(v -> renderNodes());
+        canvas.setOnContextMenuRequested(event -> {
+            contextX = event.getX();
+            contextY = event.getY();
+            ContextMenu menu = buildCanvasContextMenu();
+            menu.show(canvas, event.getScreenX(), event.getScreenY());
+            event.consume();
+        });
+    }
+
+    private ContextMenu buildCanvasContextMenu() {
+        ContextMenu menu = new ContextMenu();
+        MenuItem addQuest = new MenuItem("Add Quest Here");
+        addQuest.setOnAction(e -> {
+            if (currentChapter == null) {
+                return;
+            }
+            double[] world = canvas.screenToWorld(contextX, contextY);
+            double snappedX = canvas.snap(world[0]);
+            double snappedY = canvas.snap(world[1]);
+            addQuestAt(snappedX, snappedY);
+        });
+        menu.getItems().add(addQuest);
+        return menu;
+    }
+
     private boolean newChapterAvailable() {
         return viewModel != null && viewModel.getChapter() != null;
     }
@@ -130,7 +178,13 @@ public class ChapterEditorController {
     private void applyChapter(Chapter chapter) {
         if (chapter == null) {
             currentChapter = null;
-            graphCanvas.setChapter(null);
+            selectedQuestId = null;
+            questPositions.clear();
+            nodeLayer.getChildren().clear();
+            nodes.clear();
+            if (canvas != null) {
+                canvas.redraw();
+            }
             if (chapterTitleLabel != null) {
                 chapterTitleLabel.setText(EMPTY_TITLE);
             }
@@ -143,13 +197,171 @@ public class ChapterEditorController {
             chapterTitleLabel.setText(chapter.title());
         }
         selectChapter(chapter);
-        graphCanvas.setChapter(chapter);
-        graphCanvas.rebuildGraph();
-        populateQuestDetails(chapter);
-        if (pendingSelectionQuestId != null) {
-            graphCanvas.selectQuest(pendingSelectionQuestId);
-            pendingSelectionQuestId = null;
+        loadQuestPositions();
+        if (canvas != null) {
+            canvas.redraw();
         }
+        populateQuestDetails(chapter);
+    }
+
+    private void loadQuestPositions() {
+        questPositions.clear();
+        if (currentChapter == null) {
+            return;
+        }
+        StoreDao dao = UiServiceLocator.storeDao;
+        List<String> questIds = currentChapter.quests().stream()
+                .map(Quest::id)
+                .filter(Objects::nonNull)
+                .toList();
+        if (dao != null && !questIds.isEmpty()) {
+            Map<String, StoreDao.QuestPosition> stored = dao.findQuestPositions(questIds);
+            stored.values().forEach(pos -> questPositions.put(pos.questId(), new Point2D(pos.x(), pos.y())));
+        }
+        double spacing = 120.0;
+        int columnCount = Math.max(1, (int) Math.ceil(Math.sqrt(Math.max(questIds.size(), 1))));
+        int index = 0;
+        for (Quest quest : currentChapter.quests()) {
+            if (quest == null || quest.id() == null) {
+                continue;
+            }
+            if (!questPositions.containsKey(quest.id())) {
+                int row = index / columnCount;
+                int col = index % columnCount;
+                questPositions.put(quest.id(), new Point2D(col * spacing, row * spacing));
+            }
+            index++;
+        }
+    }
+
+    private void renderNodes() {
+        nodes.clear();
+        nodeLayer.getChildren().clear();
+        if (canvas == null || currentChapter == null) {
+            return;
+        }
+        drawEdges(canvas.getGraphicsContext2D());
+        for (Quest quest : currentChapter.quests()) {
+            if (quest == null || quest.id() == null) {
+                continue;
+            }
+            Point2D world = questPositions.getOrDefault(quest.id(), new Point2D(0, 0));
+            QuestNodeView node = new QuestNodeView(quest.id(), quest.title(), world.getX(), world.getY());
+            positionNode(node, world);
+            configureNodeInteractions(node, quest);
+            nodes.put(quest.id(), node);
+            nodeLayer.getChildren().add(node);
+        }
+        String toSelect = pendingSelectionQuestId != null ? pendingSelectionQuestId : selectedQuestId;
+        if (toSelect != null && nodes.containsKey(toSelect)) {
+            selectedQuestId = toSelect;
+        } else if (toSelect != null) {
+            selectedQuestId = null;
+        }
+        pendingSelectionQuestId = null;
+        updateSelectionVisuals();
+    }
+
+    private void drawEdges(GraphicsContext gc) {
+        gc.setTransform(canvas.getWorld());
+        gc.setStroke(Color.web("#6ea0ff"));
+        gc.setLineWidth(1.6 / Math.max(canvas.getScale(), 0.1));
+        gc.setLineDashes(0);
+        gc.beginPath();
+        for (Quest quest : currentChapter.quests()) {
+            Point2D start = questPositions.get(quest.id());
+            if (start == null) {
+                continue;
+            }
+            for (Dependency dependency : quest.dependencies()) {
+                Point2D end = questPositions.get(dependency.questId());
+                if (end == null) {
+                    continue;
+                }
+                gc.moveTo(start.getX(), start.getY());
+                gc.lineTo(end.getX(), end.getY());
+            }
+        }
+        gc.stroke();
+    }
+
+    private void positionNode(QuestNodeView node, Point2D world) {
+        node.setWorldPosition(world.getX(), world.getY());
+        Point2D screen = canvas.getWorld().transform(world);
+        node.updateScreenPosition(screen.getX(), screen.getY());
+    }
+
+    private void configureNodeInteractions(QuestNodeView node, Quest quest) {
+        node.setOnMove((id, screenX, screenY) -> handleNodeMove(id, screenX, screenY));
+        node.setOnMouseClicked(event -> {
+            if (event.getButton() == MouseButton.PRIMARY) {
+                selectQuest(node.questId);
+                if (event.getClickCount() == 2) {
+                    showQuestEditDialog(quest);
+                }
+                event.consume();
+            }
+        });
+        node.setOnContextMenuRequested(event -> {
+            ContextMenu menu = buildNodeContextMenu(node.questId);
+            menu.show(node, event.getScreenX(), event.getScreenY());
+            event.consume();
+        });
+    }
+
+    private ContextMenu buildNodeContextMenu(String questId) {
+        ContextMenu menu = new ContextMenu();
+        MenuItem delete = new MenuItem("Delete Quest");
+        delete.setOnAction(e -> deleteQuest(questId));
+        Menu connectMenu = new Menu("Connect →");
+        if (currentChapter != null) {
+            for (Quest quest : currentChapter.quests()) {
+                if (quest == null || quest.id() == null || quest.id().equals(questId)) {
+                    continue;
+                }
+                MenuItem targetItem = new MenuItem(quest.title());
+                targetItem.setOnAction(evt -> connectQuests(questId, quest.id(), true));
+                connectMenu.getItems().add(targetItem);
+            }
+        }
+        if (connectMenu.getItems().isEmpty()) {
+            connectMenu.setDisable(true);
+        }
+        menu.getItems().addAll(delete, connectMenu);
+        return menu;
+    }
+
+    private void handleNodeMove(String questId, double screenX, double screenY) {
+        double[] world = canvas.screenToWorld(screenX, screenY);
+        double snappedX = canvas.snap(world[0]);
+        double snappedY = canvas.snap(world[1]);
+        questPositions.put(questId, new Point2D(snappedX, snappedY));
+        persistQuestPosition(questId, snappedX, snappedY);
+        pendingSelectionQuestId = questId;
+        if (canvas != null) {
+            canvas.redraw();
+        }
+    }
+
+    private void persistQuestPosition(String questId, double x, double y) {
+        StoreDao dao = UiServiceLocator.storeDao;
+        if (dao != null) {
+            dao.updateQuestPosition(questId, x, y);
+        }
+    }
+
+    private void updateSelectionVisuals() {
+        nodes.values().forEach(view -> view.setSelected(Objects.equals(view.questId, selectedQuestId)));
+    }
+
+    private void selectQuest(String questId) {
+        selectedQuestId = questId;
+        updateSelectionVisuals();
+    }
+
+    private void clearSelection() {
+        selectedQuestId = null;
+        updateSelectionVisuals();
     }
 
     private void configureChapterSelector() {
@@ -273,6 +485,118 @@ public class ChapterEditorController {
         }
     }
 
+    @FXML
+    private void onRemoveQuest() {
+        if (currentChapter == null || selectedQuestId == null) {
+            return;
+        }
+        deleteQuest(selectedQuestId);
+    }
+
+    private void deleteQuest(String questId) {
+        if (currentChapter == null) {
+            return;
+        }
+        Quest toRemove = currentChapter.quests().stream()
+                .filter(q -> Objects.equals(q.id(), questId))
+                .findFirst()
+                .orElse(null);
+        if (toRemove == null) {
+            return;
+        }
+        List<Quest> updatedQuests = new ArrayList<>();
+        List<Quest> questsToPersist = new ArrayList<>();
+        for (Quest quest : currentChapter.quests()) {
+            if (quest.id().equals(questId)) {
+                continue;
+            }
+            Quest cleaned = removeDependencyReferences(quest, questId);
+            updatedQuests.add(cleaned);
+            if (cleaned != quest) {
+                questsToPersist.add(cleaned);
+            }
+        }
+        Chapter updatedChapter = rebuildChapter(currentChapter, updatedQuests);
+        questPositions.remove(questId);
+        clearSelection();
+        applyUpdatedChapter(updatedChapter);
+        StoreDao dao = UiServiceLocator.storeDao;
+        if (dao != null) {
+            dao.deleteQuest(questId);
+            questsToPersist.forEach(dao::saveQuest);
+        }
+        if (canvas != null) {
+            canvas.redraw();
+        }
+    }
+
+    private void connectQuests(String sourceId, String targetId, boolean required) {
+        if (Objects.equals(sourceId, targetId) || currentChapter == null) {
+            return;
+        }
+        Quest source = currentChapter.quests().stream()
+                .filter(q -> Objects.equals(q.id(), sourceId))
+                .findFirst()
+                .orElse(null);
+        if (source == null) {
+            return;
+        }
+        boolean alreadyLinked = source.dependencies().stream()
+                .anyMatch(dep -> Objects.equals(dep.questId(), targetId));
+        if (alreadyLinked) {
+            return;
+        }
+        List<Dependency> deps = new ArrayList<>(source.dependencies());
+        deps.add(new Dependency(targetId, required));
+        Quest updatedSource = Quest.builder()
+                .id(source.id())
+                .title(source.title())
+                .description(source.description())
+                .icon(source.icon())
+                .visibility(source.visibility())
+                .tasks(source.tasks())
+                .rewards(source.rewards())
+                .dependencies(deps)
+                .build();
+        List<Quest> updatedQuests = currentChapter.quests().stream()
+                .map(q -> Objects.equals(q.id(), sourceId) ? updatedSource : q)
+                .toList();
+        Chapter updatedChapter = rebuildChapter(currentChapter, updatedQuests);
+        pendingSelectionQuestId = sourceId;
+        applyUpdatedChapter(updatedChapter);
+        StoreDao dao = UiServiceLocator.storeDao;
+        if (dao != null) {
+            dao.saveQuest(updatedSource);
+        }
+        if (canvas != null) {
+            canvas.redraw();
+        }
+    }
+
+    private void addQuestAt(double worldX, double worldY) {
+        if (currentChapter == null) {
+            return;
+        }
+        Quest newQuest = Quest.builder()
+                .id(generateQuestId(currentChapter))
+                .title(generateQuestTitle(currentChapter))
+                .build();
+        List<Quest> updatedQuests = new ArrayList<>(currentChapter.quests());
+        updatedQuests.add(newQuest);
+        Chapter updatedChapter = rebuildChapter(currentChapter, updatedQuests);
+        questPositions.put(newQuest.id(), new Point2D(worldX, worldY));
+        persistQuestPosition(newQuest.id(), worldX, worldY);
+        pendingSelectionQuestId = newQuest.id();
+        applyUpdatedChapter(updatedChapter);
+        StoreDao dao = UiServiceLocator.storeDao;
+        if (dao != null) {
+            dao.saveQuest(newQuest);
+        }
+        if (canvas != null) {
+            canvas.redraw();
+        }
+    }
+
     private static final class ChapterListCell extends javafx.scene.control.ListCell<Chapter> {
         @Override
         protected void updateItem(Chapter chapter, boolean empty) {
@@ -285,68 +609,10 @@ public class ChapterEditorController {
         }
     }
 
-    private void onAddQuest() {
-        if (currentChapter == null) {
-            return;
-        }
-
-        Quest newQuest = Quest.builder()
-                .id(generateQuestId(currentChapter))
-                .title(generateQuestTitle(currentChapter))
-                .build();
-
-        List<Quest> updatedQuests = new ArrayList<>(currentChapter.quests());
-        updatedQuests.add(newQuest);
-
-        Chapter updatedChapter = rebuildChapter(currentChapter, updatedQuests);
-        pendingSelectionQuestId = newQuest.id();
-        applyUpdatedChapter(updatedChapter);
-
-        StoreDao dao = UiServiceLocator.storeDao;
-        if (dao != null) {
-            dao.saveQuest(newQuest);
-        }
-    }
-
-    @FXML
-    private void onRemoveQuest() {
-        if (currentChapter == null) {
-            return;
-        }
-        Quest selectedQuest = graphCanvas.getSelectedQuest();
-        if (selectedQuest == null) {
-            return;
-        }
-
-        List<Quest> updatedQuests = new ArrayList<>();
-        List<Quest> questsToPersist = new ArrayList<>();
-        for (Quest quest : currentChapter.quests()) {
-            if (quest.id().equals(selectedQuest.id())) {
-                continue;
-            }
-            Quest cleaned = removeDependencyReferences(quest, selectedQuest.id());
-            updatedQuests.add(cleaned);
-            if (cleaned != quest) {
-                questsToPersist.add(cleaned);
-            }
-        }
-
-        Chapter updatedChapter = rebuildChapter(currentChapter, updatedQuests);
-        graphCanvas.clearSelection();
-        applyUpdatedChapter(updatedChapter);
-
-        StoreDao dao = UiServiceLocator.storeDao;
-        if (dao != null) {
-            dao.deleteQuest(selectedQuest.id());
-            questsToPersist.forEach(dao::saveQuest);
-        }
-    }
-
     private void showQuestEditDialog(Quest quest) {
         if (quest == null) {
             return;
         }
-
         Dialog<Quest> dialog = new Dialog<>();
         dialog.setTitle("Edit Quest");
         dialog.setHeaderText("Update quest details");
@@ -400,7 +666,6 @@ public class ChapterEditorController {
         if (currentChapter == null || updatedQuest == null) {
             return;
         }
-
         List<Quest> quests = new ArrayList<>(currentChapter.quests().size());
         boolean replaced = false;
         for (Quest quest : currentChapter.quests()) {
@@ -411,18 +676,18 @@ public class ChapterEditorController {
                 quests.add(quest);
             }
         }
-
         if (!replaced) {
             quests.add(updatedQuest);
         }
-
         Chapter updatedChapter = rebuildChapter(currentChapter, quests);
+        pendingSelectionQuestId = updatedQuest.id();
         applyUpdatedChapter(updatedChapter);
-        graphCanvas.selectQuest(updatedQuest.id());
-
         StoreDao dao = UiServiceLocator.storeDao;
         if (dao != null) {
             dao.saveQuest(updatedQuest);
+        }
+        if (canvas != null) {
+            canvas.redraw();
         }
     }
 
