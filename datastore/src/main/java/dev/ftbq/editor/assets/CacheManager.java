@@ -309,6 +309,10 @@ public final class CacheManager {
         }
         try {
             ResourceId resourceId = ResourceId.fromString(identifier);
+            Optional<byte[]> cachedIcon = loadNamespacedIcon(resourceId);
+            if (cachedIcon.isPresent()) {
+                return cachedIcon;
+            }
             Optional<byte[]> resourceBytes = loadIconFromResource(resourceId);
             if (resourceBytes.isPresent()) {
                 return resourceBytes;
@@ -360,6 +364,19 @@ public final class CacheManager {
             }
         }
         return Optional.empty();
+    }
+
+    private Optional<byte[]> loadNamespacedIcon(ResourceId resourceId) {
+        Path namespaceDirectory = iconDirectory.resolve(resourceId.namespace());
+        Path candidate = namespaceDirectory.resolve(resourceId.path() + ".png");
+        if (!Files.exists(candidate) || !Files.isRegularFile(candidate)) {
+            return Optional.empty();
+        }
+        try {
+            return Optional.of(Files.readAllBytes(candidate));
+        } catch (IOException ex) {
+            throw new CacheOperationException("Failed to read cached icon", ex);
+        }
     }
 
     private static boolean isLikelyHash(String value) {

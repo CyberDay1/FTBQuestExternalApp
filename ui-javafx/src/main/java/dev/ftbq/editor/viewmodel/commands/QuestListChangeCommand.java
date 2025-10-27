@@ -6,13 +6,18 @@ import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import dev.ftbq.editor.domain.AdvancementTask;
 import dev.ftbq.editor.domain.Dependency;
+import dev.ftbq.editor.domain.CommandReward;
 import dev.ftbq.editor.domain.ItemRef;
+import dev.ftbq.editor.domain.ItemReward;
 import dev.ftbq.editor.domain.ItemTask;
 import dev.ftbq.editor.domain.LocationTask;
+import dev.ftbq.editor.domain.LootTableReward;
 import dev.ftbq.editor.domain.Reward;
 import dev.ftbq.editor.domain.RewardCommand;
 import dev.ftbq.editor.domain.RewardType;
 import dev.ftbq.editor.domain.Task;
+import dev.ftbq.editor.domain.XpLevelReward;
+import dev.ftbq.editor.domain.XpReward;
 import dev.ftbq.editor.services.bus.UndoableCommand;
 
 import java.util.ArrayList;
@@ -191,15 +196,18 @@ public final class QuestListChangeCommand implements UndoableCommand {
 
     private static ObjectNode serializeReward(Reward reward) {
         ObjectNode node = JsonNodeFactory.instance.objectNode();
-        node.put("type", reward.type().name());
-        switch (reward.type()) {
-            case ITEM -> reward.item().ifPresent(item -> node.set("item", serializeItemRef(item)));
-            case LOOT_TABLE -> reward.lootTableId().ifPresent(id -> node.put("lootTableId", id));
-            case EXPERIENCE -> node.put("experience", reward.experience().orElse(0));
-            case COMMAND -> reward.command().ifPresent(command -> {
+        node.put("type", reward.type().id());
+        switch (reward) {
+            case ItemReward itemReward -> itemReward.item().ifPresent(item -> node.set("item", serializeItemRef(item)));
+            case LootTableReward lootTableReward -> lootTableReward.lootTableId().ifPresent(id -> node.put("lootTableId", id));
+            case XpLevelReward xpLevelReward -> node.put("experience", xpLevelReward.experienceLevels().orElse(0));
+            case XpReward xpReward -> node.put("experience", xpReward.experienceAmount().orElse(0));
+            case CommandReward commandReward -> commandReward.command().ifPresent(command -> {
                 node.put("command", command.command());
                 node.put("runAsServer", command.runAsServer());
             });
+            default -> {
+            }
         }
         return node;
     }
@@ -253,7 +261,7 @@ public final class QuestListChangeCommand implements UndoableCommand {
             }
             RewardType rewardType;
             try {
-                rewardType = RewardType.valueOf(typeText.toUpperCase(Locale.ROOT));
+                rewardType = RewardType.fromId(typeText);
             } catch (IllegalArgumentException ex) {
                 continue;
             }
@@ -266,7 +274,8 @@ public final class QuestListChangeCommand implements UndoableCommand {
                     }
                     yield Reward.lootTable(lootTableId);
                 }
-                case EXPERIENCE -> Reward.experience(element.path("experience").asInt(0));
+                case XP_LEVELS -> Reward.xpLevels(element.path("experience").asInt(0));
+                case XP_AMOUNT -> Reward.xpAmount(element.path("experience").asInt(0));
                 case COMMAND -> {
                     String commandText = element.path("command").asText("");
                     if (commandText.isBlank()) {

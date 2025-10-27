@@ -6,7 +6,10 @@ import dev.ftbq.editor.domain.Quest;
 import dev.ftbq.editor.domain.QuestFile;
 import dev.ftbq.editor.domain.Reward;
 import dev.ftbq.editor.domain.Task;
+import dev.ftbq.editor.domain.TaskTypeRegistry;
 import dev.ftbq.editor.services.UiServiceLocator;
+import dev.ftbq.editor.services.templates.RewardTemplates;
+import dev.ftbq.editor.services.templates.TaskTemplates;
 import dev.ftbq.editor.store.StoreDao;
 import dev.ftbq.editor.ui.graph.GraphCanvas;
 import dev.ftbq.editor.ui.graph.QuestNodeView;
@@ -29,21 +32,23 @@ import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.control.Alert;
 import javafx.scene.control.ButtonBar;
 import javafx.scene.control.ButtonType;
+import javafx.scene.control.CheckBox;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.Dialog;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListView;
 import javafx.scene.control.Menu;
+import javafx.scene.control.MenuButton;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.SelectionMode;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
+import javafx.scene.control.TextInputDialog;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.MouseButton;
 import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.GridPane;
-import javafx.scene.paint.Color;
 import javafx.util.StringConverter;
 import javafx.scene.control.Button;
 import javafx.stage.DirectoryChooser;
@@ -87,6 +92,10 @@ public class ChapterEditorController {
 
     @FXML
     private Button exportButton;
+    private MenuButton addTaskMenu;
+
+    @FXML
+    private MenuButton addRewardMenu;
 
     private GraphCanvas canvas;
     private final ObservableList<String> tasks = FXCollections.observableArrayList();
@@ -135,6 +144,7 @@ public class ChapterEditorController {
         setupCanvas();
         configureChapterSelector();
         configureDetailLists();
+        configureAddMenus();
         if (viewModel != null && viewModel.getChapter() != null) {
             applyChapter(viewModel.getChapter());
         }
@@ -288,7 +298,7 @@ public class ChapterEditorController {
 
     private void drawEdges(GraphicsContext gc) {
         gc.setTransform(canvas.getWorld());
-        gc.setStroke(Color.web("#6ea0ff"));
+        gc.setStroke(canvas.getEdgeRequiredColor());
         gc.setLineWidth(1.6 / Math.max(canvas.getScale(), 0.1));
         gc.setLineDashes(0);
         gc.beginPath();
@@ -420,6 +430,49 @@ public class ChapterEditorController {
         configureListView(dependencyList, dependencies, "No dependencies defined");
     }
 
+    private void configureAddMenus() {
+        configureTaskMenu();
+        configureRewardMenu();
+    }
+
+    private void configureTaskMenu() {
+        if (addTaskMenu == null) {
+            return;
+        }
+        addTaskMenu.getItems().clear();
+        for (String id : TaskTypeRegistry.ids()) {
+            MenuItem item = new MenuItem(id);
+            item.setOnAction(event -> addTaskFromTemplate(id));
+            addTaskMenu.getItems().add(item);
+        }
+    }
+
+    private void configureRewardMenu() {
+        if (addRewardMenu == null) {
+            return;
+        }
+        addRewardMenu.getItems().clear();
+
+        MenuItem xpLevels = new MenuItem("XP Levels");
+        xpLevels.setOnAction(event -> promptForInteger("Add XP Levels", "Levels", 5)
+                .map(value -> Math.max(0, value))
+                .ifPresent(levels -> addRewardFromTemplate(RewardTemplates.xpLevels(levels))));
+
+        MenuItem xpAmount = new MenuItem("XP Amount");
+        xpAmount.setOnAction(event -> promptForInteger("Add XP Amount", "Amount", 100)
+                .map(value -> Math.max(0, value))
+                .ifPresent(amount -> addRewardFromTemplate(RewardTemplates.xpAmount(amount))));
+
+        MenuItem lootTable = new MenuItem("Loot Table");
+        lootTable.setOnAction(event -> promptForString("Add Loot Table", "Loot table ID", "mod:loot/example")
+                .ifPresent(id -> addRewardFromTemplate(RewardTemplates.lootTable(id))));
+
+        MenuItem command = new MenuItem("Command");
+        command.setOnAction(event -> promptForCommandReward().ifPresent(this::addRewardFromTemplate));
+
+        addRewardMenu.getItems().addAll(xpLevels, xpAmount, lootTable, command);
+    }
+
     private void configureListView(ListView<String> listView, ObservableList<String> items, String placeholderText) {
         if (listView == null) {
             return;
@@ -435,6 +488,87 @@ public class ChapterEditorController {
                 event.consume();
             }
         });
+    }
+
+    private void addTaskFromTemplate(String id) {
+        Task template = switch (id) {
+            case "item" -> TaskTemplates.item("minecraft:stone", 1);
+            case "advancement" -> TaskTemplates.advancement("minecraft:story/root");
+            case "location" -> TaskTemplates.location(0, 64, 0, "minecraft:overworld");
+            default -> null;
+        };
+        if (template == null) {
+            return;
+        }
+        tasks.add("Task %d: %s".formatted(taskCounter++, template.describe()));
+    }
+
+    private void addRewardFromTemplate(Reward reward) {
+        if (reward == null) {
+            return;
+        }
+        rewards.add("Reward %d: %s".formatted(rewardCounter++, reward.describe()));
+    }
+
+    private Optional<Integer> promptForInteger(String title, String prompt, int defaultValue) {
+        TextInputDialog dialog = new TextInputDialog(Integer.toString(defaultValue));
+        dialog.setTitle(title);
+        dialog.setHeaderText(null);
+        dialog.setContentText(prompt);
+        return dialog.showAndWait()
+                .map(String::trim)
+                .filter(input -> !input.isEmpty())
+                .flatMap(input -> {
+                    try {
+                        return Optional.of(Integer.parseInt(input));
+                    } catch (NumberFormatException ex) {
+                        return Optional.empty();
+                    }
+                });
+    }
+
+    private Optional<String> promptForString(String title, String prompt, String defaultValue) {
+        TextInputDialog dialog = new TextInputDialog(defaultValue);
+        dialog.setTitle(title);
+        dialog.setHeaderText(null);
+        dialog.setContentText(prompt);
+        return dialog.showAndWait()
+                .map(String::trim)
+                .filter(value -> !value.isEmpty());
+    }
+
+    private Optional<Reward> promptForCommandReward() {
+        Dialog<Reward> dialog = new Dialog<>();
+        dialog.setTitle("Add Command Reward");
+        dialog.setHeaderText(null);
+        dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
+
+        GridPane content = new GridPane();
+        content.setHgap(8);
+        content.setVgap(8);
+        Label commandLabel = new Label("Command");
+        TextField commandField = new TextField();
+        CheckBox runAsServer = new CheckBox("Run as server");
+        content.add(commandLabel, 0, 0);
+        content.add(commandField, 1, 0);
+        content.add(runAsServer, 1, 1);
+        GridPane.setMargin(runAsServer, new Insets(4, 0, 0, 0));
+
+        dialog.getDialogPane().setContent(content);
+        dialog.setResultConverter(button -> {
+            if (button == ButtonType.OK) {
+                String commandText = commandField.getText() == null ? "" : commandField.getText().trim();
+                if (!commandText.isEmpty()) {
+                    try {
+                        return RewardTemplates.command(commandText, runAsServer.isSelected());
+                    } catch (IllegalArgumentException ex) {
+                        return null;
+                    }
+                }
+            }
+            return null;
+        });
+        return dialog.showAndWait().filter(Objects::nonNull);
     }
 
     private void clearQuestDetails() {
@@ -471,11 +605,11 @@ public class ChapterEditorController {
     }
 
     private String formatTaskEntry(Quest quest, Task task) {
-        return "%s: %s".formatted(quest.title(), task.type());
+        return "%s: %s".formatted(quest.title(), task.describe());
     }
 
     private String formatRewardEntry(Quest quest, Reward reward) {
-        return "%s: %s".formatted(quest.title(), reward.type());
+        return "%s: %s".formatted(quest.title(), reward.describe());
     }
 
     private String formatDependencyEntry(Quest quest, Dependency dependency) {

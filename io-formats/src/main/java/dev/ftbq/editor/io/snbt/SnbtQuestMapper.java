@@ -105,7 +105,8 @@ public class SnbtQuestMapper {
         return switch (reward.type()) {
             case ITEM -> "{type:\"item\", item:" + reward.item().map(this::itemRefToSnbt).orElseThrow() + "}";
             case LOOT_TABLE -> "{type:\"loot_table\", table:\"" + escape(reward.lootTableId().orElseThrow()) + "\"}";
-            case EXPERIENCE -> "{type:\"experience\", amount:" + reward.experience().orElseThrow() + "}";
+            case XP_LEVELS -> "{type:\"xp_levels\", amount:" + reward.experienceLevels().orElseThrow() + "}";
+            case XP_AMOUNT -> "{type:\"xp_amount\", amount:" + reward.experienceAmount().orElseThrow() + "}";
             case COMMAND -> {
                 var command = reward.command().orElseThrow();
                 yield "{type:\"command\", command:\"" + escape(command.command()) + "\", run_as_server:" + booleanToByte(command.runAsServer()) + "}";

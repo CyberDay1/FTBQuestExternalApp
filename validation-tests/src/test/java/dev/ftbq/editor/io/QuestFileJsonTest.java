@@ -50,7 +50,7 @@ class QuestFileJsonTest {
                 ),
                 List.of(
                         Reward.item(new ItemRef("minecraft:diamond", 1)),
-                        Reward.experience(25),
+                        Reward.xpAmount(25),
                         Reward.command(new RewardCommand("/say hello", true)),
                         Reward.lootTable("mod:loot/bonus")
                 ),

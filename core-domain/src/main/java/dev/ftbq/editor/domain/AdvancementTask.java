@@ -15,4 +15,9 @@ public record AdvancementTask(String advancementId) implements Task {
     public String type() {
         return "advancement";
     }
+
+    @Override
+    public String describe() {
+        return "Complete advancement " + advancementId;
+    }
 }

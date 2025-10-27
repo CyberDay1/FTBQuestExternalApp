@@ -218,10 +218,10 @@ public final class QuestFileJson {
 
         private static RewardData fromDomain(Reward reward) {
             return new RewardData(
-                    reward.type().name(),
+                    reward.type().id(),
                     reward.item().map(ItemRefData::fromDomain).orElse(null),
                     reward.lootTableId().orElse(null),
-                    reward.experience().orElse(null),
+                    reward.experienceLevels().or(() -> reward.experienceAmount()).orElse(null),
                     reward.command().map(CommandData::fromDomain).orElse(null)
             );
         }
@@ -229,7 +229,7 @@ public final class QuestFileJson {
         private Reward toDomain() {
             RewardType rewardType;
             try {
-                rewardType = RewardType.valueOf(type.toUpperCase(Locale.ROOT));
+                rewardType = RewardType.fromId(type);
             } catch (IllegalArgumentException ex) {
                 throw new IllegalArgumentException("Unsupported reward type: " + type, ex);
             }
@@ -246,7 +246,8 @@ public final class QuestFileJson {
                     }
                     yield Reward.lootTable(lootTable);
                 }
-                case EXPERIENCE -> Reward.experience(experience == null ? 0 : experience);
+                case XP_LEVELS -> Reward.xpLevels(experience == null ? 0 : experience);
+                case XP_AMOUNT -> Reward.xpAmount(experience == null ? 0 : experience);
                 case COMMAND -> {
                     if (command == null) {
                         throw new IllegalArgumentException("Command reward is missing command data");

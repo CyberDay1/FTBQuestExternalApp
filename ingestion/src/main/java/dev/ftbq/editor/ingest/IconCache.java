@@ -57,12 +57,12 @@ public final class IconCache {
     }
 
     private Image loadIcon(ResourceId id) {
-        String hash = iconIndex.get(id);
-        if (hash == null || hash.isBlank()) {
+        String reference = iconIndex.getOrDefault(id, id.toString());
+        if (reference == null || reference.isBlank()) {
             return null;
         }
-        Path iconPath = iconsDirectory.resolve(hash + ".png");
-        if (!Files.exists(iconPath)) {
+        Path iconPath = resolveIconPath(reference);
+        if (iconPath == null || !Files.exists(iconPath)) {
             return null;
         }
         try (InputStream input = Files.newInputStream(iconPath)) {
@@ -71,6 +71,19 @@ public final class IconCache {
         } catch (IOException e) {
             throw new UncheckedIOException("Failed to load icon for " + id, e);
         }
+    }
+
+    private Path resolveIconPath(String reference) {
+        if (reference.indexOf(':') >= 0) {
+            try {
+                ResourceId iconId = ResourceId.fromString(reference);
+                Path namespaceDirectory = iconsDirectory.resolve(iconId.namespace());
+                return namespaceDirectory.resolve(iconId.path() + ".png");
+            } catch (IllegalArgumentException ignored) {
+                // Fall through to legacy resolution for malformed identifiers.
+            }
+        }
+        return iconsDirectory.resolve(reference + ".png");
     }
 }
 

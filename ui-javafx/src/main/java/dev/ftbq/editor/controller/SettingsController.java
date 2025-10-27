@@ -1,5 +1,6 @@
 package dev.ftbq.editor.controller;
 
+import dev.ftbq.editor.ThemeService;
 import dev.ftbq.editor.assets.CacheManager;
 import dev.ftbq.editor.domain.version.MinecraftVersion;
 import dev.ftbq.editor.domain.version.VersionCatalog;
@@ -19,6 +20,7 @@ import java.util.Optional;
 import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.scene.control.Button;
+import javafx.scene.control.CheckBox;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.stage.FileChooser;
@@ -37,11 +39,15 @@ public class SettingsController {
     private Button clearIconCacheButton;
     @FXML
     private Label statusLabel;
+    @FXML
+    private CheckBox darkModeCheckBox;
 
     private VersionCatalog versionCatalog;
     private final CacheManager cacheManager;
     private final CatalogImportService catalogImportService;
     private final StructuredLogger logger;
+    private final ThemeService themeService;
+    private boolean updatingThemeSelection;
 
     public SettingsController() {
         this(
@@ -50,17 +56,20 @@ public class SettingsController {
                 new CatalogImportService(
                         UiServiceLocator.getStoreDao(),
                         ServiceLocator.loggerFactory()),
-                ServiceLocator.loggerFactory().create(SettingsController.class));
+                ServiceLocator.loggerFactory().create(SettingsController.class),
+                ThemeService.getInstance());
     }
 
     SettingsController(VersionCatalog versionCatalog,
                        CacheManager cacheManager,
                        CatalogImportService catalogImportService,
-                       StructuredLogger logger) {
+                       StructuredLogger logger,
+                       ThemeService themeService) {
         this.versionCatalog = Objects.requireNonNull(versionCatalog, "versionCatalog");
         this.cacheManager = Objects.requireNonNull(cacheManager, "cacheManager");
         this.catalogImportService = Objects.requireNonNull(catalogImportService, "catalogImportService");
         this.logger = Objects.requireNonNull(logger, "logger");
+        this.themeService = Objects.requireNonNull(themeService, "themeService");
     }
 
     @FXML
@@ -79,6 +88,30 @@ public class SettingsController {
         }
         if (addJarButton != null && addJarButton.getAccessibleText() == null) {
             addJarButton.setAccessibleText("Import Minecraft JAR");
+        }
+
+        if (darkModeCheckBox != null) {
+            darkModeCheckBox.setAccessibleText("Toggle dark mode");
+            updatingThemeSelection = true;
+            darkModeCheckBox.setSelected(themeService.getTheme() == ThemeService.Theme.DARK);
+            updatingThemeSelection = false;
+            darkModeCheckBox.selectedProperty().addListener((obs, wasSelected, isSelected) -> {
+                if (updatingThemeSelection) {
+                    return;
+                }
+                themeService.setTheme(isSelected ? ThemeService.Theme.DARK : ThemeService.Theme.LIGHT);
+            });
+            themeService.themeProperty().addListener((obs, oldTheme, newTheme) -> {
+                if (darkModeCheckBox == null) {
+                    return;
+                }
+                boolean dark = newTheme == ThemeService.Theme.DARK;
+                if (darkModeCheckBox.isSelected() != dark) {
+                    updatingThemeSelection = true;
+                    darkModeCheckBox.setSelected(dark);
+                    updatingThemeSelection = false;
+                }
+            });
         }
 
         MinecraftVersion activeVersion = safeGetActiveVersion();

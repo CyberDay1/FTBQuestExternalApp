@@ -1,120 +1,69 @@
 package dev.ftbq.editor.domain;
 
-import java.util.Objects;
 import java.util.Optional;
 
 /**
- * Represents a quest reward. Each reward type exposes a relevant payload such as an item,
- * loot table identifier, experience amount, or command configuration.
+ * Represents a quest reward.
  */
-public final class Reward {
+public sealed interface Reward permits ItemReward, LootTableReward, XpLevelReward, XpReward, CommandReward {
 
-    private final RewardType type;
-    private final ItemRef item;
-    private final String lootTableId;
-    private final Integer experience;
-    private final RewardCommand command;
+    RewardType type();
 
-    private Reward(RewardType type, ItemRef item, String lootTableId, Integer experience, RewardCommand command) {
-        this.type = Objects.requireNonNull(type, "type");
-        this.item = item;
-        this.lootTableId = lootTableId;
-        this.experience = experience;
-        this.command = command;
-        validateState();
+    default Optional<ItemRef> item() {
+        return Optional.empty();
     }
 
-    public static Reward item(ItemRef item) {
-        return new Reward(RewardType.ITEM, Objects.requireNonNull(item, "item"), null, null, null);
+    default Optional<String> lootTableId() {
+        return Optional.empty();
     }
 
-    public static Reward lootTable(String lootTableId) {
-        if (lootTableId == null || lootTableId.isBlank()) {
-            throw new IllegalArgumentException("Loot table reward requires a loot table id");
-        }
-        return new Reward(RewardType.LOOT_TABLE, null, lootTableId.trim(), null, null);
+    default Optional<Integer> experienceLevels() {
+        return Optional.empty();
     }
 
-    public static Reward experience(int amount) {
-        if (amount < 0) {
-            throw new IllegalArgumentException("Experience reward cannot be negative");
-        }
-        return new Reward(RewardType.EXPERIENCE, null, null, amount, null);
+    default Optional<Integer> experienceAmount() {
+        return Optional.empty();
     }
 
-    public static Reward command(RewardCommand command) {
-        return new Reward(RewardType.COMMAND, null, null, null, Objects.requireNonNull(command, "command"));
+    default Optional<RewardCommand> command() {
+        return Optional.empty();
     }
 
-    private void validateState() {
-        switch (type) {
-            case ITEM -> {
-                if (item == null) {
-                    throw new IllegalStateException("Item reward must include an item reference");
-                }
-            }
-            case LOOT_TABLE -> {
-                if (lootTableId == null) {
-                    throw new IllegalStateException("Loot table reward must include a loot table id");
-                }
-            }
-            case EXPERIENCE -> {
-                if (experience == null) {
-                    throw new IllegalStateException("Experience reward must include an amount");
-                }
-            }
-            case COMMAND -> {
-                if (command == null) {
-                    throw new IllegalStateException("Command reward must include a command configuration");
-                }
-            }
-        }
+    default String describe() {
+        return switch (type()) {
+            case ITEM -> item().map(item -> item.count() + " × " + item.itemId()).orElse("Item reward");
+            case LOOT_TABLE -> lootTableId().orElse("Loot table reward");
+            case XP_LEVELS -> experienceLevels().map(levels -> levels + " levels").orElse("XP levels");
+            case XP_AMOUNT -> experienceAmount().map(amount -> amount + " xp").orElse("XP amount");
+            case COMMAND -> command().map(RewardCommand::command).orElse("Command reward");
+        };
     }
 
-    public RewardType type() {
-        return type;
+    static Reward item(ItemRef item) {
+        return new ItemReward(item);
     }
 
-    public Optional<ItemRef> item() {
-        return Optional.ofNullable(item);
+    static Reward lootTable(String lootTableId) {
+        return new LootTableReward(lootTableId);
     }
 
-    public Optional<String> lootTableId() {
-        return Optional.ofNullable(lootTableId);
+    static Reward xpLevels(int levels) {
+        return new XpLevelReward(levels);
     }
 
-    public Optional<Integer> experience() {
-        return Optional.ofNullable(experience);
+    static Reward xpAmount(int amount) {
+        return new XpReward(amount);
     }
 
-    public Optional<RewardCommand> command() {
-        return Optional.ofNullable(command);
+    static Reward command(RewardCommand command) {
+        return new CommandReward(command);
     }
 
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (!(o instanceof Reward reward)) return false;
-        return type == reward.type &&
-                Objects.equals(item, reward.item) &&
-                Objects.equals(lootTableId, reward.lootTableId) &&
-                Objects.equals(experience, reward.experience) &&
-                Objects.equals(command, reward.command);
+    static Reward command(String command, boolean runAsServer) {
+        return new CommandReward(new RewardCommand(command, runAsServer));
     }
 
-    @Override
-    public int hashCode() {
-        return Objects.hash(type, item, lootTableId, experience, command);
-    }
-
-    @Override
-    public String toString() {
-        return "Reward{" +
-                "type=" + type +
-                ", item=" + item +
-                ", lootTableId='" + lootTableId + '\'' +
-                ", experience=" + experience +
-                ", command=" + command +
-                '}';
+    static Reward item(String itemId, int count) {
+        return new ItemReward(new ItemRef(itemId, count));
     }
 }
