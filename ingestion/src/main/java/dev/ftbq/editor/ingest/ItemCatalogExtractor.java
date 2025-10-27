@@ -52,12 +52,17 @@ public final class ItemCatalogExtractor {
      * @throws IOException if the archive cannot be read
      */
     public static ItemCatalog extract(Path jar, String source, String version, boolean isVanilla) throws IOException {
+        return extract(jar, source, version, isVanilla, null);
+    }
+
+    public static ItemCatalog extract(Path jar, String source, String version, boolean isVanilla,
+            ItemCatalog existingCatalog) throws IOException {
         Objects.requireNonNull(jar, "jar");
         Objects.requireNonNull(source, "source");
         Objects.requireNonNull(version, "version");
 
-        Map<String, ItemMeta> items = new LinkedHashMap<>();
-        Map<String, Set<String>> tags = new TreeMap<>();
+        Map<String, ItemMeta> items = initialiseItems(existingCatalog);
+        Map<String, Set<String>> tags = initialiseTags(existingCatalog);
         Map<String, ModMetadata> modMetadata = new LinkedHashMap<>();
         Map<ResourceId, String> modelTextures = new LinkedHashMap<>();
 
@@ -81,7 +86,7 @@ public final class ItemCatalogExtractor {
                         Map<String, String> translations = MAPPER.readValue(input, STRING_MAP);
                         translations.forEach((key, value) ->
                                 parseLangEntry(namespace, key, value, isVanilla, modMetadata)
-                                        .ifPresent(meta -> items.putIfAbsent(meta.id(), meta)));
+                                        .ifPresent(meta -> items.put(meta.id(), meta)));
                     }
                 } else if (name.startsWith("data/") && name.contains("/tags/items/") && name.endsWith(".json")) {
                     String namespace = extractNamespace(name, "data/");
@@ -165,6 +170,35 @@ public final class ItemCatalogExtractor {
             Map<String, List<String>> finalizedTags = finalizeTags(tags);
             return new ItemCatalog(source, version, isVanilla, Collections.unmodifiableList(enrichedItems), finalizedTags);
         }
+    }
+
+    private static Map<String, ItemMeta> initialiseItems(ItemCatalog existingCatalog) {
+        Map<String, ItemMeta> items = new LinkedHashMap<>();
+        if (existingCatalog == null) {
+            return items;
+        }
+        for (ItemMeta meta : existingCatalog.items()) {
+            if (meta == null || meta.id() == null) {
+                continue;
+            }
+            items.put(meta.id(), meta);
+        }
+        return items;
+    }
+
+    private static Map<String, Set<String>> initialiseTags(ItemCatalog existingCatalog) {
+        Map<String, Set<String>> tags = new TreeMap<>();
+        if (existingCatalog == null) {
+            return tags;
+        }
+        existingCatalog.tags().forEach((tagId, values) -> {
+            if (tagId == null || values == null) {
+                return;
+            }
+            Set<String> merged = tags.computeIfAbsent(tagId, ignored -> new LinkedHashSet<>());
+            merged.addAll(values);
+        });
+        return tags;
     }
 
     private static String extractNamespace(String path, String prefix) {

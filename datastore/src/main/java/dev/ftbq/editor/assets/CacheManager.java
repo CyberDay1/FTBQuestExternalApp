@@ -1,13 +1,16 @@
 package dev.ftbq.editor.assets;
 
+import dev.ftbq.editor.resources.ResourceId;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.attribute.FileTime;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
@@ -23,6 +26,8 @@ public final class CacheManager {
 
     private static final String ICON_EXTENSION = ".icon";
     private static final String BACKGROUND_EXTENSION = ".background";
+    private static final byte[] DEFAULT_ICON_BYTES = Base64.getDecoder().decode(
+            "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4nGNgYAAAAAMAASsJTYQAAAAASUVORK5CYII=");
 
     private static final int DEFAULT_MAX_ICON_ENTRIES = 512;
     private static final int DEFAULT_MAX_BACKGROUND_ENTRIES = 128;
@@ -30,6 +35,7 @@ public final class CacheManager {
     private final Path rootDirectory;
     private final Path iconDirectory;
     private final Path backgroundDirectory;
+    private final Path legacyIconDirectory;
     private final int maxIconEntries;
     private final int maxBackgroundEntries;
     private final AtomicLong logicalClock = new AtomicLong();
@@ -54,6 +60,7 @@ public final class CacheManager {
         this.maxBackgroundEntries = maxBackgroundEntries;
         this.iconDirectory = rootDirectory.resolve("icons");
         this.backgroundDirectory = rootDirectory.resolve("backgrounds");
+        this.legacyIconDirectory = rootDirectory.resolveSibling("cache").resolve("icons");
         initialiseDirectories();
         seedLogicalClock();
     }
@@ -73,23 +80,33 @@ public final class CacheManager {
 
     public Optional<byte[]> fetchIcon(String hash) {
         Objects.requireNonNull(hash, "hash");
+        if (!isLikelyHash(hash)) {
+            return fetchNamespacedIcon(hash);
+        }
         Path iconPath = iconDirectory.resolve(hash + ICON_EXTENSION);
         synchronized (iconLock) {
             if (missingIconHashes.contains(hash)) {
                 return Optional.empty();
             }
-            if (!Files.exists(iconPath)) {
-                missingIconHashes.add(hash);
-                return Optional.empty();
+            Path resolvedPath = iconPath;
+            Optional<byte[]> data = readIconBytes(iconPath);
+            if (data.isEmpty()) {
+                resolvedPath = iconDirectory.resolve(hash + ".png");
+                data = readIconBytes(resolvedPath);
             }
-            try {
-                byte[] data = Files.readAllBytes(iconPath);
+            if (data.isEmpty()) {
+                resolvedPath = legacyIconDirectory.resolve(hash + ".png");
+                data = readIconBytes(resolvedPath);
+            }
+            if (data.isPresent()) {
                 missingIconHashes.remove(hash);
-                touch(iconPath);
-                return Optional.of(data);
-            } catch (IOException ex) {
-                throw new CacheOperationException("Failed to read cached icon", ex);
+                if (resolvedPath.startsWith(iconDirectory)) {
+                    touch(resolvedPath);
+                }
+                return data;
             }
+            missingIconHashes.add(hash);
+            return Optional.empty();
         }
     }
 
@@ -272,6 +289,93 @@ public final class CacheManager {
             builder.append(String.format(Locale.ROOT, "%02x", b));
         }
         return builder.toString();
+    }
+
+    private Optional<byte[]> readIconBytes(Path path) {
+        if (path == null || !Files.exists(path) || !Files.isRegularFile(path)) {
+            return Optional.empty();
+        }
+        try {
+            return Optional.of(Files.readAllBytes(path));
+        } catch (IOException ex) {
+            throw new CacheOperationException("Failed to read cached icon", ex);
+        }
+    }
+
+    private Optional<byte[]> fetchNamespacedIcon(String identifier) {
+        Optional<byte[]> localFile = tryReadLocalFile(identifier);
+        if (localFile.isPresent()) {
+            return localFile;
+        }
+        try {
+            ResourceId resourceId = ResourceId.fromString(identifier);
+            Optional<byte[]> resourceBytes = loadIconFromResource(resourceId);
+            if (resourceBytes.isPresent()) {
+                return resourceBytes;
+            }
+        } catch (IllegalArgumentException ignored) {
+            // Not a valid resource identifier, fall through to default icon.
+        }
+        return Optional.of(DEFAULT_ICON_BYTES.clone());
+    }
+
+    private Optional<byte[]> tryReadLocalFile(String identifier) {
+        try {
+            Path candidate = Path.of(identifier);
+            if (Files.exists(candidate) && Files.isRegularFile(candidate)) {
+                return Optional.of(Files.readAllBytes(candidate));
+            }
+        } catch (InvalidPathException | IOException ignored) {
+            // Not a readable local file reference.
+        }
+        return Optional.empty();
+    }
+
+    private Optional<byte[]> loadIconFromResource(ResourceId resourceId) {
+        String path = resourceId.path();
+        if (path.contains("..")) {
+            return Optional.empty();
+        }
+        if ("minecraft".equals(resourceId.namespace()) && !path.contains("/")) {
+            path = "item/" + path;
+        }
+        String relative = "assets/" + resourceId.namespace() + "/textures/" + path + ".png";
+        List<Path> candidates = new ArrayList<>();
+        candidates.add(rootDirectory.resolve(relative));
+        Path parent = rootDirectory.getParent();
+        if (parent != null) {
+            candidates.add(parent.resolve(relative));
+        }
+        candidates.add(Path.of(relative));
+        if (!relative.startsWith("/")) {
+            candidates.add(Path.of("/" + relative));
+        }
+        for (Path candidate : candidates) {
+            if (Files.exists(candidate) && Files.isRegularFile(candidate)) {
+                try {
+                    return Optional.of(Files.readAllBytes(candidate));
+                } catch (IOException ex) {
+                    throw new CacheOperationException("Failed to read icon resource", ex);
+                }
+            }
+        }
+        return Optional.empty();
+    }
+
+    private static boolean isLikelyHash(String value) {
+        if (value == null || value.length() != 64) {
+            return false;
+        }
+        for (int i = 0; i < value.length(); i++) {
+            char ch = value.charAt(i);
+            boolean hex = (ch >= '0' && ch <= '9')
+                    || (ch >= 'a' && ch <= 'f')
+                    || (ch >= 'A' && ch <= 'F');
+            if (!hex) {
+                return false;
+            }
+        }
+        return true;
     }
 
     public static final class CacheOperationException extends RuntimeException {

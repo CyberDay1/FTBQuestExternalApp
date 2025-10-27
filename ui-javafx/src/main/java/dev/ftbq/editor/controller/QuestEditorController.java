@@ -2,6 +2,8 @@ package dev.ftbq.editor.controller;
 
 import dev.ftbq.editor.ThemeService;
 import dev.ftbq.editor.assets.CacheManager;
+import dev.ftbq.editor.commands.CommandTemplateRegistry;
+import dev.ftbq.editor.domain.CommandReward;
 import dev.ftbq.editor.domain.Dependency;
 import dev.ftbq.editor.domain.IconRef;
 import dev.ftbq.editor.domain.ItemRef;
@@ -20,16 +22,18 @@ import dev.ftbq.editor.services.logging.StructuredLogger;
 import dev.ftbq.editor.viewmodel.QuestEditorViewModel;
 import dev.ftbq.editor.controller.ItemBrowserController;
 import javafx.application.Platform;
+import javafx.collections.FXCollections;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
-import javafx.scene.control.Alert;
 import javafx.scene.Node;
+import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.ButtonBar;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.CheckBox;
+import javafx.scene.control.ComboBox;
 import javafx.scene.control.Dialog;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
@@ -38,6 +42,7 @@ import javafx.scene.control.SpinnerValueFactory;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 import javafx.scene.control.Tooltip;
+import javafx.scene.control.Label;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.KeyCode;
@@ -514,33 +519,93 @@ public class QuestEditorController {
     private void onAddReward() {
         Dialog<Reward> dialog = new Dialog<>();
         dialog.setTitle("Add reward");
-        dialog.setHeaderText("Create an item reward");
+        dialog.setHeaderText("Configure quest reward");
         ButtonType addButtonType = new ButtonType("Add", ButtonBar.ButtonData.OK_DONE);
         dialog.getDialogPane().getButtonTypes().addAll(addButtonType, ButtonType.CANCEL);
+
+        ComboBox<String> rewardTypeCombo = new ComboBox<>(FXCollections.observableArrayList("Item", "Command"));
+        rewardTypeCombo.setValue("Item");
 
         TextField itemIdField = new TextField();
         itemIdField.setPromptText("namespace:item");
         Spinner<Integer> countSpinner = new Spinner<>();
         countSpinner.setValueFactory(new SpinnerValueFactory.IntegerSpinnerValueFactory(1, Integer.MAX_VALUE, 1));
 
+        TextField commandField = new TextField();
+        commandField.setPromptText("/say Quest complete!");
+        ComboBox<String> templateCombo = new ComboBox<>(FXCollections.observableArrayList(CommandTemplateRegistry.vanillaTemplateNames()));
+        templateCombo.setPromptText("Select template");
+        CheckBox asPlayerCheckBox = new CheckBox("Run as player");
+
+        GridPane itemPane = new GridPane();
+        itemPane.setHgap(10);
+        itemPane.setVgap(10);
+        itemPane.add(new Label("Item ID:"), 0, 0);
+        itemPane.add(itemIdField, 1, 0);
+        itemPane.add(new Label("Count:"), 0, 1);
+        itemPane.add(countSpinner, 1, 1);
+
+        GridPane commandPane = new GridPane();
+        commandPane.setHgap(10);
+        commandPane.setVgap(10);
+        commandPane.add(new Label("Template:"), 0, 0);
+        commandPane.add(templateCombo, 1, 0);
+        commandPane.add(new Label("Command:"), 0, 1);
+        commandPane.add(commandField, 1, 1);
+        commandPane.add(asPlayerCheckBox, 1, 2);
+        commandPane.setVisible(false);
+        commandPane.setManaged(false);
+
         GridPane grid = new GridPane();
         grid.setHgap(10);
         grid.setVgap(10);
-        grid.add(new javafx.scene.control.Label("Item ID:"), 0, 0);
-        grid.add(itemIdField, 1, 0);
-        grid.add(new javafx.scene.control.Label("Count:"), 0, 1);
-        grid.add(countSpinner, 1, 1);
+        grid.add(new Label("Reward Type:"), 0, 0);
+        grid.add(rewardTypeCombo, 1, 0);
+        grid.add(itemPane, 0, 1, 2, 1);
+        grid.add(commandPane, 0, 1, 2, 1);
 
         dialog.getDialogPane().setContent(grid);
 
         Node addButton = dialog.getDialogPane().lookupButton(addButtonType);
         addButton.setDisable(true);
-        itemIdField.textProperty().addListener((obs, oldValue, newValue) -> addButton.setDisable(newValue == null || newValue.isBlank()));
+
+        Runnable updateAddButton = () -> {
+            boolean commandSelected = "Command".equals(rewardTypeCombo.getValue());
+            boolean disable = commandSelected
+                    ? commandField.getText() == null || commandField.getText().trim().isEmpty()
+                    : itemIdField.getText() == null || itemIdField.getText().trim().isEmpty();
+            addButton.setDisable(disable);
+        };
+
+        Runnable updateVisibleSection = () -> {
+            boolean commandSelected = "Command".equals(rewardTypeCombo.getValue());
+            itemPane.setVisible(!commandSelected);
+            itemPane.setManaged(!commandSelected);
+            commandPane.setVisible(commandSelected);
+            commandPane.setManaged(commandSelected);
+            dialog.setHeaderText(commandSelected ? "Create a command reward" : "Create an item reward");
+            updateAddButton.run();
+        };
+
+        itemIdField.textProperty().addListener((obs, oldValue, newValue) -> updateAddButton.run());
+        commandField.textProperty().addListener((obs, oldValue, newValue) -> updateAddButton.run());
+        rewardTypeCombo.valueProperty().addListener((obs, oldValue, newValue) -> updateVisibleSection.run());
+        templateCombo.valueProperty().addListener((obs, oldValue, newValue) -> {
+            String command = CommandTemplateRegistry.findVanillaCommand(newValue);
+            if (command != null) {
+                commandField.setText(command);
+            }
+        });
+
+        updateVisibleSection.run();
 
         configureDialogOwner(dialog);
         dialog.setResultConverter(button -> {
             if (button != addButtonType) {
                 return null;
+            }
+            if ("Command".equals(rewardTypeCombo.getValue())) {
+                return new CommandReward(commandField.getText().trim(), asPlayerCheckBox.isSelected());
             }
             ItemRef ref = new ItemRef(itemIdField.getText().trim(), countSpinner.getValue());
             return new ItemReward(ref);
