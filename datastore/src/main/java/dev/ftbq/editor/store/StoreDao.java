@@ -370,6 +370,10 @@ public final class StoreDao {
         }
     }
 
+    public void updateQuestPosition(String questId, double x, double y) {
+        saveQuestPosition(questId, x, y);
+    }
+
     public Optional<QuestPosition> findQuestPosition(String questId) {
         Objects.requireNonNull(questId, "questId");
         try (PreparedStatement statement = connection.prepareStatement(SELECT_QUEST_POSITION_SQL)) {
