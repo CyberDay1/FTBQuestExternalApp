@@ -1,25 +1,14 @@
-﻿:root {
-    /* Light Theme */
-    -bg: #f4f6fb;
+﻿/* Shared palette tokens */
+:root {
+    /* Light defaults */
+    -bg: #f7f7f7;
     -bg-elev: #ffffff;
-    -fg: #21252b;
-    -fg-muted: #5c6370;
-    -accent: #3564c2;
-    -grid: #d4d9e2;
-    -node: #ffffff;
-    -node-stroke: #b0b0b0;
-    -edge-required: #3564c2;
-    -edge-optional: #7f9dd6;
-
-    /* Dark Theme */
-    -bg-dark: #1e1e2e;
-    -bg-elev-dark: #2b2b3b;
-    -fg-dark: #e6e6e6;
-    -fg-muted-dark: #9aa0b3;
-    -accent-dark: #6ea8fe;
-    -grid-dark: #444857;
-    -node-dark: #2b2b3b;
-    -node-stroke-dark: #6c6c6c;
-    -edge-required-dark: #6ea8fe;
-    -edge-optional-dark: #98b7ff;
+    -fg: #1a1a1a;
+    -fg-muted: #5a5a5a;
+    -accent: #1967d2;
+    -grid: #dddddd;
+    -edge-required: #cc8b00;
+    -edge-optional: #6a3dad;
+    -node: #e0f2ff;
+    -node-stroke: #1967d2;
 }

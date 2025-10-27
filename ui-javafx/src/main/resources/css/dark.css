@@ -1,33 +1,47 @@
 ﻿@import "tokens.css";
 
-/* Scene base */
+/* Override root palette for dark mode */
 .root {
-    -fx-background-color: derive(-bg, 0%); /* ensures conversion to Paint */
+    -bg: #121212;
+    -bg-elev: #1e1e1e;
+    -fg: #e0e0e0;
+    -fg-muted: #aaaaaa;
+    -accent: #8ab4f8;
+    -grid: #333333;
+    -edge-required: #f4b400;
+    -edge-optional: #a142f4;
+    -node: #263238;
+    -node-stroke: #8ab4f8;
 }
 
+/* Apply variables using lookup() for valid Paint objects */
+.root {
+    -fx-background-color: lookup("-bg");
+}
 
-/* Common controls */
-.label { -fx-text-fill: -fg; }
-.text { -fx-fill: -fg; }
-.button { -fx-background-color: -bg-elev; -fx-text-fill: -fg; }
+.label { -fx-text-fill: lookup("-fg"); }
+.text { -fx-fill: lookup("-fg"); }
+.button {
+    -fx-background-color: lookup("-bg-elev");
+    -fx-text-fill: lookup("-fg");
+}
 .text-field, .combo-box, .choice-box, .list-view, .tree-view, .table-view {
-    -fx-background-color: -bg-elev;
-    -fx-text-fill: -fg;
-    -fx-prompt-text-fill: -fg-muted;
+    -fx-background-color: lookup("-bg-elev");
+    -fx-text-fill: lookup("-fg");
+    -fx-prompt-text-fill: lookup("-fg-muted");
 }
 
-/* Graph-specific (read by code or style classes) */
+/* Graph elements */
 .graph-canvas {
-    -graph-grid-color: ladder(-grid, derive(-grid, 0%) 100%);
-    -graph-edge-required-color: ladder(-edge-required, derive(-edge-required, 0%) 100%);
-    -graph-edge-optional-color: ladder(-edge-optional, derive(-edge-optional, 0%) 100%);
+    -graph-grid-color: lookup("-grid");
+    -graph-edge-required-color: lookup("-edge-required");
+    -graph-edge-optional-color: lookup("-edge-optional");
 }
-
 .quest-node {
-    -quest-node-fill: -node;
-    -quest-node-stroke: -node-stroke;
+    -quest-node-fill: lookup("-node");
+    -quest-node-stroke: lookup("-node-stroke");
 }
 .quest-node-label {
-    -fx-fill: -fg;
-    -fx-text-fill: -fg;
+    -fx-fill: lookup("-fg");
+    -fx-text-fill: lookup("-fg");
 }
