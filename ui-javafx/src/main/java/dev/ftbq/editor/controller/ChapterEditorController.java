@@ -5,6 +5,8 @@ import dev.ftbq.editor.domain.Dependency;
 import dev.ftbq.editor.domain.Quest;
 import dev.ftbq.editor.domain.Reward;
 import dev.ftbq.editor.domain.Task;
+import dev.ftbq.editor.services.UiServiceLocator;
+import dev.ftbq.editor.store.StoreDao;
 import dev.ftbq.editor.view.graph.GraphCanvas;
 import dev.ftbq.editor.viewmodel.ChapterEditorViewModel;
 import javafx.collections.FXCollections;
@@ -18,9 +20,13 @@ import javafx.scene.layout.StackPane;
 import javafx.scene.input.KeyCode;
 import javafx.util.StringConverter;
 
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * Controller responsible for presenting a quest chapter graph.
@@ -73,6 +79,8 @@ public class ChapterEditorController {
     private int dependencyCounter = 1;
     private ChapterEditorViewModel viewModel;
     private boolean programmaticChapterSelection;
+    private Chapter currentChapter;
+    private String pendingSelectionQuestId;
 
     @FXML
     public void initialize() {
@@ -109,6 +117,7 @@ public class ChapterEditorController {
 
     private void applyChapter(Chapter chapter) {
         if (chapter == null) {
+            currentChapter = null;
             graphCanvas.setChapter(null);
             if (chapterTitleLabel != null) {
                 chapterTitleLabel.setText(EMPTY_TITLE);
@@ -117,6 +126,7 @@ public class ChapterEditorController {
             clearQuestDetails();
             return;
         }
+        currentChapter = chapter;
         if (chapterTitleLabel != null) {
             chapterTitleLabel.setText(chapter.title());
         }
@@ -124,6 +134,10 @@ public class ChapterEditorController {
         graphCanvas.setChapter(chapter);
         graphCanvas.rebuildGraph();
         populateQuestDetails(chapter);
+        if (pendingSelectionQuestId != null) {
+            graphCanvas.selectQuest(pendingSelectionQuestId);
+            pendingSelectionQuestId = null;
+        }
     }
 
     private void configureChapterSelector() {
@@ -257,5 +271,136 @@ public class ChapterEditorController {
                 setText(chapter.title());
             }
         }
+    private void onAddQuest() {
+        if (currentChapter == null) {
+            return;
+        }
+
+        Quest newQuest = Quest.builder()
+                .id(generateQuestId(currentChapter))
+                .title(generateQuestTitle(currentChapter))
+                .build();
+
+        List<Quest> updatedQuests = new ArrayList<>(currentChapter.quests());
+        updatedQuests.add(newQuest);
+
+        Chapter updatedChapter = rebuildChapter(currentChapter, updatedQuests);
+        pendingSelectionQuestId = newQuest.id();
+        applyUpdatedChapter(updatedChapter);
+
+        StoreDao dao = UiServiceLocator.storeDao;
+        if (dao != null) {
+            dao.saveQuest(newQuest);
+        }
+    }
+
+    @FXML
+    private void onRemoveQuest() {
+        if (currentChapter == null) {
+            return;
+        }
+        Quest selectedQuest = graphCanvas.getSelectedQuest();
+        if (selectedQuest == null) {
+            return;
+        }
+
+        List<Quest> updatedQuests = new ArrayList<>();
+        List<Quest> questsToPersist = new ArrayList<>();
+        for (Quest quest : currentChapter.quests()) {
+            if (quest.id().equals(selectedQuest.id())) {
+                continue;
+            }
+            Quest cleaned = removeDependencyReferences(quest, selectedQuest.id());
+            updatedQuests.add(cleaned);
+            if (cleaned != quest) {
+                questsToPersist.add(cleaned);
+            }
+        }
+
+        Chapter updatedChapter = rebuildChapter(currentChapter, updatedQuests);
+        graphCanvas.clearSelection();
+        applyUpdatedChapter(updatedChapter);
+
+        StoreDao dao = UiServiceLocator.storeDao;
+        if (dao != null) {
+            dao.deleteQuest(selectedQuest.id());
+            questsToPersist.forEach(dao::saveQuest);
+        }
+    }
+
+    private Chapter rebuildChapter(Chapter original, List<Quest> quests) {
+        return Chapter.builder()
+                .id(original.id())
+                .title(original.title())
+                .icon(original.icon())
+                .background(original.background())
+                .visibility(original.visibility())
+                .quests(quests)
+                .build();
+    }
+
+    private void applyUpdatedChapter(Chapter updatedChapter) {
+        if (viewModel != null) {
+            viewModel.setChapter(updatedChapter);
+        } else {
+            applyChapter(updatedChapter);
+        }
+    }
+
+    private String generateQuestId(Chapter chapter) {
+        Set<String> existingIds = chapter.quests().stream()
+                .map(Quest::id)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toCollection(HashSet::new));
+        String baseId = "new_quest";
+        if (!existingIds.contains(baseId)) {
+            return baseId;
+        }
+        int counter = 2;
+        while (true) {
+            String candidate = "%s_%d".formatted(baseId, counter);
+            if (!existingIds.contains(candidate)) {
+                return candidate;
+            }
+            counter++;
+        }
+    }
+
+    private String generateQuestTitle(Chapter chapter) {
+        Set<String> existingTitles = chapter.quests().stream()
+                .map(Quest::title)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toCollection(HashSet::new));
+        String baseTitle = "New Quest";
+        if (!existingTitles.contains(baseTitle)) {
+            return baseTitle;
+        }
+        int counter = 2;
+        while (true) {
+            String candidate = "%s %d".formatted(baseTitle, counter);
+            if (!existingTitles.contains(candidate)) {
+                return candidate;
+            }
+            counter++;
+        }
+    }
+
+    private Quest removeDependencyReferences(Quest quest, String questId) {
+        List<Dependency> filteredDependencies = quest.dependencies().stream()
+                .filter(dependency -> !Objects.equals(dependency.questId(), questId))
+                .toList();
+        if (filteredDependencies.size() == quest.dependencies().size()) {
+            return quest;
+        }
+        return Quest.builder()
+                .id(quest.id())
+                .title(quest.title())
+                .description(quest.description())
+                .icon(quest.icon())
+                .visibility(quest.visibility())
+                .tasks(quest.tasks())
+                .rewards(quest.rewards())
+                .dependencies(filteredDependencies)
+                .build();
     }
 }

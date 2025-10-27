@@ -15,6 +15,7 @@ import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import javafx.css.PseudoClass;
 import javafx.fxml.FXMLLoader;
 import javafx.geometry.Point2D;
 import javafx.scene.Group;
@@ -92,6 +93,8 @@ public class GraphCanvas extends Pane {
     private QuestEditorController questEditorController;
     private QuestGraphModel model;
     private final StructuredLogger logger = ServiceLocator.loggerFactory().create(GraphCanvas.class);
+    private final ObjectProperty<QuestGraphModel.Node> selectedNode = new SimpleObjectProperty<>();
+    private QuestNodeView selectedNodeView;
 
     private double currentScale = 1.0;
     private boolean panning;
@@ -142,6 +145,47 @@ public class GraphCanvas extends Pane {
 
     public Chapter getChapter() {
         return chapter.get();
+    }
+
+    public Quest getSelectedQuest() {
+        QuestGraphModel.Node node = selectedNode.get();
+        return node == null ? null : node.getQuest();
+    }
+
+    public void selectQuest(String questId) {
+        if (questId == null) {
+            clearSelection();
+            return;
+        }
+        QuestNodeView view = nodeViews.get(questId);
+        if (view != null) {
+            setSelectedNode(view);
+        }
+    }
+
+    public void clearSelection() {
+        if (selectedNodeView != null) {
+            selectedNodeView.setSelected(false);
+            selectedNodeView = null;
+        }
+        selectedNode.set(null);
+    }
+
+    private void setSelectedNode(QuestNodeView view) {
+        if (view == null) {
+            clearSelection();
+            return;
+        }
+        if (selectedNodeView == view) {
+            selectedNode.set(view.getModelNode());
+            return;
+        }
+        if (selectedNodeView != null) {
+            selectedNodeView.setSelected(false);
+        }
+        selectedNodeView = view;
+        selectedNode.set(view.getModelNode());
+        view.setSelected(true);
     }
 
     public ObjectProperty<BackgroundRef> backgroundRefProperty() {
@@ -225,6 +269,7 @@ public class GraphCanvas extends Pane {
         // TODO: Verify that CacheManager stores icons for all items ingested. If the cache does not
         // contain an icon for a quest, display the colored circle as a fallback but avoid repeatedly
         // attempting to fetch the missing icon. Consider caching negative lookups or storing this state.
+        clearSelection();
         nodeLayer.getChildren().clear();
         nodeViews.clear();
         edges.clear();
@@ -311,6 +356,7 @@ public class GraphCanvas extends Pane {
             if (event.getButton() != MouseButton.PRIMARY) {
                 return;
             }
+            setSelectedNode(view);
             view.requestFocus();
             view.startDrag(contentGroup.sceneToLocal(event.getSceneX(), event.getSceneY()));
             event.consume();
@@ -343,6 +389,7 @@ public class GraphCanvas extends Pane {
 
         view.setOnMouseClicked(event -> {
             if (event.getButton() == MouseButton.PRIMARY && event.getClickCount() == 2) {
+                setSelectedNode(view);
                 Quest quest = view.getModelNode().getQuest();
                 if (quest == null) {
                     logger.warn("Quest node missing quest model");
@@ -411,6 +458,7 @@ public class GraphCanvas extends Pane {
         if (event.getButton() != MouseButton.PRIMARY) {
             return;
         }
+        clearSelection();
         panning = true;
         panAnchor = new Point2D(event.getX(), event.getY());
         panStartTranslate = new Point2D(translateTransform.getX(), translateTransform.getY());
@@ -721,6 +769,8 @@ public class GraphCanvas extends Pane {
         private ValidationLevel currentLevel = ValidationLevel.OK;
         private Point2D dragAnchor = Point2D.ZERO;
         private Point2D initialLayout = Point2D.ZERO;
+        private boolean selected;
+        private static final PseudoClass SELECTED_PSEUDO_CLASS = PseudoClass.getPseudoClass("selected");
 
         private QuestNodeView(QuestGraphModel.Node modelNode) {
             this.modelNode = modelNode;
@@ -795,6 +845,18 @@ public class GraphCanvas extends Pane {
 
         public Point2D getCenter() {
             return new Point2D(getLayoutX() + NODE_SIZE / 2, getLayoutY() + NODE_SIZE / 2);
+        }
+
+        public void setSelected(boolean selected) {
+            if (this.selected == selected) {
+                return;
+            }
+            this.selected = selected;
+            pseudoClassStateChanged(SELECTED_PSEUDO_CLASS, selected);
+        }
+
+        public boolean isSelected() {
+            return selected;
         }
 
         public void startDrag(Point2D anchor) {
