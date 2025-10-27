@@ -64,6 +64,8 @@
     <bottom>
         <HBox spacing="10" alignment="CENTER_RIGHT">
             <children>
+                <Button fx:id="exportButton" text="Export" onAction="#handleExportQuests"/>
+                <Button fx:id="importButton" text="Import" onAction="#handleImportQuests"/>
                 <Button fx:id="undoButton" text="Undo" onAction="#handleUndoAction"/>
                 <Button fx:id="redoButton" text="Redo" onAction="#handleRedoAction"/>
                 <Button fx:id="linkLootTableButton" text="Link Loot Table" onAction="#onLinkLootTable"/>
