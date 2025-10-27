@@ -64,3 +64,5 @@ public final class WindowSettings {
         storeCoordinate(KEY_Y, stage.getY());
     }
 }
+
+

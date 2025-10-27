@@ -56,9 +56,9 @@ public class MainApp extends Application {
         lootTab.setClosable(false);
         tabPane.getTabs().add(lootTab);
 
-        // Quest editor removed — quests are now edited via Chapter Editor directly
+        // Quest editor removed â€” quests are now edited via Chapter Editor directly
         try {
-            logger.info("Quest editor deprecated — skipping quest_editor.fxml load");
+            logger.info("Quest editor deprecated â€” skipping quest_editor.fxml load");
         } catch (Exception e) {
             logger.warn("Quest editor load skipped", e);
         }
@@ -96,3 +96,7 @@ public class MainApp extends Application {
         super.stop();
     }
 }
+
+
+
+

@@ -82,3 +82,5 @@ public final class QuestFieldChangeCommand implements UndoableCommand {
         return new QuestFieldChangeCommand(questId, field, value, previousValue);
     }
 }
+
+

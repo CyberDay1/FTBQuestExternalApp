@@ -1,12 +1,23 @@
-:root {
+﻿.root {
+    /* base palette */
     -bg: #141414;
     -bg-elev: #1c1c1c;
     -fg: #e6e6e6;
     -fg-muted: #b6b6b6;
     -accent: #6ea8fe;
+
+    /* graph/quest colors */
     -grid: #3a3a3a;
-    -node: #2f4f4f;
-    -node-stroke: #b0b0b0;
     -edge-required: #f6c744;
     -edge-optional: #a78bfa;
+    -node: #2f4f4f;
+    -node-stroke: #b0b0b0;
+
+    /* aliases used by component styles */
+    -graph-grid-color: -grid;
+    -graph-edge-required-color: -edge-required;
+    -graph-edge-optional-color: -edge-optional;
+    -quest-node-fill: -node;
+    -quest-node-stroke: -node-stroke;
+    -quest-node-label: -fg;
 }

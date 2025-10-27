@@ -13,3 +13,5 @@ public final class ServiceLocator {
     public static CommandBus commandBus(){ return COMMAND_BUS; }
     public static EventBus eventBus(){ return EVENT_BUS; }
 }
+
+

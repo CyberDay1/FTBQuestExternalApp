@@ -23,6 +23,7 @@ public class GraphCanvas extends Canvas {
     private static final Color DEFAULT_GRID_COLOR = Color.web("#d4d9e2");
     private static final Color DEFAULT_EDGE_REQUIRED_COLOR = Color.web("#3564c2");
     private static final Color DEFAULT_EDGE_OPTIONAL_COLOR = Color.web("#7f9dd6");
+
     private static final CssMetaData<GraphCanvas, Paint> GRID_PAINT_META =
             new CssMetaData<>("-graph-grid-color", PaintConverter.getInstance(), DEFAULT_GRID_COLOR) {
                 @Override
@@ -35,6 +36,7 @@ public class GraphCanvas extends Canvas {
                     return node.gridPaint;
                 }
             };
+
     private static final CssMetaData<GraphCanvas, Paint> EDGE_REQUIRED_PAINT_META =
             new CssMetaData<>("-graph-edge-required-color", PaintConverter.getInstance(), DEFAULT_EDGE_REQUIRED_COLOR) {
                 @Override
@@ -47,6 +49,7 @@ public class GraphCanvas extends Canvas {
                     return node.edgeRequiredPaint;
                 }
             };
+
     private static final CssMetaData<GraphCanvas, Paint> EDGE_OPTIONAL_PAINT_META =
             new CssMetaData<>("-graph-edge-optional-color", PaintConverter.getInstance(), DEFAULT_EDGE_OPTIONAL_COLOR) {
                 @Override
@@ -59,6 +62,7 @@ public class GraphCanvas extends Canvas {
                     return node.edgeOptionalPaint;
                 }
             };
+
     private static final List<CssMetaData<? extends Styleable, ?>> CSS_META_DATA;
 
     static {
@@ -80,59 +84,65 @@ public class GraphCanvas extends Canvas {
 
     private final Affine world = new Affine();
     private Consumer<Void> onRedraw;
-    private final StyleableObjectProperty<Paint> gridPaint = new StyleableObjectProperty<>(DEFAULT_GRID_COLOR) {
-        @Override
-        public Object getBean() {
-            return GraphCanvas.this;
-        }
 
-        @Override
-        public String getName() {
-            return "gridPaint";
-        }
+    private final StyleableObjectProperty<Paint> gridPaint =
+            new StyleableObjectProperty<>(DEFAULT_GRID_COLOR) {
+                @Override
+                public Object getBean() {
+                    return GraphCanvas.this;
+                }
 
-        @Override
-        public CssMetaData<GraphCanvas, Paint> getCssMetaData() {
-            return GRID_PAINT_META;
-        }
-    };
-    private final StyleableObjectProperty<Paint> edgeRequiredPaint = new StyleableObjectProperty<>(DEFAULT_EDGE_REQUIRED_COLOR) {
-        @Override
-        public Object getBean() {
-            return GraphCanvas.this;
-        }
+                @Override
+                public String getName() {
+                    return "gridPaint";
+                }
 
-        @Override
-        public String getName() {
-            return "edgeRequiredPaint";
-        }
+                @Override
+                public CssMetaData<GraphCanvas, Paint> getCssMetaData() {
+                    return GRID_PAINT_META;
+                }
+            };
 
-        @Override
-        public CssMetaData<GraphCanvas, Paint> getCssMetaData() {
-            return EDGE_REQUIRED_PAINT_META;
-        }
-    };
-    private final StyleableObjectProperty<Paint> edgeOptionalPaint = new StyleableObjectProperty<>(DEFAULT_EDGE_OPTIONAL_COLOR) {
-        @Override
-        public Object getBean() {
-            return GraphCanvas.this;
-        }
+    private final StyleableObjectProperty<Paint> edgeRequiredPaint =
+            new StyleableObjectProperty<>(DEFAULT_EDGE_REQUIRED_COLOR) {
+                @Override
+                public Object getBean() {
+                    return GraphCanvas.this;
+                }
 
-        @Override
-        public String getName() {
-            return "edgeOptionalPaint";
-        }
+                @Override
+                public String getName() {
+                    return "edgeRequiredPaint";
+                }
 
-        @Override
-        public CssMetaData<GraphCanvas, Paint> getCssMetaData() {
-            return EDGE_OPTIONAL_PAINT_META;
-        }
-    };
+                @Override
+                public CssMetaData<GraphCanvas, Paint> getCssMetaData() {
+                    return EDGE_REQUIRED_PAINT_META;
+                }
+            };
+
+    private final StyleableObjectProperty<Paint> edgeOptionalPaint =
+            new StyleableObjectProperty<>(DEFAULT_EDGE_OPTIONAL_COLOR) {
+                @Override
+                public Object getBean() {
+                    return GraphCanvas.this;
+                }
+
+                @Override
+                public String getName() {
+                    return "edgeOptionalPaint";
+                }
+
+                @Override
+                public CssMetaData<GraphCanvas, Paint> getCssMetaData() {
+                    return EDGE_OPTIONAL_PAINT_META;
+                }
+            };
 
     public GraphCanvas(double w, double h) {
+        getStyleClass().add("graph-canvas");
         setWidth(w);
         setHeight(h);
-        getStyleClass().add("graph-canvas");
         gridPaint.addListener((obs, oldPaint, newPaint) -> redraw());
         edgeRequiredPaint.addListener((obs, oldPaint, newPaint) -> redraw());
         edgeOptionalPaint.addListener((obs, oldPaint, newPaint) -> redraw());
@@ -269,3 +279,5 @@ public class GraphCanvas extends Canvas {
         return fallback;
     }
 }
+
+

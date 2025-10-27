@@ -75,3 +75,5 @@ final class StoreBackedVersionCatalog implements VersionCatalog {
     private record SimpleItemCatalog(Collection<ItemRef> items) implements ItemCatalog {
     }
 }
+
+

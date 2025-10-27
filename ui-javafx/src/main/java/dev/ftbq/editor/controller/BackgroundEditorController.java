@@ -355,3 +355,5 @@ public class BackgroundEditorController {
         return Character.toUpperCase(lower.charAt(0)) + lower.substring(1);
     }
 }
+
+

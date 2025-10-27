@@ -19,3 +19,5 @@ public final class ThemeService {
         scene.getStylesheets().add(ThemeService.class.getResource(path).toExternalForm());
     }
 }
+
+

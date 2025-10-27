@@ -292,3 +292,5 @@ public class QuestEditorViewModel {
         dependencySnapshot = List.copyOf(dependencies);
     }
 }
+
+

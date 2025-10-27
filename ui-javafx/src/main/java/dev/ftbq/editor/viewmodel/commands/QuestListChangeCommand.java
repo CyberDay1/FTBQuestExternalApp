@@ -320,3 +320,5 @@ public final class QuestListChangeCommand implements UndoableCommand {
         }
     }
 }
+
+

@@ -228,3 +228,5 @@ public class SettingsController {
         Platform.runLater(() -> statusLabel.setText(message));
     }
 }
+
+
