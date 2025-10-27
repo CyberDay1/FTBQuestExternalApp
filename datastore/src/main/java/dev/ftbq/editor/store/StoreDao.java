@@ -47,12 +47,6 @@ public final class StoreDao {
                 kind = excluded.kind
             """;
 
-    private static final String UPSERT_QUEST_SQL = """
-            INSERT INTO quests (id, data)
-            VALUES (?, ?)
-            ON CONFLICT(id) DO UPDATE SET data = excluded.data
-            """;
-
     private static final String UPSERT_LOOT_TABLE_SQL = """
             INSERT INTO loot_tables (name, data)
             VALUES (?, ?)
@@ -271,22 +265,6 @@ public final class StoreDao {
             return quests;
         } catch (SQLException e) {
             throw new UncheckedSqlException("Failed to list quests", e);
-        }
-    }
-
-    /**
-     * Saves or updates the given quest into the underlying store.
-     *
-     * @param quest the quest to save or update
-     */
-    public void saveQuest(Quest quest) {
-        Objects.requireNonNull(quest, "quest");
-        try (PreparedStatement statement = connection.prepareStatement(UPSERT_QUEST_SQL)) {
-            statement.setString(1, quest.id());
-            statement.setString(2, quest.toString());
-            statement.executeUpdate();
-        } catch (SQLException e) {
-            throw new UncheckedSqlException("Failed to upsert quest " + quest.id(), e);
         }
     }
 
