@@ -281,13 +281,15 @@ public final class ItemCatalogExtractor {
             return Optional.empty();
         }
         String id = namespace + ":" + itemName;
+        boolean vanillaNamespace = "minecraft".equals(namespace);
+        boolean effectiveVanilla = isVanilla || vanillaNamespace;
         ModMetadata metadata = modMetadata.get(namespace);
         return Optional.of(new ItemMeta(
                 id,
                 value,
                 namespace,
                 kind,
-                isVanilla,
+                effectiveVanilla,
                 null,
                 null,
                 metadata != null ? metadata.modId() : namespace,
@@ -300,13 +302,15 @@ public final class ItemCatalogExtractor {
         int colon = id.indexOf(':');
         String namespace = colon > 0 ? id.substring(0, colon) : "minecraft";
         String itemName = colon > 0 ? id.substring(colon + 1) : id;
+        boolean vanillaNamespace = "minecraft".equals(namespace);
+        boolean effectiveVanilla = isVanilla || vanillaNamespace;
         ModMetadata metadata = modMetadata.get(namespace);
         return new ItemMeta(
                 namespace + ":" + itemName,
                 id,
                 namespace,
                 "item",
-                isVanilla,
+                effectiveVanilla,
                 null,
                 null,
                 metadata != null ? metadata.modId() : namespace,
