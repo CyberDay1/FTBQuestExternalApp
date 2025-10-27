@@ -93,6 +93,7 @@ public class ChapterEditorController {
     private final ObservableList<String> dependencies = FXCollections.observableArrayList();
     private final Map<String, QuestNodeView> nodes = new HashMap<>();
     private final Map<String, Point2D> questPositions = new HashMap<>();
+    private final Map<String, ChapterGraphState> chapterStates = new HashMap<>();
     private final AnchorPane nodeLayer = new AnchorPane();
     private int taskCounter = 1;
     private int rewardCounter = 1;
@@ -191,6 +192,12 @@ public class ChapterEditorController {
     }
 
     private void applyChapter(Chapter chapter) {
+        if (chapter == currentChapter) {
+            return;
+        }
+        if (currentChapter != null) {
+            persistCurrentChapterState();
+        }
         if (chapter == null) {
             currentChapter = null;
             selectedQuestId = null;
@@ -212,20 +219,31 @@ public class ChapterEditorController {
             chapterTitleLabel.setText(chapter.title());
         }
         selectChapter(chapter);
-        loadQuestPositions();
+        restoreQuestPositions(chapter);
+        applyCanvasState(chapter);
         if (canvas != null) {
             canvas.redraw();
         }
         populateQuestDetails(chapter);
     }
 
-    private void loadQuestPositions() {
+    private void restoreQuestPositions(Chapter chapter) {
         questPositions.clear();
-        if (currentChapter == null) {
+        if (chapter == null) {
             return;
         }
+        ChapterGraphState cachedState = chapterStates.get(chapterKey(chapter));
+        if (cachedState != null) {
+            questPositions.putAll(cachedState.positions);
+        } else {
+            loadQuestPositionsFromStore(chapter);
+        }
+        ensureQuestPositions(chapter);
+    }
+
+    private void loadQuestPositionsFromStore(Chapter chapter) {
         StoreDao dao = UiServiceLocator.storeDao;
-        List<String> questIds = currentChapter.quests().stream()
+        List<String> questIds = chapter.quests().stream()
                 .map(Quest::id)
                 .filter(Objects::nonNull)
                 .toList();
@@ -233,10 +251,14 @@ public class ChapterEditorController {
             Map<String, StoreDao.QuestPosition> stored = dao.findQuestPositions(questIds);
             stored.values().forEach(pos -> questPositions.put(pos.questId(), new Point2D(pos.x(), pos.y())));
         }
+    }
+
+    private void ensureQuestPositions(Chapter chapter) {
+        List<Quest> quests = chapter.quests();
         double spacing = 120.0;
-        int columnCount = Math.max(1, (int) Math.ceil(Math.sqrt(Math.max(questIds.size(), 1))));
+        int columnCount = Math.max(1, (int) Math.ceil(Math.sqrt(Math.max(quests.size(), 1))));
         int index = 0;
-        for (Quest quest : currentChapter.quests()) {
+        for (Quest quest : quests) {
             if (quest == null || quest.id() == null) {
                 continue;
             }
@@ -247,6 +269,41 @@ public class ChapterEditorController {
             }
             index++;
         }
+    }
+
+    private void applyCanvasState(Chapter chapter) {
+        if (canvas == null) {
+            return;
+        }
+        ChapterGraphState cachedState = chapterStates.get(chapterKey(chapter));
+        if (cachedState != null) {
+            canvas.setState(cachedState.scale, cachedState.translateX, cachedState.translateY);
+        } else {
+            canvas.resetView();
+        }
+    }
+
+    private void persistCurrentChapterState() {
+        if (currentChapter == null) {
+            return;
+        }
+        String key = chapterKey(currentChapter);
+        ChapterGraphState state = chapterStates.computeIfAbsent(key, k -> new ChapterGraphState());
+        state.positions.clear();
+        state.positions.putAll(questPositions);
+        if (canvas != null) {
+            state.scale = canvas.getScale();
+            state.translateX = canvas.getPanX();
+            state.translateY = canvas.getPanY();
+        }
+    }
+
+    private String chapterKey(Chapter chapter) {
+        if (chapter == null) {
+            return "";
+        }
+        String id = chapter.id();
+        return id != null ? id : chapter.title();
     }
 
     private void renderNodes() {
@@ -301,6 +358,9 @@ public class ChapterEditorController {
     }
 
     private void positionNode(QuestNodeView node, Point2D world) {
+        if (canvas == null) {
+            return;
+        }
         node.setWorldPosition(world.getX(), world.getY());
         Point2D screen = canvas.getWorld().transform(world);
         node.updateScreenPosition(screen.getX(), screen.getY());
@@ -308,12 +368,10 @@ public class ChapterEditorController {
 
     private void configureNodeInteractions(QuestNodeView node, Quest quest) {
         node.setOnMove((id, screenX, screenY) -> handleNodeMove(id, screenX, screenY));
+        node.setOnEdit(id -> showQuestEditDialog(quest));
         node.setOnMouseClicked(event -> {
             if (event.getButton() == MouseButton.PRIMARY) {
                 selectQuest(node.questId);
-                if (event.getClickCount() == 2) {
-                    showQuestEditDialog(quest);
-                }
                 event.consume();
             }
         });
@@ -361,10 +419,17 @@ public class ChapterEditorController {
     }
 
     private void handleNodeMove(String questId, double screenX, double screenY) {
+        if (canvas == null) {
+            return;
+        }
         double[] world = canvas.screenToWorld(screenX, screenY);
         double snappedX = canvas.snap(world[0]);
         double snappedY = canvas.snap(world[1]);
         questPositions.put(questId, new Point2D(snappedX, snappedY));
+        ChapterGraphState state = chapterStates.get(chapterKey(currentChapter));
+        if (state != null) {
+            state.positions.put(questId, new Point2D(snappedX, snappedY));
+        }
         persistQuestPosition(questId, snappedX, snappedY);
         pendingSelectionQuestId = questId;
         if (canvas != null) {
@@ -386,6 +451,13 @@ public class ChapterEditorController {
     private void selectQuest(String questId) {
         selectedQuestId = questId;
         updateSelectionVisuals();
+    }
+
+    private static final class ChapterGraphState {
+        private final Map<String, Point2D> positions = new HashMap<>();
+        private double scale = 1.0;
+        private double translateX;
+        private double translateY;
     }
 
     private void clearSelection() {
