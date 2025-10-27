@@ -9,6 +9,7 @@ import dev.ftbq.editor.domain.Visibility;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
 
+import java.util.ArrayList;
 import java.util.Objects;
 
 /**
@@ -79,6 +80,35 @@ public class ChapterEditorViewModel {
         builder.addQuest(makeTools);
         builder.addQuest(explore);
 
+        setChapter(builder.build());
+    }
+
+    public void updateQuest(Quest updatedQuest) {
+        Objects.requireNonNull(updatedQuest, "updatedQuest");
+        Chapter currentChapter = getChapter();
+        if (currentChapter == null) {
+            return;
+        }
+        java.util.List<Quest> quests = new ArrayList<>(currentChapter.quests());
+        boolean replaced = false;
+        for (int i = 0; i < quests.size(); i++) {
+            Quest quest = quests.get(i);
+            if (quest.id().equals(updatedQuest.id())) {
+                quests.set(i, updatedQuest);
+                replaced = true;
+                break;
+            }
+        }
+        if (!replaced) {
+            return;
+        }
+        Chapter.Builder builder = Chapter.builder()
+                .id(currentChapter.id())
+                .title(currentChapter.title())
+                .icon(currentChapter.icon())
+                .background(currentChapter.background())
+                .visibility(currentChapter.visibility())
+                .quests(quests);
         setChapter(builder.build());
     }
 }
