@@ -12,16 +12,20 @@ import dev.ftbq.editor.services.bus.UndoManager;
 import dev.ftbq.editor.services.events.QuestChanged;
 import dev.ftbq.editor.viewmodel.commands.QuestFieldChangeCommand;
 import dev.ftbq.editor.viewmodel.commands.QuestFieldChangeCommand.Field;
+import dev.ftbq.editor.viewmodel.commands.QuestListChangeCommand;
+import dev.ftbq.editor.viewmodel.commands.QuestListChangeCommand.CollectionType;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import javafx.collections.ListChangeListener;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.function.Supplier;
 
 public class QuestEditorViewModel {
     private final StringProperty title = new SimpleStringProperty("");
@@ -40,12 +44,16 @@ public class QuestEditorViewModel {
     private Quest currentQuest;
     private boolean suppressRecording;
     private boolean commandSubscriptionRegistered;
+    private List<Task> taskSnapshot = List.of();
+    private List<Reward> rewardSnapshot = List.of();
+    private List<Dependency> dependencySnapshot = List.of();
 
     public QuestEditorViewModel(CommandBus commandBus, EventBus eventBus, UndoManager undoManager) {
         this.commandBus = Objects.requireNonNull(commandBus, "commandBus");
         this.eventBus = Objects.requireNonNull(eventBus, "eventBus");
         this.undoManager = Objects.requireNonNull(undoManager, "undoManager");
         attachListeners();
+        attachCollectionListeners();
         registerCommandHandlers();
         registerUndoFactories();
     }
@@ -87,6 +95,7 @@ public class QuestEditorViewModel {
             tasks.setAll(quest.tasks());
             rewards.setAll(quest.rewards());
             dependencies.setAll(quest.dependencies());
+            updateSnapshots();
         } finally {
             suppressRecording = false;
         }
@@ -132,6 +141,24 @@ public class QuestEditorViewModel {
         description.addListener((obs, oldValue, newValue) -> onFieldChanged(Field.DESCRIPTION, oldValue, newValue));
     }
 
+    private void attachCollectionListeners() {
+        tasks.addListener((ListChangeListener<Task>) change -> onCollectionChanged(
+                CollectionType.TASKS,
+                () -> taskSnapshot,
+                () -> new ArrayList<>(tasks)
+        ));
+        rewards.addListener((ListChangeListener<Reward>) change -> onCollectionChanged(
+                CollectionType.REWARDS,
+                () -> rewardSnapshot,
+                () -> new ArrayList<>(rewards)
+        ));
+        dependencies.addListener((ListChangeListener<Dependency>) change -> onCollectionChanged(
+                CollectionType.DEPENDENCIES,
+                () -> dependencySnapshot,
+                () -> new ArrayList<>(dependencies)
+        ));
+    }
+
     private void registerCommandHandlers() {
         if (commandBus == null || commandSubscriptionRegistered) {
             return;
@@ -140,6 +167,8 @@ public class QuestEditorViewModel {
         commandBus.subscribeAll(command -> {
             if (command instanceof QuestFieldChangeCommand changeCommand) {
                 handleFieldChangeCommand(changeCommand);
+            } else if (command instanceof QuestListChangeCommand listChangeCommand) {
+                handleListChangeCommand(listChangeCommand);
             }
         });
         commandSubscriptionRegistered = true;
@@ -148,6 +177,7 @@ public class QuestEditorViewModel {
     private void registerUndoFactories() {
         if (undoManager != null) {
             undoManager.registerFactory(QuestFieldChangeCommand.TYPE, QuestFieldChangeCommand::fromPayload);
+            undoManager.registerFactory(QuestListChangeCommand.TYPE, QuestListChangeCommand::fromPayload);
         }
     }
 
@@ -180,5 +210,79 @@ public class QuestEditorViewModel {
         } finally {
             suppressRecording = previous;
         }
+    }
+
+    private void handleListChangeCommand(QuestListChangeCommand command) {
+        if (!Objects.equals(questId, command.questId())) {
+            return;
+        }
+        boolean previous = suppressRecording;
+        suppressRecording = true;
+        try {
+            switch (command.collectionType()) {
+                case TASKS -> {
+                    tasks.setAll(command.tasks());
+                    taskSnapshot = List.copyOf(command.tasks());
+                }
+                case REWARDS -> {
+                    rewards.setAll(command.rewards());
+                    rewardSnapshot = List.copyOf(command.rewards());
+                }
+                case DEPENDENCIES -> {
+                    dependencies.setAll(command.dependencies());
+                    dependencySnapshot = List.copyOf(command.dependencies());
+                }
+            }
+            currentQuest = toQuest();
+        } finally {
+            suppressRecording = previous;
+        }
+    }
+
+    private void onCollectionChanged(CollectionType type,
+                                     Supplier<List<?>> previousSupplier,
+                                     Supplier<List<?>> currentSupplier) {
+        if (suppressRecording || questId == null || questId.isBlank() || commandBus == null) {
+            updateSnapshot(type, currentSupplier.get());
+            return;
+        }
+        List<?> previous = previousSupplier.get();
+        List<?> current = currentSupplier.get();
+        if (Objects.equals(previous, current)) {
+            updateSnapshot(type, current);
+            return;
+        }
+        QuestListChangeCommand command = switch (type) {
+            case TASKS -> QuestListChangeCommand.forTasks(questId, castList(current), castList(previous));
+            case REWARDS -> QuestListChangeCommand.forRewards(questId, castList(current), castList(previous));
+            case DEPENDENCIES -> QuestListChangeCommand.forDependencies(questId, castList(current), castList(previous));
+        };
+        boolean previousRecording = suppressRecording;
+        suppressRecording = true;
+        try {
+            commandBus.dispatch(command);
+        } finally {
+            suppressRecording = previousRecording;
+        }
+        updateSnapshot(type, current);
+    }
+
+    @SuppressWarnings("unchecked")
+    private <T> List<T> castList(List<?> list) {
+        return (List<T>) list;
+    }
+
+    private void updateSnapshot(CollectionType type, List<?> snapshot) {
+        switch (type) {
+            case TASKS -> taskSnapshot = List.copyOf(castList(snapshot));
+            case REWARDS -> rewardSnapshot = List.copyOf(castList(snapshot));
+            case DEPENDENCIES -> dependencySnapshot = List.copyOf(castList(snapshot));
+        }
+    }
+
+    private void updateSnapshots() {
+        taskSnapshot = List.copyOf(tasks);
+        rewardSnapshot = List.copyOf(rewards);
+        dependencySnapshot = List.copyOf(dependencies);
     }
 }

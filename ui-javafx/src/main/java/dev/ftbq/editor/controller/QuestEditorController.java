@@ -16,10 +16,12 @@ import dev.ftbq.editor.services.bus.UndoManager;
 import dev.ftbq.editor.services.logging.StructuredLogger;
 import dev.ftbq.editor.viewmodel.QuestEditorViewModel;
 import dev.ftbq.editor.controller.ItemBrowserController;
+import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
+import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
@@ -36,7 +38,9 @@ import javafx.stage.Stage;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.util.HashSet;
 import java.util.Objects;
+import java.util.Set;
 import java.util.function.Consumer;
 
 /**
@@ -79,18 +83,27 @@ public class QuestEditorController {
     @FXML
     private Button cancelButton;
 
+    @FXML
+    private Button undoButton;
+
+    @FXML
+    private Button redoButton;
+
     private final QuestEditorViewModel viewModel;
     private final StructuredLogger logger;
 
     private final Tooltip iconTooltip = new Tooltip();
     private Consumer<String> lootTableLinkHandler = tableId -> { };
     private UndoManager undoManager;
+    private CommandBus commandBus;
+    private boolean undoStateListenerRegistered;
 
     public QuestEditorController() {
         this(
                 new QuestEditorViewModel(ServiceLocator.commandBus(), ServiceLocator.eventBus(), ServiceLocator.undoManager()),
                 ServiceLocator.loggerFactory().create(QuestEditorController.class)
         );
+        this.commandBus = ServiceLocator.commandBus();
         this.undoManager = ServiceLocator.undoManager();
     }
 
@@ -104,7 +117,10 @@ public class QuestEditorController {
     }
 
     public void setCommandBus(CommandBus commandBus) {
-        viewModel.setCommandBus(Objects.requireNonNull(commandBus, "commandBus"));
+        this.commandBus = Objects.requireNonNull(commandBus, "commandBus");
+        viewModel.setCommandBus(this.commandBus);
+        undoStateListenerRegistered = false;
+        registerUndoStateListener();
     }
 
     public void setEventBus(EventBus eventBus) {
@@ -114,6 +130,7 @@ public class QuestEditorController {
     public void setUndoManager(UndoManager undoManager) {
         this.undoManager = Objects.requireNonNull(undoManager, "undoManager");
         viewModel.setUndoManager(undoManager);
+        updateUndoRedoButtons();
     }
 
     public void setLootTableLinkHandler(Consumer<String> handler) {
@@ -145,6 +162,12 @@ public class QuestEditorController {
         if (cancelButton != null && cancelButton.getAccessibleText() == null) {
             cancelButton.setAccessibleText("Cancel quest edits");
         }
+        if (undoButton != null && undoButton.getAccessibleText() == null) {
+            undoButton.setAccessibleText("Undo last change");
+        }
+        if (redoButton != null && redoButton.getAccessibleText() == null) {
+            redoButton.setAccessibleText("Redo change");
+        }
         IconRef initialIcon = viewModel.iconProperty().get();
         updateIconTooltip(initialIcon);
         viewModel.iconProperty().addListener((obs, oldIcon, newIcon) -> updateIconTooltip(newIcon));
@@ -153,6 +176,8 @@ public class QuestEditorController {
         } else {
             refreshFromViewModel();
         }
+        registerUndoStateListener();
+        updateUndoRedoButtons();
     }
 
     private void installUndoRedoShortcuts() {
@@ -168,10 +193,12 @@ public class QuestEditorController {
         if (event.getCode() == KeyCode.Z) {
             if (undoManager != null && undoManager.undo()) {
                 event.consume();
+                updateUndoRedoButtons();
             }
         } else if (event.getCode() == KeyCode.Y) {
             if (undoManager != null && undoManager.redo()) {
                 event.consume();
+                updateUndoRedoButtons();
             }
         }
     }
@@ -314,6 +341,9 @@ public class QuestEditorController {
 
     @FXML
     private void handleSave() {
+        if (!validateQuestConfiguration()) {
+            return;
+        }
         Quest saved = viewModel.save();
         logger.info("Quest saved", StructuredLogger.field("questId", saved.id()));
     }
@@ -323,6 +353,21 @@ public class QuestEditorController {
         viewModel.revertChanges();
         logger.info("Quest edits reverted", StructuredLogger.field("questId", viewModel.getCurrentQuest() != null ? viewModel.getCurrentQuest().id() : ""));
         refreshFromViewModel();
+        updateUndoRedoButtons();
+    }
+
+    @FXML
+    private void handleUndoAction() {
+        if (undoManager != null && undoManager.undo()) {
+            updateUndoRedoButtons();
+        }
+    }
+
+    @FXML
+    private void handleRedoAction() {
+        if (undoManager != null && undoManager.redo()) {
+            updateUndoRedoButtons();
+        }
     }
 
     void openItemBrowser() {
@@ -350,5 +395,66 @@ public class QuestEditorController {
         } catch (IOException e) {
             logger.error("Failed to open item browser", e);
         }
+    }
+
+    private void registerUndoStateListener() {
+        if (undoStateListenerRegistered || commandBus == null) {
+            return;
+        }
+        commandBus.subscribeAll(command -> Platform.runLater(this::updateUndoRedoButtons));
+        undoStateListenerRegistered = true;
+    }
+
+    private void updateUndoRedoButtons() {
+        boolean canUndo = undoManager != null && undoManager.canUndo();
+        boolean canRedo = undoManager != null && undoManager.canRedo();
+        if (undoButton != null) {
+            undoButton.setDisable(!canUndo);
+        }
+        if (redoButton != null) {
+            redoButton.setDisable(!canRedo);
+        }
+    }
+
+    private boolean validateQuestConfiguration() {
+        Quest quest = viewModel.toQuest();
+        if (quest.title() == null || quest.title().isBlank()) {
+            showValidationError("Quest title must not be empty.");
+            return false;
+        }
+
+        Set<String> dependencyIds = new HashSet<>();
+        for (Dependency dependency : quest.dependencies()) {
+            if (!dependencyIds.add(dependency.questId())) {
+                showValidationError("Duplicate dependency found for quest: " + dependency.questId());
+                return false;
+            }
+            if (quest.id() != null && quest.id().equals(dependency.questId())) {
+                showValidationError("Quest cannot depend on itself: " + dependency.questId());
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private void showValidationError(String message) {
+        logger.error(message, null);
+        if (Platform.isFxApplicationThread()) {
+            showAlert(message);
+        } else {
+            Platform.runLater(() -> showAlert(message));
+        }
+    }
+
+    private void showAlert(String message) {
+        Alert alert = new Alert(Alert.AlertType.ERROR);
+        alert.setTitle("Validation Error");
+        alert.setHeaderText(null);
+        alert.setContentText(message);
+        if (rootPane != null && rootPane.getScene() != null) {
+            alert.initOwner(rootPane.getScene().getWindow());
+        }
+        alert.showAndWait();
     }
 }
