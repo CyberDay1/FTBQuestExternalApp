@@ -9,10 +9,12 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -31,6 +33,8 @@ public final class CacheManager {
     private final int maxIconEntries;
     private final int maxBackgroundEntries;
     private final AtomicLong logicalClock = new AtomicLong();
+
+    private final Set<String> missingIconHashes = new HashSet<>();
 
     private final Object iconLock = new Object();
     private final Object backgroundLock = new Object();
@@ -61,6 +65,7 @@ public final class CacheManager {
             writeIfNecessary(iconPath, data);
             touch(iconPath);
             enforceLimit(iconDirectory, maxIconEntries);
+            missingIconHashes.remove(hash);
         }
         return hash;
     }
@@ -69,11 +74,16 @@ public final class CacheManager {
         Objects.requireNonNull(hash, "hash");
         Path iconPath = iconDirectory.resolve(hash + ICON_EXTENSION);
         synchronized (iconLock) {
+            if (missingIconHashes.contains(hash)) {
+                return Optional.empty();
+            }
             if (!Files.exists(iconPath)) {
+                missingIconHashes.add(hash);
                 return Optional.empty();
             }
             try {
                 byte[] data = Files.readAllBytes(iconPath);
+                missingIconHashes.remove(hash);
                 touch(iconPath);
                 return Optional.of(data);
             } catch (IOException ex) {
