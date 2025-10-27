@@ -3,6 +3,7 @@ package dev.ftbq.editor.controller;
 import dev.ftbq.editor.domain.Chapter;
 import dev.ftbq.editor.domain.Dependency;
 import dev.ftbq.editor.domain.Quest;
+import dev.ftbq.editor.domain.QuestFile;
 import dev.ftbq.editor.domain.Reward;
 import dev.ftbq.editor.domain.Task;
 import dev.ftbq.editor.domain.TaskTypeRegistry;
@@ -13,6 +14,14 @@ import dev.ftbq.editor.store.StoreDao;
 import dev.ftbq.editor.ui.graph.GraphCanvas;
 import dev.ftbq.editor.ui.graph.QuestNodeView;
 import dev.ftbq.editor.viewmodel.ChapterEditorViewModel;
+import dev.ftbq.editor.services.io.SnbtImportExportService;
+import dev.ftbq.editor.validation.BrokenReferenceValidator;
+import dev.ftbq.editor.validation.DependencyCycleValidator;
+import dev.ftbq.editor.validation.LootWeightsValidator;
+import dev.ftbq.editor.validation.RequiredFieldsValidator;
+import dev.ftbq.editor.validation.ValidationIssue;
+import dev.ftbq.editor.validation.Validator;
+import dev.ftbq.editor.view.dialog.ValidationResultsDialog;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
@@ -20,6 +29,7 @@ import javafx.geometry.Insets;
 import javafx.geometry.Point2D;
 import javafx.scene.Node;
 import javafx.scene.canvas.GraphicsContext;
+import javafx.scene.control.Alert;
 import javafx.scene.control.ButtonBar;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.CheckBox;
@@ -40,7 +50,11 @@ import javafx.scene.input.MouseButton;
 import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.GridPane;
 import javafx.util.StringConverter;
+import javafx.scene.control.Button;
+import javafx.stage.DirectoryChooser;
+import javafx.stage.Window;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -77,6 +91,7 @@ public class ChapterEditorController {
     private ListView<String> dependencyList;
 
     @FXML
+    private Button exportButton;
     private MenuButton addTaskMenu;
 
     @FXML
@@ -116,6 +131,13 @@ public class ChapterEditorController {
     private String selectedQuestId;
     private double contextX;
     private double contextY;
+    private final SnbtImportExportService exportService = new SnbtImportExportService();
+    private final List<Validator> validators = List.of(
+            new DependencyCycleValidator(),
+            new BrokenReferenceValidator(),
+            new RequiredFieldsValidator(),
+            new LootWeightsValidator()
+    );
 
     @FXML
     public void initialize() {
@@ -596,6 +618,46 @@ public class ChapterEditorController {
     }
 
     @FXML
+    private void onExport() {
+        if (currentChapter == null) {
+            showAlert(Alert.AlertType.INFORMATION, "Export", "Select a chapter to export.");
+            return;
+        }
+        QuestFile questFile = buildQuestFileForExport();
+        List<ValidationIssue> issues = runValidators(questFile);
+        if (!issues.isEmpty()) {
+            Window owner = exportButton != null && exportButton.getScene() != null ? exportButton.getScene().getWindow() : null;
+            ValidationResultsDialog dialog = new ValidationResultsDialog(owner, issues, this::handleJumpToIssue);
+            dialog.showAndWait();
+            return;
+        }
+
+        DirectoryChooser chooser = new DirectoryChooser();
+        chooser.setTitle("Select export directory");
+        Window owner = exportButton != null && exportButton.getScene() != null ? exportButton.getScene().getWindow() : null;
+        File directory = owner != null ? chooser.showDialog(owner) : chooser.showDialog(null);
+        if (directory == null) {
+            return;
+        }
+        try {
+            exportService.exportPack(questFile, directory);
+            showAlert(Alert.AlertType.INFORMATION, "Export Complete", "Quest pack exported to " + directory.getAbsolutePath());
+        } catch (Exception ex) {
+            showAlert(Alert.AlertType.ERROR, "Export Failed", "Unable to export quest pack: " + ex.getMessage());
+        }
+    }
+
+    @FXML
+    private void onAddTask() {
+        tasks.add("Task %d".formatted(taskCounter++));
+    }
+
+    @FXML
+    private void onAddReward() {
+        rewards.add("Reward %d".formatted(rewardCounter++));
+    }
+
+    @FXML
     private void onAddDependency() {
         dependencies.add("Dependency %d".formatted(dependencyCounter++));
     }
@@ -891,5 +953,64 @@ public class ChapterEditorController {
                 .rewards(quest.rewards())
                 .dependencies(filteredDependencies)
                 .build();
+    }
+
+    private QuestFile buildQuestFileForExport() {
+        List<Chapter> chaptersToExport;
+        if (viewModel != null && !viewModel.getChapters().isEmpty()) {
+            chaptersToExport = List.copyOf(viewModel.getChapters());
+        } else {
+            chaptersToExport = List.of(currentChapter);
+        }
+        return QuestFile.builder()
+                .id(currentChapter.id())
+                .title(currentChapter.title())
+                .chapterGroups(List.of())
+                .chapters(chaptersToExport)
+                .lootTables(List.of())
+                .build();
+    }
+
+    private List<ValidationIssue> runValidators(QuestFile questFile) {
+        List<ValidationIssue> issues = new ArrayList<>();
+        Validator.ItemResolver resolver = new Validator.ItemResolver() { };
+        for (Validator validator : validators) {
+            issues.addAll(validator.validate(questFile, resolver));
+        }
+        return issues;
+    }
+
+    private void handleJumpToIssue(ValidationIssue issue) {
+        if (issue == null) {
+            return;
+        }
+        String questId = extractQuestId(issue.path());
+        if (questId != null) {
+            selectQuest(questId);
+        }
+    }
+
+    private String extractQuestId(String path) {
+        if (path == null || path.isBlank()) {
+            return null;
+        }
+        String[] segments = path.split("/");
+        for (int i = 0; i < segments.length - 1; i++) {
+            if ("quests".equals(segments[i])) {
+                return segments[i + 1];
+            }
+        }
+        return null;
+    }
+
+    private void showAlert(Alert.AlertType type, String title, String message) {
+        Alert alert = new Alert(type);
+        alert.setTitle(title);
+        alert.setHeaderText(null);
+        alert.setContentText(message);
+        if (exportButton != null && exportButton.getScene() != null) {
+            alert.initOwner(exportButton.getScene().getWindow());
+        }
+        alert.showAndWait();
     }
 }
