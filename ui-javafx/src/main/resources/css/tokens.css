@@ -1,5 +1,5 @@
 ﻿/* Shared palette tokens */
-:root {
+.root {
     /* Light defaults */
     -bg: #f7f7f7;
     -bg-elev: #ffffff;

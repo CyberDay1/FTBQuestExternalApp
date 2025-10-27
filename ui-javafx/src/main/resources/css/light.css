@@ -1,45 +1,33 @@
-﻿@import "tokens.css";
-
-/* Override root palette for light */
+﻿/* Light mode theme */
 .root {
-    -bg: #f7f7f7;
-    -bg-elev: #ffffff;
-    -fg: #1a1a1a;
-    -fg-muted: #5a5a5a;
-    -accent: #1967d2;
-    -grid: #dddddd;
-    -edge-required: #cc8b00;
-    -edge-optional: #6a3dad;
-    -node: #e0f2ff;
-    -node-stroke: #1967d2;
-
-    -fx-background-color: var(-bg);
+    -fx-background-color: #f7f7f7;
+    -fx-text-fill: #1a1a1a;
 }
 
 /* Common controls */
-.label { -fx-text-fill: var(-fg); }
-.text { -fx-fill: var(-fg); }
+.label { -fx-text-fill: #1a1a1a; }
+.text  { -fx-fill: #1a1a1a; }
 .button {
-    -fx-background-color: var(-bg-elev);
-    -fx-text-fill: var(-fg);
+    -fx-background-color: #ffffff;
+    -fx-text-fill: #1a1a1a;
 }
 .text-field, .combo-box, .choice-box, .list-view, .tree-view, .table-view {
-    -fx-background-color: var(-bg-elev);
-    -fx-text-fill: var(-fg);
-    -fx-prompt-text-fill: var(-fg-muted);
+    -fx-background-color: #ffffff;
+    -fx-text-fill: #1a1a1a;
+    -fx-prompt-text-fill: #5a5a5a;
 }
 
-/* Graph-specific */
+/* Graph elements */
 .graph-canvas {
-    -graph-grid-color: var(-grid);
-    -graph-edge-required-color: var(-edge-required);
-    -graph-edge-optional-color: var(-edge-optional);
+    -graph-grid-color: #dddddd;
+    -graph-edge-required-color: #cc8b00;
+    -graph-edge-optional-color: #6a3dad;
 }
 .quest-node {
-    -quest-node-fill: var(-node);
-    -quest-node-stroke: var(-node-stroke);
+    -quest-node-fill: #e0f2ff;
+    -quest-node-stroke: #1967d2;
 }
 .quest-node-label {
-    -fx-fill: var(-fg);
-    -fx-text-fill: var(-fg);
+    -fx-fill: #1a1a1a;
+    -fx-text-fill: #1a1a1a;
 }

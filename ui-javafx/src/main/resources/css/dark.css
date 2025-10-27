@@ -1,45 +1,84 @@
-﻿@import "tokens.css";
-
-/* Override root palette for dark mode */
+﻿/* Dark mode theme */
 .root {
-    -bg: #121212;
-    -bg-elev: #1e1e1e;
-    -fg: #e0e0e0;
-    -fg-muted: #aaaaaa;
-    -accent: #8ab4f8;
-    -grid: #333333;
-    -edge-required: #f4b400;
-    -edge-optional: #a142f4;
-    -node: #263238;
-    -node-stroke: #8ab4f8;
-
-    -fx-background-color: var(-bg);
+    -fx-background-color: #121212;
+    -fx-text-fill: #e0e0e0;
 }
 
 /* Common controls */
-.label { -fx-text-fill: var(-fg); }
-.text { -fx-fill: var(-fg); }
+.label { -fx-text-fill: #e0e0e0; }
+.text  { -fx-fill: #e0e0e0; }
 .button {
-    -fx-background-color: var(-bg-elev);
-    -fx-text-fill: var(-fg);
+    -fx-background-color: #1e1e1e;
+    -fx-text-fill: #e0e0e0;
 }
 .text-field, .combo-box, .choice-box, .list-view, .tree-view, .table-view {
-    -fx-background-color: var(-bg-elev);
-    -fx-text-fill: var(-fg);
-    -fx-prompt-text-fill: var(-fg-muted);
+    -fx-background-color: #1e1e1e;
+    -fx-text-fill: #e0e0e0;
+    -fx-prompt-text-fill: #aaaaaa;
 }
 
 /* Graph elements */
 .graph-canvas {
-    -graph-grid-color: var(-grid);
-    -graph-edge-required-color: var(-edge-required);
-    -graph-edge-optional-color: var(-edge-optional);
+    -graph-grid-color: #333333;
+    -graph-edge-required-color: #f4b400;
+    -graph-edge-optional-color: #a142f4;
 }
 .quest-node {
-    -quest-node-fill: var(-node);
-    -quest-node-stroke: var(-node-stroke);
+    -quest-node-fill: #263238;
+    -quest-node-stroke: #8ab4f8;
 }
 .quest-node-label {
-    -fx-fill: var(-fg);
-    -fx-text-fill: var(-fg);
+    -fx-fill: #e0e0e0;
+    -fx-text-fill: #e0e0e0;
+}
+/* TabPane and menu bars */
+.tab-pane, .tab-header-background, .menu-bar, .tool-bar {
+    -fx-background-color: #1e1e1e;
+}
+.tab, .menu, .menu-item {
+    -fx-text-fill: #e0e0e0;
+    -fx-background-color: #1e1e1e;
+}
+
+/* Scroll and list cells */
+.scroll-pane, .viewport, .list-cell, .tree-cell, .table-row-cell {
+    -fx-background-color: #1e1e1e;
+    -fx-text-fill: #e0e0e0;
+}
+
+/* SplitPane dividers */
+.split-pane-divider {
+    -fx-background-color: #2a2a2a;
+}
+
+/* Tooltips and context menus */
+.tooltip, .context-menu {
+    -fx-background-color: #2a2a2a;
+    -fx-text-fill: #e0e0e0;
+}
+
+/* Tabs and buttons active/hovered */
+.button:hover, .tab:hover, .menu:hover {
+    -fx-background-color: #2a2a2a;
+}
+.button:pressed, .tab:selected {
+    -fx-background-color: #3a3a3a;
+}
+
+/* Combo and choice popups */
+.combo-box-popup, .choice-box-popup {
+    -fx-background-color: #2a2a2a;
+}
+.table-view .column-header, .table-view .filler {
+    -fx-background-color: #2a2a2a;
+}
+.scroll-bar, .scroll-bar .track, .scroll-bar .thumb {
+    -fx-background-color: #2a2a2a;
+}
+.check-box, .radio-button {
+    -fx-text-fill: #e0e0e0;
+}
+.split-menu-button, .menu-button {
+    -fx-background-color: #1e1e1e;
+    -fx-text-fill: #e0e0e0;
 }
