@@ -63,10 +63,10 @@ CREATE TABLE IF NOT EXISTS quest_rewards (
     type TEXT NOT NULL,
     item_id TEXT,
     item_count INTEGER,
-    amount INTEGER,
+    loot_table_id TEXT,
+    experience INTEGER,
     command TEXT,
-    as_player INTEGER,
-    metadata TEXT,
+    run_as_server INTEGER,
     PRIMARY KEY (quest_id, reward_index),
     FOREIGN KEY (quest_id) REFERENCES quests(id) ON DELETE CASCADE
 );

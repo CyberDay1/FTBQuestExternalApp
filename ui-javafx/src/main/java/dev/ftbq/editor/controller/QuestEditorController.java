@@ -7,10 +7,11 @@ import dev.ftbq.editor.domain.CommandReward;
 import dev.ftbq.editor.domain.Dependency;
 import dev.ftbq.editor.domain.IconRef;
 import dev.ftbq.editor.domain.ItemRef;
-import dev.ftbq.editor.domain.ItemReward;
 import dev.ftbq.editor.domain.ItemTask;
 import dev.ftbq.editor.domain.Quest;
 import dev.ftbq.editor.domain.Reward;
+import dev.ftbq.editor.domain.RewardCommand;
+import dev.ftbq.editor.domain.RewardType;
 import dev.ftbq.editor.domain.Task;
 import dev.ftbq.editor.domain.Visibility;
 import dev.ftbq.editor.services.UiServiceLocator;
@@ -281,7 +282,7 @@ public class QuestEditorController {
                 @Override
                 protected void updateItem(Reward item, boolean empty) {
                     super.updateItem(item, empty);
-                    setText(empty || item == null ? null : item.type());
+                    setText(empty || item == null ? null : formatReward(item));
                 }
             });
         }
@@ -519,6 +520,13 @@ public class QuestEditorController {
     private void onAddReward() {
         Dialog<Reward> dialog = new Dialog<>();
         dialog.setTitle("Add reward");
+        dialog.setHeaderText("Create a quest reward");
+        ButtonType addButtonType = new ButtonType("Add", ButtonBar.ButtonData.OK_DONE);
+        dialog.getDialogPane().getButtonTypes().addAll(addButtonType, ButtonType.CANCEL);
+
+        ComboBox<RewardType> typeBox = new ComboBox<>();
+        typeBox.getItems().setAll(RewardType.values());
+        typeBox.getSelectionModel().select(RewardType.ITEM);
         dialog.setHeaderText("Configure quest reward");
         ButtonType addButtonType = new ButtonType("Add", ButtonBar.ButtonData.OK_DONE);
         dialog.getDialogPane().getButtonTypes().addAll(addButtonType, ButtonType.CANCEL);
@@ -531,6 +539,16 @@ public class QuestEditorController {
         Spinner<Integer> countSpinner = new Spinner<>();
         countSpinner.setValueFactory(new SpinnerValueFactory.IntegerSpinnerValueFactory(1, Integer.MAX_VALUE, 1));
 
+        TextField lootTableField = new TextField();
+        lootTableField.setPromptText("namespace:loot_table");
+
+        Spinner<Integer> experienceSpinner = new Spinner<>();
+        experienceSpinner.setValueFactory(new SpinnerValueFactory.IntegerSpinnerValueFactory(0, Integer.MAX_VALUE, 0));
+
+        TextField commandField = new TextField();
+        commandField.setPromptText("/say hello");
+        CheckBox runAsServerBox = new CheckBox("Run as server");
+        runAsServerBox.setSelected(true);
         TextField commandField = new TextField();
         commandField.setPromptText("/say Quest complete!");
         ComboBox<String> templateCombo = new ComboBox<>(FXCollections.observableArrayList(CommandTemplateRegistry.vanillaTemplateNames()));
@@ -559,6 +577,28 @@ public class QuestEditorController {
         GridPane grid = new GridPane();
         grid.setHgap(10);
         grid.setVgap(10);
+        grid.add(new Label("Reward type:"), 0, 0);
+        grid.add(typeBox, 1, 0);
+
+        Label itemLabel = new Label("Item ID:");
+        grid.add(itemLabel, 0, 1);
+        grid.add(itemIdField, 1, 1);
+        Label countLabel = new Label("Count:");
+        grid.add(countLabel, 0, 2);
+        grid.add(countSpinner, 1, 2);
+
+        Label lootLabel = new Label("Loot table:");
+        grid.add(lootLabel, 0, 3);
+        grid.add(lootTableField, 1, 3);
+
+        Label experienceLabel = new Label("Experience:");
+        grid.add(experienceLabel, 0, 4);
+        grid.add(experienceSpinner, 1, 4);
+
+        Label commandLabel = new Label("Command:");
+        grid.add(commandLabel, 0, 5);
+        grid.add(commandField, 1, 5);
+        grid.add(runAsServerBox, 1, 6);
         grid.add(new Label("Reward Type:"), 0, 0);
         grid.add(rewardTypeCombo, 1, 0);
         grid.add(itemPane, 0, 1, 2, 1);
@@ -567,6 +607,40 @@ public class QuestEditorController {
         dialog.getDialogPane().setContent(grid);
 
         Node addButton = dialog.getDialogPane().lookupButton(addButtonType);
+
+        Runnable updateFields = () -> {
+            RewardType type = typeBox.getSelectionModel().getSelectedItem();
+            if (type == null) {
+                addButton.setDisable(true);
+                return;
+            }
+            boolean itemSelected = type == RewardType.ITEM;
+            boolean lootSelected = type == RewardType.LOOT_TABLE;
+            boolean xpSelected = type == RewardType.EXPERIENCE;
+            boolean commandSelected = type == RewardType.COMMAND;
+
+            setRowVisibility(itemLabel, itemIdField, itemSelected);
+            setRowVisibility(countLabel, countSpinner, itemSelected);
+            setRowVisibility(lootLabel, lootTableField, lootSelected);
+            setRowVisibility(experienceLabel, experienceSpinner, xpSelected);
+            setRowVisibility(commandLabel, commandField, commandSelected);
+            runAsServerBox.setManaged(commandSelected);
+            runAsServerBox.setVisible(commandSelected);
+
+            boolean valid = switch (type) {
+                case ITEM -> !itemIdField.getText().trim().isEmpty();
+                case LOOT_TABLE -> !lootTableField.getText().trim().isEmpty();
+                case EXPERIENCE -> true;
+                case COMMAND -> !commandField.getText().trim().isEmpty();
+            };
+            addButton.setDisable(!valid);
+        };
+
+        typeBox.valueProperty().addListener((obs, oldValue, newValue) -> updateFields.run());
+        itemIdField.textProperty().addListener((obs, oldValue, newValue) -> updateFields.run());
+        lootTableField.textProperty().addListener((obs, oldValue, newValue) -> updateFields.run());
+        commandField.textProperty().addListener((obs, oldValue, newValue) -> updateFields.run());
+        updateFields.run();
         addButton.setDisable(true);
 
         Runnable updateAddButton = () -> {
@@ -604,6 +678,16 @@ public class QuestEditorController {
             if (button != addButtonType) {
                 return null;
             }
+            RewardType type = typeBox.getSelectionModel().getSelectedItem();
+            if (type == null) {
+                return null;
+            }
+            return switch (type) {
+                case ITEM -> Reward.item(new ItemRef(itemIdField.getText().trim(), countSpinner.getValue()));
+                case LOOT_TABLE -> Reward.lootTable(lootTableField.getText().trim());
+                case EXPERIENCE -> Reward.experience(experienceSpinner.getValue());
+                case COMMAND -> Reward.command(new RewardCommand(commandField.getText().trim(), runAsServerBox.isSelected()));
+            };
             if ("Command".equals(rewardTypeCombo.getValue())) {
                 return new CommandReward(commandField.getText().trim(), asPlayerCheckBox.isSelected());
             }
@@ -611,6 +695,26 @@ public class QuestEditorController {
             return new ItemReward(ref);
         });
         dialog.showAndWait().ifPresent(viewModel.getRewards()::add);
+    }
+
+    private void setRowVisibility(Node label, Node field, boolean visible) {
+        label.setManaged(visible);
+        label.setVisible(visible);
+        field.setManaged(visible);
+        field.setVisible(visible);
+    }
+
+    private String formatReward(Reward reward) {
+        return switch (reward.type()) {
+            case ITEM -> reward.item()
+                    .map(item -> "Item: " + item.itemId() + " x" + item.count())
+                    .orElse("Item reward");
+            case LOOT_TABLE -> "Loot table: " + reward.lootTableId().orElse("(unset)");
+            case EXPERIENCE -> "Experience: " + reward.experience().orElse(0);
+            case COMMAND -> reward.command()
+                    .map(command -> "Command: " + command.command())
+                    .orElse("Command reward");
+        };
     }
 
     private void configureDialogOwner(Dialog<?> dialog) {
