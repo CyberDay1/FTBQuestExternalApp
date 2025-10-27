@@ -1,7 +1,5 @@
 package dev.ftbq.editor;
 
-import java.awt.GraphicsEnvironment;
-
 import javafx.application.Application;
 
 /**
@@ -34,11 +32,8 @@ public final class HeadlessLauncher {
     }
 
     private static boolean detectHeadlessEnvironment() {
-        // Respect the standard AWT headless flag before falling back to runtime detection
-        if (Boolean.getBoolean("java.awt.headless")) {
-            return true;
-        }
-        return GraphicsEnvironment.isHeadless();
+        // Use the Java AWT headless flag for cross-platform detection
+        return java.awt.GraphicsEnvironment.isHeadless();
     }
 
     private static void applyHeadlessProperties() {
