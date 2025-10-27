@@ -6,6 +6,8 @@ import dev.ftbq.editor.domain.BackgroundRef;
 import dev.ftbq.editor.domain.BackgroundRepeat;
 import dev.ftbq.editor.domain.Chapter;
 import dev.ftbq.editor.domain.Quest;
+import dev.ftbq.editor.assets.CacheManager;
+import dev.ftbq.editor.services.UiServiceLocator;
 import dev.ftbq.editor.services.bus.ServiceLocator;
 import dev.ftbq.editor.services.logging.StructuredLogger;
 import javafx.beans.property.ObjectProperty;
@@ -21,6 +23,7 @@ import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.control.Label;
 import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.input.ScrollEvent;
@@ -37,6 +40,7 @@ import javafx.stage.Modality;
 import javafx.stage.Stage;
 import javafx.geometry.Pos;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.InvalidPathException;
@@ -642,30 +646,50 @@ public class GraphCanvas extends Pane {
             setPickOnBounds(false);
             getStyleClass().add("quest-node");
 
-            Circle iconCircle = new Circle(NODE_SIZE / 2 - 6);
-            iconCircle.setFill(colorFromString(modelNode.getQuest().icon().icon()));
-            iconCircle.setStroke(Color.web("#202020"));
-            iconCircle.setStrokeWidth(2);
-            iconCircle.setMouseTransparent(true);
+            ImageView iconView = new ImageView();
+            iconView.setFitWidth(NODE_SIZE - 12);
+            iconView.setFitHeight(NODE_SIZE - 12);
+            iconView.setPreserveRatio(true);
 
-            Label iconLabel = new Label(shortIconName(modelNode.getQuest()));
-            iconLabel.setTextFill(Color.WHITE);
-            iconLabel.setFont(Font.font("System", FontWeight.BOLD, 14));
-            iconLabel.setMouseTransparent(true);
+            boolean loadedIcon = false;
+            CacheManager cacheManager = UiServiceLocator.cacheManager;
+            if (cacheManager != null) {
+                String iconId = modelNode.getQuest().icon().icon();
+                cacheManager.fetchIcon(iconId).ifPresent(bytes -> iconView.setImage(new Image(new ByteArrayInputStream(bytes))));
+                loadedIcon = iconView.getImage() != null;
+            }
+
+            StackPane stack;
+            if (!loadedIcon) {
+                Circle iconCircle = new Circle(NODE_SIZE / 2 - 6);
+                iconCircle.setFill(colorFromString(modelNode.getQuest().icon().icon()));
+                iconCircle.setStroke(Color.web("#202020"));
+                iconCircle.setStrokeWidth(2);
+                iconCircle.setMouseTransparent(true);
+
+                Label iconLabel = new Label(shortIconName(modelNode.getQuest()));
+                iconLabel.setTextFill(Color.WHITE);
+                iconLabel.setFont(Font.font("System", FontWeight.BOLD, 14));
+                iconLabel.setMouseTransparent(true);
+
+                stack = new StackPane(iconCircle, iconLabel, badge);
+                StackPane.setAlignment(iconCircle, Pos.CENTER);
+                StackPane.setAlignment(iconLabel, Pos.CENTER);
+            } else {
+                stack = new StackPane(iconView, badge);
+                StackPane.setAlignment(iconView, Pos.CENTER);
+            }
+
+            stack.setPrefSize(NODE_SIZE, NODE_SIZE);
+            stack.setMinSize(NODE_SIZE, NODE_SIZE);
+            stack.setMaxSize(NODE_SIZE, NODE_SIZE);
+            StackPane.setAlignment(badge, Pos.TOP_RIGHT);
+            badge.setTranslateX(-10);
+            badge.setTranslateY(10);
 
             badge.setStroke(Color.web("#1f1f1f"));
             badge.setStrokeWidth(2);
             badge.setMouseTransparent(true);
-
-            StackPane stack = new StackPane(iconCircle, iconLabel, badge);
-            stack.setPrefSize(NODE_SIZE, NODE_SIZE);
-            stack.setMinSize(NODE_SIZE, NODE_SIZE);
-            stack.setMaxSize(NODE_SIZE, NODE_SIZE);
-            StackPane.setAlignment(iconCircle, Pos.CENTER);
-            StackPane.setAlignment(iconLabel, Pos.CENTER);
-            StackPane.setAlignment(badge, Pos.TOP_RIGHT);
-            badge.setTranslateX(-10);
-            badge.setTranslateY(10);
 
             getChildren().add(stack);
             setValidationLevel(modelNode.getValidationLevel());
