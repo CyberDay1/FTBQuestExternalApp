@@ -351,6 +351,65 @@ public final class StoreDao {
         }
     }
 
+    /**
+     * Loads a quest header and its dependency list by quest ID.
+     * Tasks and rewards are not loaded by this method.
+     *
+     * @param id quest identifier to look up
+     * @return the quest if present, otherwise an empty optional
+     */
+    public Optional<Quest> findQuestById(String id) {
+        Objects.requireNonNull(id, "id");
+        try (PreparedStatement statement = connection.prepareStatement("""
+                SELECT id, title, description, icon, icon_relative_path, visibility
+                FROM quests
+                WHERE id = ?
+                """)) {
+            statement.setString(1, id);
+            try (ResultSet resultSet = statement.executeQuery()) {
+                if (!resultSet.next()) {
+                    return Optional.empty();
+                }
+                String questId = resultSet.getString("id");
+                String title = resultSet.getString("title");
+                String description = resultSet.getString("description");
+                String iconId = resultSet.getString("icon");
+                String iconRelativePath = resultSet.getString("icon_relative_path");
+                IconRef icon = new IconRef(iconId, Optional.ofNullable(iconRelativePath));
+                Visibility visibility = Visibility.valueOf(resultSet.getString("visibility"));
+
+                List<Dependency> dependencies = new ArrayList<>();
+                try (PreparedStatement depStatement = connection.prepareStatement("""
+                        SELECT dependency_quest_id, required
+                        FROM quest_dependencies
+                        WHERE quest_id = ?
+                        """)) {
+                    depStatement.setString(1, questId);
+                    try (ResultSet depResultSet = depStatement.executeQuery()) {
+                        while (depResultSet.next()) {
+                            String dependencyId = depResultSet.getString("dependency_quest_id");
+                            boolean required = depResultSet.getInt("required") != 0;
+                            dependencies.add(new Dependency(dependencyId, required));
+                        }
+                    }
+                }
+
+                return Optional.of(Quest.builder()
+                        .id(questId)
+                        .title(title)
+                        .description(description)
+                        .icon(icon)
+                        .visibility(visibility)
+                        .dependencies(dependencies)
+                        .tasks(List.of())
+                        .rewards(List.of())
+                        .build());
+            }
+        } catch (SQLException e) {
+            throw new UncheckedSqlException("Failed to load quest " + id, e);
+        }
+    }
+
     public Optional<LootTableEntity> findLootTable(String name) {
         try (PreparedStatement statement = connection.prepareStatement("""
                 SELECT name, data
