@@ -42,7 +42,7 @@ class QuestPersistenceTest {
                     ))
                     .rewards(List.of(
                             Reward.item(new ItemRef("minecraft:diamond", 2)),
-                            Reward.experience(100),
+                            Reward.xpAmount(100),
                             Reward.command(new RewardCommand("/say Quest complete!", true)),
                             Reward.command(new RewardCommand("/give @p minecraft:apple", false)),
                             Reward.lootTable("mod:bonus/legendary")
@@ -183,7 +183,7 @@ class QuestPersistenceTest {
                     .description("Initial description")
                     .icon(new IconRef("minecraft:book"))
                     .tasks(List.of(new ItemTask(new ItemRef("minecraft:apple", 1), false)))
-                    .rewards(List.of(Reward.experience(10)))
+                    .rewards(List.of(Reward.xpAmount(10)))
                     .dependencies(List.of(new Dependency("quest_a", true)))
                     .build();
 

@@ -1,17 +1,22 @@
 package dev.ftbq.editor.store;
 
 import dev.ftbq.editor.domain.AdvancementTask;
+import dev.ftbq.editor.domain.CommandReward;
 import dev.ftbq.editor.domain.Dependency;
 import dev.ftbq.editor.domain.IconRef;
 import dev.ftbq.editor.domain.ItemRef;
+import dev.ftbq.editor.domain.ItemReward;
 import dev.ftbq.editor.domain.ItemTask;
 import dev.ftbq.editor.domain.LocationTask;
+import dev.ftbq.editor.domain.LootTableReward;
 import dev.ftbq.editor.domain.Quest;
 import dev.ftbq.editor.domain.Reward;
 import dev.ftbq.editor.domain.RewardCommand;
 import dev.ftbq.editor.domain.RewardType;
 import dev.ftbq.editor.domain.Task;
 import dev.ftbq.editor.domain.Visibility;
+import dev.ftbq.editor.domain.XpLevelReward;
+import dev.ftbq.editor.domain.XpReward;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -746,7 +751,7 @@ public final class StoreDao {
             for (Reward reward : quest.rewards()) {
                 statement.setString(1, quest.id());
                 statement.setInt(2, index++);
-                statement.setString(3, reward.type().name().toLowerCase(Locale.ROOT));
+                statement.setString(3, reward.type().id());
 
                 setStringOrNull(statement, 4, null);
                 setIntegerOrNull(statement, 5, null);
@@ -755,18 +760,22 @@ public final class StoreDao {
                 setStringOrNull(statement, 8, null);
                 setIntegerOrNull(statement, 9, null);
 
-                switch (reward.type()) {
-                    case ITEM -> {
-                        ItemRef item = reward.item().orElseThrow();
+                switch (reward) {
+                    case ItemReward itemReward -> {
+                        ItemRef item = itemReward.item().orElseThrow();
                         statement.setString(4, item.itemId());
                         statement.setInt(5, item.count());
                     }
-                    case LOOT_TABLE -> setStringOrNull(statement, 6, reward.lootTableId().orElse(null));
-                    case EXPERIENCE -> statement.setInt(7, reward.experience().orElse(0));
-                    case COMMAND -> {
-                        RewardCommand command = reward.command().orElseThrow();
+                    case LootTableReward lootTableReward -> setStringOrNull(statement, 6, lootTableReward.lootTableId().orElse(null));
+                    case XpLevelReward xpLevelReward -> statement.setInt(7, xpLevelReward.experienceLevels().orElse(0));
+                    case XpReward xpReward -> statement.setInt(7, xpReward.experienceAmount().orElse(0));
+                    case CommandReward commandReward -> {
+                        RewardCommand command = commandReward.command().orElseThrow();
                         statement.setString(8, command.command());
                         statement.setInt(9, command.runAsServer() ? 1 : 0);
+                    }
+                    default -> {
+                        // no-op
                     }
                 }
 
@@ -793,7 +802,7 @@ public final class StoreDao {
                     }
                     RewardType rewardType;
                     try {
-                        rewardType = RewardType.valueOf(type.toUpperCase(Locale.ROOT));
+                        rewardType = RewardType.fromId(type);
                     } catch (IllegalArgumentException ex) {
                         continue;
                     }
@@ -814,10 +823,16 @@ public final class StoreDao {
                                 rewards.add(Reward.lootTable(lootTableId));
                             }
                         }
-                        case EXPERIENCE -> {
+                        case XP_LEVELS -> {
+                            int levels = resultSet.getInt("experience");
+                            if (!resultSet.wasNull()) {
+                                rewards.add(Reward.xpLevels(levels));
+                            }
+                        }
+                        case XP_AMOUNT -> {
                             int amount = resultSet.getInt("experience");
                             if (!resultSet.wasNull()) {
-                                rewards.add(Reward.experience(amount));
+                                rewards.add(Reward.xpAmount(amount));
                             }
                         }
                         case COMMAND -> {

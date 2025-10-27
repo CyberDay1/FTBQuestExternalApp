@@ -36,7 +36,7 @@ class SnbtQuestMapperTest {
                 ),
                 List.of(
                         Reward.item(new ItemRef("minecraft:apple", 3)),
-                        Reward.experience(50),
+                        Reward.xpAmount(50),
                         Reward.command(new RewardCommand("/say Hello", true))
                 ),
                 List.of(new Dependency("intro", true), new Dependency("optional", false)),
@@ -81,7 +81,7 @@ class SnbtQuestMapperTest {
           icon:\"minecraft:book\",
           visibility:\"visible\",
           tasks:[{type:\"item\", item:{id:\"minecraft:oak_log\", count:16}, consume:1b}, {type:\"advancement\", advancement:\"minecraft:adventure/root\"}, {type:\"location\", dimension:\"minecraft:overworld\", x:128.0d, y:64.25d, z:-12.5d, radius:5.0d}],
-          rewards:[{type:\"item\", item:{id:\"minecraft:apple\", count:3}}, {type:\"experience\", amount:50}, {type:\"command\", command:\"/say Hello\", run_as_server:1b}],
+          rewards:[{type:\"item\", item:{id:\"minecraft:apple\", count:3}}, {type:\"xp_amount\", amount:50}, {type:\"command\", command:\"/say Hello\", run_as_server:1b}],
           dependencies:[{quest:\"intro\", required:1b}, {quest:\"optional\", required:0b}]
         }
       ]

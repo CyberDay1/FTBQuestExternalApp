@@ -6,4 +6,8 @@ package dev.ftbq.editor.domain;
 public sealed interface Task permits ItemTask, AdvancementTask, LocationTask {
 
     String type();
+
+    default String describe() {
+        return type();
+    }
 }
