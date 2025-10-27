@@ -1,9 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
 <?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ListView?>
 <?import javafx.scene.layout.BorderPane?>
 <?import javafx.scene.layout.StackPane?>
+<?import javafx.scene.layout.VBox?>
 
 <BorderPane xmlns="http://javafx.com/javafx/20" xmlns:fx="http://javafx.com/fxml/1"
             fx:controller="dev.ftbq.editor.controller.ChapterEditorController">
@@ -17,4 +20,19 @@
     <center>
         <StackPane fx:id="graphContainer" prefWidth="800" prefHeight="600" />
     </center>
+    <right>
+        <VBox fx:id="questDetailBox" spacing="8" prefWidth="260" BorderPane.alignment="CENTER">
+            <children>
+                <Label text="Tasks" />
+                <ListView fx:id="taskList" VBox.vgrow="ALWAYS" />
+                <Button text="Add Task" onAction="#onAddTask" />
+                <Label text="Rewards" />
+                <ListView fx:id="rewardList" VBox.vgrow="ALWAYS" />
+                <Button text="Add Reward" onAction="#onAddReward" />
+                <Label text="Dependencies" />
+                <ListView fx:id="dependencyList" VBox.vgrow="ALWAYS" />
+                <Button text="Add Dependency" onAction="#onAddDependency" />
+            </children>
+        </VBox>
+    </right>
 </BorderPane>
