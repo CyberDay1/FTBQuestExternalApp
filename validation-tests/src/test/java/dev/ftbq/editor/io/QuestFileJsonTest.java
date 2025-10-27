@@ -6,12 +6,9 @@ import dev.ftbq.editor.domain.BackgroundRef;
 import dev.ftbq.editor.domain.BackgroundRepeat;
 import dev.ftbq.editor.domain.Chapter;
 import dev.ftbq.editor.domain.ChapterGroup;
-import dev.ftbq.editor.domain.CommandReward;
-import dev.ftbq.editor.domain.CustomReward;
 import dev.ftbq.editor.domain.Dependency;
 import dev.ftbq.editor.domain.IconRef;
 import dev.ftbq.editor.domain.ItemRef;
-import dev.ftbq.editor.domain.ItemReward;
 import dev.ftbq.editor.domain.ItemTask;
 import dev.ftbq.editor.domain.LocationTask;
 import dev.ftbq.editor.domain.LootCondition;
@@ -21,8 +18,9 @@ import dev.ftbq.editor.domain.LootPool;
 import dev.ftbq.editor.domain.LootTable;
 import dev.ftbq.editor.domain.Quest;
 import dev.ftbq.editor.domain.QuestFile;
+import dev.ftbq.editor.domain.Reward;
+import dev.ftbq.editor.domain.RewardCommand;
 import dev.ftbq.editor.domain.Visibility;
-import dev.ftbq.editor.domain.XpReward;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -51,10 +49,10 @@ class QuestFileJsonTest {
                         new LocationTask("minecraft:overworld", 10.0, 64.0, -5.0, 3.5)
                 ),
                 List.of(
-                        new ItemReward(new ItemRef("minecraft:diamond", 1)),
-                        new XpReward(25),
-                        new CommandReward("/say hello", true),
-                        new CustomReward("mod:bonus", Map.of("key", "value"))
+                        Reward.item(new ItemRef("minecraft:diamond", 1)),
+                        Reward.experience(25),
+                        Reward.command(new RewardCommand("/say hello", true)),
+                        Reward.lootTable("mod:loot/bonus")
                 ),
                 List.of(new Dependency("quest-0", true)),
                 Visibility.SECRET

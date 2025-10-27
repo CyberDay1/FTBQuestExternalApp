@@ -1,24 +1,17 @@
 package dev.ftbq.editor.store;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import dev.ftbq.editor.domain.AdvancementTask;
-import dev.ftbq.editor.domain.CommandReward;
-import dev.ftbq.editor.domain.CustomReward;
 import dev.ftbq.editor.domain.Dependency;
 import dev.ftbq.editor.domain.IconRef;
 import dev.ftbq.editor.domain.ItemRef;
-import dev.ftbq.editor.domain.ItemReward;
 import dev.ftbq.editor.domain.ItemTask;
 import dev.ftbq.editor.domain.LocationTask;
 import dev.ftbq.editor.domain.Quest;
 import dev.ftbq.editor.domain.Reward;
+import dev.ftbq.editor.domain.RewardCommand;
+import dev.ftbq.editor.domain.RewardType;
 import dev.ftbq.editor.domain.Task;
 import dev.ftbq.editor.domain.Visibility;
-import dev.ftbq.editor.domain.XpReward;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -28,7 +21,6 @@ import java.sql.Types;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
 import java.util.Optional;
 import java.util.Objects;
 
@@ -82,7 +74,7 @@ public final class StoreDao {
             """;
 
     private static final String INSERT_QUEST_REWARD_SQL = """
-            INSERT INTO quest_rewards (quest_id, reward_index, type, item_id, item_count, amount, command, as_player, metadata)
+            INSERT INTO quest_rewards (quest_id, reward_index, type, item_id, item_count, loot_table_id, experience, command, run_as_server)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             """;
 
@@ -90,14 +82,6 @@ public final class StoreDao {
             INSERT INTO quest_dependencies (quest_id, dependency_quest_id, required)
             VALUES (?, ?, ?)
             """;
-
-    private static final ObjectMapper METADATA_MAPPER;
-
-    static {
-        METADATA_MAPPER = new ObjectMapper();
-        METADATA_MAPPER.registerModule(new Jdk8Module());
-        METADATA_MAPPER.registerModule(new JavaTimeModule());
-    }
 
     private final Connection connection;
 
@@ -608,33 +592,29 @@ public final class StoreDao {
             for (Reward reward : quest.rewards()) {
                 statement.setString(1, quest.id());
                 statement.setInt(2, index++);
-                statement.setString(3, reward.type());
+                statement.setString(3, reward.type().name().toLowerCase(Locale.ROOT));
 
-                if (reward instanceof ItemReward itemReward) {
-                    ItemRef item = itemReward.item();
-                    statement.setString(4, item.itemId());
-                    statement.setInt(5, item.count());
-                } else {
-                    setStringOrNull(statement, 4, null);
-                    setIntegerOrNull(statement, 5, null);
+                setStringOrNull(statement, 4, null);
+                setIntegerOrNull(statement, 5, null);
+                setStringOrNull(statement, 6, null);
+                setIntegerOrNull(statement, 7, null);
+                setStringOrNull(statement, 8, null);
+                setIntegerOrNull(statement, 9, null);
+
+                switch (reward.type()) {
+                    case ITEM -> {
+                        ItemRef item = reward.item().orElseThrow();
+                        statement.setString(4, item.itemId());
+                        statement.setInt(5, item.count());
+                    }
+                    case LOOT_TABLE -> setStringOrNull(statement, 6, reward.lootTableId().orElse(null));
+                    case EXPERIENCE -> statement.setInt(7, reward.experience().orElse(0));
+                    case COMMAND -> {
+                        RewardCommand command = reward.command().orElseThrow();
+                        statement.setString(8, command.command());
+                        statement.setInt(9, command.runAsServer() ? 1 : 0);
+                    }
                 }
-
-                if (reward instanceof XpReward xpReward) {
-                    statement.setInt(6, xpReward.amount());
-                } else {
-                    setIntegerOrNull(statement, 6, null);
-                }
-
-                if (reward instanceof CommandReward commandReward) {
-                    statement.setString(7, commandReward.command());
-                    statement.setInt(8, commandReward.asPlayer() ? 1 : 0);
-                } else {
-                    setStringOrNull(statement, 7, null);
-                    setIntegerOrNull(statement, 8, null);
-                }
-
-                String metadataJson = serializeMetadata(reward.metadata());
-                setStringOrNull(statement, 9, metadataJson);
 
                 statement.addBatch();
             }
@@ -644,7 +624,7 @@ public final class StoreDao {
 
     private List<Reward> loadQuestRewards(String questId) throws SQLException {
         try (PreparedStatement statement = connection.prepareStatement("""
-                SELECT type, item_id, item_count, amount, command, as_player, metadata
+                SELECT type, item_id, item_count, loot_table_id, experience, command, run_as_server
                 FROM quest_rewards
                 WHERE quest_id = ?
                 ORDER BY reward_index
@@ -654,33 +634,44 @@ public final class StoreDao {
                 List<Reward> rewards = new ArrayList<>();
                 while (resultSet.next()) {
                     String type = resultSet.getString("type");
-                    switch (type) {
-                        case "item" -> {
+                    if (type == null) {
+                        continue;
+                    }
+                    RewardType rewardType;
+                    try {
+                        rewardType = RewardType.valueOf(type.toUpperCase(Locale.ROOT));
+                    } catch (IllegalArgumentException ex) {
+                        continue;
+                    }
+                    switch (rewardType) {
+                        case ITEM -> {
                             String itemId = resultSet.getString("item_id");
                             int count = resultSet.getInt("item_count");
                             if (resultSet.wasNull() || count < 1) {
                                 count = 1;
                             }
                             if (itemId != null) {
-                                rewards.add(new ItemReward(new ItemRef(itemId, count)));
+                                rewards.add(Reward.item(new ItemRef(itemId, count)));
                             }
                         }
-                        case "xp" -> {
-                            int amount = resultSet.getInt("amount");
+                        case LOOT_TABLE -> {
+                            String lootTableId = resultSet.getString("loot_table_id");
+                            if (lootTableId != null) {
+                                rewards.add(Reward.lootTable(lootTableId));
+                            }
+                        }
+                        case EXPERIENCE -> {
+                            int amount = resultSet.getInt("experience");
                             if (!resultSet.wasNull()) {
-                                rewards.add(new XpReward(amount));
+                                rewards.add(Reward.experience(amount));
                             }
                         }
-                        case "command" -> {
+                        case COMMAND -> {
                             String command = resultSet.getString("command");
-                            boolean asPlayer = resultSet.getInt("as_player") != 0;
-                            if (command != null) {
-                                rewards.add(new CommandReward(command, asPlayer));
+                            boolean runAsServer = resultSet.getInt("run_as_server") != 0;
+                            if (command != null && !command.isBlank()) {
+                                rewards.add(Reward.command(new RewardCommand(command, runAsServer)));
                             }
-                        }
-                        default -> {
-                            Map<String, Object> metadata = deserializeMetadata(resultSet.getString("metadata"));
-                            rewards.add(new CustomReward(type, metadata));
                         }
                     }
                 }
@@ -737,28 +728,6 @@ public final class StoreDao {
             statement.setNull(index, Types.REAL);
         } else {
             statement.setDouble(index, value);
-        }
-    }
-
-    private static String serializeMetadata(Map<String, Object> metadata) {
-        if (metadata == null || metadata.isEmpty()) {
-            return null;
-        }
-        try {
-            return METADATA_MAPPER.writeValueAsString(metadata);
-        } catch (JsonProcessingException e) {
-            throw new UncheckedSqlException("Failed to serialize reward metadata", e);
-        }
-    }
-
-    private static Map<String, Object> deserializeMetadata(String metadataJson) {
-        if (metadataJson == null || metadataJson.isBlank()) {
-            return Map.of();
-        }
-        try {
-            return METADATA_MAPPER.readValue(metadataJson, new TypeReference<>() {});
-        } catch (JsonProcessingException e) {
-            throw new UncheckedSqlException("Failed to deserialize reward metadata", e);
         }
     }
 

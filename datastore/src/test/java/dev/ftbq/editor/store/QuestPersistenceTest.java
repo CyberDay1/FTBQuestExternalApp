@@ -1,28 +1,25 @@
 package dev.ftbq.editor.store;
 
 import dev.ftbq.editor.domain.AdvancementTask;
-import dev.ftbq.editor.domain.CommandReward;
 import dev.ftbq.editor.domain.Dependency;
 import dev.ftbq.editor.domain.IconRef;
 import dev.ftbq.editor.domain.ItemRef;
-import dev.ftbq.editor.domain.ItemReward;
 import dev.ftbq.editor.domain.ItemTask;
 import dev.ftbq.editor.domain.LocationTask;
 import dev.ftbq.editor.domain.Quest;
+import dev.ftbq.editor.domain.Reward;
+import dev.ftbq.editor.domain.RewardCommand;
 import dev.ftbq.editor.domain.Visibility;
-import dev.ftbq.editor.domain.XpReward;
 import org.junit.jupiter.api.Test;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -44,11 +41,11 @@ class QuestPersistenceTest {
                             new LocationTask("minecraft:overworld", 10.5, 64, -12.75, 5.0)
                     ))
                     .rewards(List.of(
-                            new ItemReward(new ItemRef("minecraft:diamond", 2)),
-                            new XpReward(100),
-                            new CommandReward("/say Quest complete!", true),
-                            new CommandReward("/give @p minecraft:apple", false),
-                            new dev.ftbq.editor.domain.CustomReward("custom", Map.of("rarity", "legendary"))
+                            Reward.item(new ItemRef("minecraft:diamond", 2)),
+                            Reward.experience(100),
+                            Reward.command(new RewardCommand("/say Quest complete!", true)),
+                            Reward.command(new RewardCommand("/give @p minecraft:apple", false)),
+                            Reward.lootTable("mod:bonus/legendary")
                     ))
                     .dependencies(List.of(
                             new Dependency("quest_0", true),
@@ -117,7 +114,7 @@ class QuestPersistenceTest {
             }
 
             try (PreparedStatement rewardStatement = connection.prepareStatement(
-                    "SELECT reward_index, type, item_id, item_count, amount, command, as_player, metadata " +
+                    "SELECT reward_index, type, item_id, item_count, loot_table_id, experience, command, run_as_server " +
                             "FROM quest_rewards WHERE quest_id = ? ORDER BY reward_index")) {
                 rewardStatement.setString(1, quest.id());
                 try (ResultSet resultSet = rewardStatement.executeQuery()) {
@@ -126,33 +123,32 @@ class QuestPersistenceTest {
                     assertEquals("item", resultSet.getString("type"));
                     assertEquals("minecraft:diamond", resultSet.getString("item_id"));
                     assertEquals(2, resultSet.getInt("item_count"));
-                    assertNull(resultSet.getObject("amount"));
+                    assertNull(resultSet.getString("loot_table_id"));
+                    assertNull(resultSet.getObject("experience"));
                     assertNull(resultSet.getString("command"));
 
                     assertTrue(resultSet.next());
                     assertEquals(1, resultSet.getInt("reward_index"));
-                    assertEquals("xp", resultSet.getString("type"));
-                    assertEquals(100, resultSet.getInt("amount"));
+                    assertEquals("experience", resultSet.getString("type"));
+                    assertEquals(100, resultSet.getInt("experience"));
                     assertNull(resultSet.getString("command"));
 
                     assertTrue(resultSet.next());
                     assertEquals(2, resultSet.getInt("reward_index"));
                     assertEquals("command", resultSet.getString("type"));
                     assertEquals("/say Quest complete!", resultSet.getString("command"));
-                    assertEquals(1, resultSet.getInt("as_player"));
+                    assertEquals(1, resultSet.getInt("run_as_server"));
 
                     assertTrue(resultSet.next());
                     assertEquals(3, resultSet.getInt("reward_index"));
                     assertEquals("command", resultSet.getString("type"));
                     assertEquals("/give @p minecraft:apple", resultSet.getString("command"));
-                    assertEquals(0, resultSet.getInt("as_player"));
+                    assertEquals(0, resultSet.getInt("run_as_server"));
 
                     assertTrue(resultSet.next());
                     assertEquals(4, resultSet.getInt("reward_index"));
-                    assertEquals("custom", resultSet.getString("type"));
-                    String metadata = resultSet.getString("metadata");
-                    assertNotNull(metadata);
-                    assertTrue(metadata.contains("\"rarity\":\"legendary\""));
+                    assertEquals("loot_table", resultSet.getString("type"));
+                    assertEquals("mod:bonus/legendary", resultSet.getString("loot_table_id"));
                     assertNull(resultSet.getString("command"));
 
                     assertFalse(resultSet.next());
@@ -187,7 +183,7 @@ class QuestPersistenceTest {
                     .description("Initial description")
                     .icon(new IconRef("minecraft:book"))
                     .tasks(List.of(new ItemTask(new ItemRef("minecraft:apple", 1), false)))
-                    .rewards(List.of(new XpReward(10)))
+                    .rewards(List.of(Reward.experience(10)))
                     .dependencies(List.of(new Dependency("quest_a", true)))
                     .build();
 
@@ -200,7 +196,7 @@ class QuestPersistenceTest {
                     .icon(new IconRef("minecraft:diamond"))
                     .visibility(Visibility.HIDDEN)
                     .tasks(List.of(new AdvancementTask("minecraft:adventure/root")))
-                    .rewards(List.of(new CommandReward("/title", false)))
+                    .rewards(List.of(Reward.command(new RewardCommand("/title", false))))
                     .dependencies(List.of(new Dependency("quest_b", false)))
                     .build();
 
@@ -228,13 +224,13 @@ class QuestPersistenceTest {
             }
 
             try (PreparedStatement rewardStatement = connection.prepareStatement(
-                    "SELECT type, command, as_player FROM quest_rewards WHERE quest_id = ?")) {
+                    "SELECT type, command, run_as_server FROM quest_rewards WHERE quest_id = ?")) {
                 rewardStatement.setString(1, updated.id());
                 try (ResultSet resultSet = rewardStatement.executeQuery()) {
                     assertTrue(resultSet.next());
                     assertEquals("command", resultSet.getString("type"));
                     assertEquals("/title", resultSet.getString("command"));
-                    assertEquals(0, resultSet.getInt("as_player"));
+                    assertEquals(0, resultSet.getInt("run_as_server"));
                     assertFalse(resultSet.next());
                 }
             }

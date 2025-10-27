@@ -8,20 +8,18 @@ import dev.ftbq.editor.domain.BackgroundRef;
 import dev.ftbq.editor.domain.BackgroundRepeat;
 import dev.ftbq.editor.domain.Chapter;
 import dev.ftbq.editor.domain.ChapterGroup;
-import dev.ftbq.editor.domain.CommandReward;
-import dev.ftbq.editor.domain.CustomReward;
 import dev.ftbq.editor.domain.Dependency;
 import dev.ftbq.editor.domain.IconRef;
-import dev.ftbq.editor.domain.ItemReward;
 import dev.ftbq.editor.domain.ItemTask;
 import dev.ftbq.editor.domain.LocationTask;
 import dev.ftbq.editor.domain.LootTable;
 import dev.ftbq.editor.domain.Quest;
 import dev.ftbq.editor.domain.QuestFile;
 import dev.ftbq.editor.domain.Reward;
+import dev.ftbq.editor.domain.RewardCommand;
+import dev.ftbq.editor.domain.RewardType;
 import dev.ftbq.editor.domain.Task;
 import dev.ftbq.editor.domain.Visibility;
-import dev.ftbq.editor.domain.XpReward;
 import dev.ftbq.editor.io.model.ItemRefData;
 
 import java.io.IOException;
@@ -29,9 +27,9 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Locale;
 import java.util.stream.Collectors;
 
 public final class QuestFileJson {
@@ -214,31 +212,60 @@ public final class QuestFileJson {
 
     private record RewardData(@JsonProperty("type") String type,
                               @JsonProperty("item") ItemRefData item,
-                              @JsonProperty("amount") Integer amount,
-                              @JsonProperty("command") String command,
-                              @JsonProperty("as_player") Boolean asPlayer,
-                              @JsonProperty("metadata") Map<String, Object> metadata) {
+                              @JsonProperty("loot_table") String lootTable,
+                              @JsonProperty("experience") Integer experience,
+                              @JsonProperty("command") CommandData command) {
 
         private static RewardData fromDomain(Reward reward) {
-            if (reward instanceof ItemReward itemReward) {
-                return new RewardData("item", ItemRefData.fromDomain(itemReward.item()), null, null, null, Map.of());
-            } else if (reward instanceof XpReward xpReward) {
-                return new RewardData("xp", null, xpReward.amount(), null, null, Map.of());
-            } else if (reward instanceof CommandReward commandReward) {
-                return new RewardData("command", null, null, commandReward.command(), commandReward.asPlayer(), Map.of());
-            } else if (reward instanceof CustomReward customReward) {
-                return new RewardData(customReward.type(), null, null, null, null, customReward.metadata());
-            }
-            throw new IllegalArgumentException("Unsupported reward type: " + reward.type());
+            return new RewardData(
+                    reward.type().name(),
+                    reward.item().map(ItemRefData::fromDomain).orElse(null),
+                    reward.lootTableId().orElse(null),
+                    reward.experience().orElse(null),
+                    reward.command().map(CommandData::fromDomain).orElse(null)
+            );
         }
 
         private Reward toDomain() {
-            return switch (type) {
-                case "item" -> new ItemReward(item.toDomain());
-                case "xp" -> new XpReward(amount);
-                case "command" -> new CommandReward(command, Boolean.TRUE.equals(asPlayer));
-                default -> new CustomReward(type, metadata == null ? Map.of() : metadata);
+            RewardType rewardType;
+            try {
+                rewardType = RewardType.valueOf(type.toUpperCase(Locale.ROOT));
+            } catch (IllegalArgumentException ex) {
+                throw new IllegalArgumentException("Unsupported reward type: " + type, ex);
+            }
+            return switch (rewardType) {
+                case ITEM -> {
+                    if (item == null) {
+                        throw new IllegalArgumentException("Item reward is missing item data");
+                    }
+                    yield Reward.item(item.toDomain());
+                }
+                case LOOT_TABLE -> {
+                    if (lootTable == null || lootTable.isBlank()) {
+                        throw new IllegalArgumentException("Loot table reward is missing table id");
+                    }
+                    yield Reward.lootTable(lootTable);
+                }
+                case EXPERIENCE -> Reward.experience(experience == null ? 0 : experience);
+                case COMMAND -> {
+                    if (command == null) {
+                        throw new IllegalArgumentException("Command reward is missing command data");
+                    }
+                    yield Reward.command(command.toDomain());
+                }
             };
+        }
+    }
+
+    private record CommandData(@JsonProperty("command") String command,
+                               @JsonProperty("run_as_server") Boolean runAsServer) {
+
+        private static CommandData fromDomain(RewardCommand command) {
+            return new CommandData(command.command(), command.runAsServer());
+        }
+
+        private RewardCommand toDomain() {
+            return new RewardCommand(command, Boolean.TRUE.equals(runAsServer));
         }
     }
 

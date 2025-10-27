@@ -1,28 +1,25 @@
 package dev.ftbq.editor.viewmodel.commands;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import dev.ftbq.editor.domain.AdvancementTask;
-import dev.ftbq.editor.domain.CommandReward;
-import dev.ftbq.editor.domain.CustomReward;
 import dev.ftbq.editor.domain.Dependency;
 import dev.ftbq.editor.domain.ItemRef;
-import dev.ftbq.editor.domain.ItemReward;
 import dev.ftbq.editor.domain.ItemTask;
 import dev.ftbq.editor.domain.LocationTask;
 import dev.ftbq.editor.domain.Reward;
+import dev.ftbq.editor.domain.RewardCommand;
+import dev.ftbq.editor.domain.RewardType;
 import dev.ftbq.editor.domain.Task;
-import dev.ftbq.editor.domain.XpReward;
 import dev.ftbq.editor.services.bus.UndoableCommand;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
+import java.util.Locale;
 
 /**
  * Captures undoable changes to quest task, reward, and dependency collections.
@@ -30,8 +27,6 @@ import java.util.Objects;
 public final class QuestListChangeCommand implements UndoableCommand {
 
     public static final String TYPE = "quest.collection.change";
-
-    private static final ObjectMapper MAPPER = new ObjectMapper();
 
     public enum CollectionType {
         TASKS,
@@ -196,19 +191,15 @@ public final class QuestListChangeCommand implements UndoableCommand {
 
     private static ObjectNode serializeReward(Reward reward) {
         ObjectNode node = JsonNodeFactory.instance.objectNode();
-        node.put("type", reward.type());
-        if (reward instanceof ItemReward itemReward) {
-            node.set("item", serializeItemRef(itemReward.item()));
-        } else if (reward instanceof XpReward xpReward) {
-            node.put("amount", xpReward.amount());
-        } else if (reward instanceof CommandReward commandReward) {
-            node.put("command", commandReward.command());
-            node.put("asPlayer", commandReward.asPlayer());
-        } else if (reward instanceof CustomReward customReward) {
-            node.put("customType", customReward.type());
-            node.set("metadata", MAPPER.valueToTree(customReward.metadata()));
-        } else {
-            throw new IllegalArgumentException("Unsupported reward type: " + reward.type());
+        node.put("type", reward.type().name());
+        switch (reward.type()) {
+            case ITEM -> reward.item().ifPresent(item -> node.set("item", serializeItemRef(item)));
+            case LOOT_TABLE -> reward.lootTableId().ifPresent(id -> node.put("lootTableId", id));
+            case EXPERIENCE -> node.put("experience", reward.experience().orElse(0));
+            case COMMAND -> reward.command().ifPresent(command -> {
+                node.put("command", command.command());
+                node.put("runAsServer", command.runAsServer());
+            });
         }
         return node;
     }
@@ -256,13 +247,37 @@ public final class QuestListChangeCommand implements UndoableCommand {
         }
         List<Reward> rewards = new ArrayList<>();
         for (JsonNode element : node) {
-            String type = element.path("type").asText("");
-            rewards.add(switch (type) {
-                case "item" -> new ItemReward(deserializeItemRef(element.path("item")));
-                case "xp" -> new XpReward(element.path("amount").asInt(0));
-                case "command" -> new CommandReward(element.path("command").asText(""), element.path("asPlayer").asBoolean(false));
-                default -> new CustomReward(type, toMetadataMap(element.path("metadata")));
-            });
+            String typeText = element.path("type").asText("");
+            if (typeText.isBlank()) {
+                continue;
+            }
+            RewardType rewardType;
+            try {
+                rewardType = RewardType.valueOf(typeText.toUpperCase(Locale.ROOT));
+            } catch (IllegalArgumentException ex) {
+                continue;
+            }
+            Reward reward = switch (rewardType) {
+                case ITEM -> Reward.item(deserializeItemRef(element.path("item")));
+                case LOOT_TABLE -> {
+                    String lootTableId = element.path("lootTableId").asText("");
+                    if (lootTableId.isBlank()) {
+                        yield null;
+                    }
+                    yield Reward.lootTable(lootTableId);
+                }
+                case EXPERIENCE -> Reward.experience(element.path("experience").asInt(0));
+                case COMMAND -> {
+                    String commandText = element.path("command").asText("");
+                    if (commandText.isBlank()) {
+                        yield null;
+                    }
+                    yield Reward.command(new RewardCommand(commandText, element.path("runAsServer").asBoolean(false)));
+                }
+            };
+            if (reward != null) {
+                rewards.add(reward);
+            }
         }
         return rewards;
     }
@@ -288,13 +303,6 @@ public final class QuestListChangeCommand implements UndoableCommand {
         String itemId = node.path("itemId").asText("minecraft:air");
         int count = node.path("count").asInt(1);
         return new ItemRef(itemId, Math.max(1, count));
-    }
-
-    private static Map<String, Object> toMetadataMap(JsonNode node) {
-        if (node == null || node.isNull() || node.isMissingNode()) {
-            return Map.of();
-        }
-        return MAPPER.convertValue(node, MAPPER.getTypeFactory().constructMapType(Map.class, String.class, Object.class));
     }
 
     private void ensureType(CollectionType expected) {
