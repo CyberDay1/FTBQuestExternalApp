@@ -10,6 +10,8 @@ import dev.ftbq.editor.services.bus.CommandBus;
 import dev.ftbq.editor.services.bus.EventBus;
 import dev.ftbq.editor.services.bus.UndoManager;
 import dev.ftbq.editor.services.events.QuestChanged;
+import dev.ftbq.editor.store.StoreDao;
+import dev.ftbq.editor.support.UiServiceLocator;
 import dev.ftbq.editor.viewmodel.commands.QuestFieldChangeCommand;
 import dev.ftbq.editor.viewmodel.commands.QuestFieldChangeCommand.Field;
 import dev.ftbq.editor.viewmodel.commands.QuestListChangeCommand;
@@ -124,6 +126,10 @@ public class QuestEditorViewModel {
     public Quest save() {
         Quest savedQuest = toQuest();
         currentQuest = savedQuest;
+        StoreDao storeDao = UiServiceLocator.getStoreDao();
+        if (storeDao != null) {
+            storeDao.saveQuest(savedQuest);
+        }
         if (eventBus != null) {
             eventBus.publish(new QuestChanged(savedQuest));
         }

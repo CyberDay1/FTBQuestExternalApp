@@ -6,9 +6,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.nio.file.Path;
 import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.util.List;
 import java.util.Optional;
 
+import dev.ftbq.editor.domain.Quest;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -146,6 +149,44 @@ class StoreDaoTest {
             assertIterableEquals(
                     List.of(block),
                     dao.listItems(null, List.of(), null, null, null, StoreDao.SortMode.VANILLA_FIRST, 1, 1));
+        }
+    }
+
+    @Test
+    void saveQuestPersistsQuestData() throws Exception {
+        try (Connection connection = Jdbc.openInMemory()) {
+            StoreDao dao = new StoreDao(connection);
+            Quest quest = Quest.builder()
+                    .id("quest-1")
+                    .title("Test Quest")
+                    .description("First version")
+                    .build();
+
+            dao.saveQuest(quest);
+
+            assertEquals(quest.toString(), loadQuestData(connection, "quest-1"));
+
+            Quest updatedQuest = Quest.builder()
+                    .id("quest-1")
+                    .title("Test Quest")
+                    .description("Updated version")
+                    .build();
+
+            dao.saveQuest(updatedQuest);
+
+            assertEquals(updatedQuest.toString(), loadQuestData(connection, "quest-1"));
+        }
+    }
+
+    private static String loadQuestData(Connection connection, String questId) throws Exception {
+        try (PreparedStatement statement = connection.prepareStatement("SELECT data FROM quests WHERE id = ?")) {
+            statement.setString(1, questId);
+            try (ResultSet resultSet = statement.executeQuery()) {
+                if (!resultSet.next()) {
+                    throw new IllegalStateException("Quest not found: " + questId);
+                }
+                return resultSet.getString("data");
+            }
         }
     }
 }

@@ -4,6 +4,9 @@ import dev.ftbq.editor.ThemeService;
 import dev.ftbq.editor.assets.CacheManager;
 import dev.ftbq.editor.domain.Dependency;
 import dev.ftbq.editor.domain.IconRef;
+import dev.ftbq.editor.domain.ItemRef;
+import dev.ftbq.editor.domain.ItemReward;
+import dev.ftbq.editor.domain.ItemTask;
 import dev.ftbq.editor.domain.Quest;
 import dev.ftbq.editor.domain.Reward;
 import dev.ftbq.editor.domain.Task;
@@ -22,9 +25,16 @@ import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.Alert;
+import javafx.scene.Node;
 import javafx.scene.control.Button;
+import javafx.scene.control.ButtonBar;
+import javafx.scene.control.ButtonType;
+import javafx.scene.control.CheckBox;
+import javafx.scene.control.Dialog;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
+import javafx.scene.control.Spinner;
+import javafx.scene.control.SpinnerValueFactory;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 import javafx.scene.control.Tooltip;
@@ -33,8 +43,10 @@ import javafx.scene.image.ImageView;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.GridPane;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
+import javafx.stage.Window;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -52,6 +64,14 @@ import java.util.function.Consumer;
 public class QuestEditorController {
     @FXML
     private BorderPane rootPane;
+
+    // Buttons enabling users to add dependencies, tasks, and rewards to the quest.
+    @FXML
+    private Button addDependencyButton;
+    @FXML
+    private Button addTaskButton;
+    @FXML
+    private Button addRewardButton;
 
     @FXML
     private TextField questTitleField;
@@ -143,6 +163,7 @@ public class QuestEditorController {
         attachStylesheet();
         bindFields();
         configureListViews();
+        configureAddButtons();
         installUndoRedoShortcuts();
         if (questDescriptionArea != null) {
             questDescriptionArea.setWrapText(true);
@@ -258,6 +279,27 @@ public class QuestEditorController {
         }
     }
 
+    private void configureAddButtons() {
+        if (addDependencyButton != null) {
+            addDependencyButton.setOnAction(event -> onAddDependency());
+            if (addDependencyButton.getAccessibleText() == null) {
+                addDependencyButton.setAccessibleText("Add quest dependency");
+            }
+        }
+        if (addTaskButton != null) {
+            addTaskButton.setOnAction(event -> onAddTask());
+            if (addTaskButton.getAccessibleText() == null) {
+                addTaskButton.setAccessibleText("Add quest task");
+            }
+        }
+        if (addRewardButton != null) {
+            addRewardButton.setOnAction(event -> onAddReward());
+            if (addRewardButton.getAccessibleText() == null) {
+                addRewardButton.setAccessibleText("Add quest reward");
+            }
+        }
+    }
+
     /**
      * Updates the tooltip and icon view based on the provided icon reference.
      *
@@ -367,6 +409,121 @@ public class QuestEditorController {
     private void handleRedoAction() {
         if (undoManager != null && undoManager.redo()) {
             updateUndoRedoButtons();
+        }
+    }
+
+    private void onAddDependency() {
+        Dialog<Dependency> dialog = new Dialog<>();
+        dialog.setTitle("Add dependency");
+        dialog.setHeaderText("Select quest dependency");
+        ButtonType addButtonType = new ButtonType("Add", ButtonBar.ButtonData.OK_DONE);
+        dialog.getDialogPane().getButtonTypes().addAll(addButtonType, ButtonType.CANCEL);
+
+        TextField questIdField = new TextField();
+        questIdField.setPromptText("quest.id");
+        CheckBox requiredBox = new CheckBox("Required dependency");
+
+        GridPane grid = new GridPane();
+        grid.setHgap(10);
+        grid.setVgap(10);
+        grid.add(new javafx.scene.control.Label("Quest ID:"), 0, 0);
+        grid.add(questIdField, 1, 0);
+        grid.add(requiredBox, 1, 1);
+
+        dialog.getDialogPane().setContent(grid);
+
+        Node addButton = dialog.getDialogPane().lookupButton(addButtonType);
+        addButton.setDisable(true);
+        questIdField.textProperty().addListener((obs, oldValue, newValue) -> addButton.setDisable(newValue == null || newValue.isBlank()));
+
+        configureDialogOwner(dialog);
+        dialog.setResultConverter(button -> button == addButtonType ? new Dependency(questIdField.getText().trim(), requiredBox.isSelected()) : null);
+        dialog.showAndWait().ifPresent(viewModel.getDependencies()::add);
+    }
+
+    private void onAddTask() {
+        Dialog<Task> dialog = new Dialog<>();
+        dialog.setTitle("Add task");
+        dialog.setHeaderText("Create an item submission task");
+        ButtonType addButtonType = new ButtonType("Add", ButtonBar.ButtonData.OK_DONE);
+        dialog.getDialogPane().getButtonTypes().addAll(addButtonType, ButtonType.CANCEL);
+
+        TextField itemIdField = new TextField();
+        itemIdField.setPromptText("namespace:item");
+        Spinner<Integer> countSpinner = new Spinner<>();
+        countSpinner.setValueFactory(new SpinnerValueFactory.IntegerSpinnerValueFactory(1, Integer.MAX_VALUE, 1));
+        CheckBox consumeBox = new CheckBox("Consume items");
+
+        GridPane grid = new GridPane();
+        grid.setHgap(10);
+        grid.setVgap(10);
+        grid.add(new javafx.scene.control.Label("Item ID:"), 0, 0);
+        grid.add(itemIdField, 1, 0);
+        grid.add(new javafx.scene.control.Label("Count:"), 0, 1);
+        grid.add(countSpinner, 1, 1);
+        grid.add(consumeBox, 1, 2);
+
+        dialog.getDialogPane().setContent(grid);
+
+        Node addButton = dialog.getDialogPane().lookupButton(addButtonType);
+        addButton.setDisable(true);
+        itemIdField.textProperty().addListener((obs, oldValue, newValue) -> addButton.setDisable(newValue == null || newValue.isBlank()));
+
+        configureDialogOwner(dialog);
+        dialog.setResultConverter(button -> {
+            if (button != addButtonType) {
+                return null;
+            }
+            ItemRef ref = new ItemRef(itemIdField.getText().trim(), countSpinner.getValue());
+            return new ItemTask(ref, consumeBox.isSelected());
+        });
+        dialog.showAndWait().ifPresent(viewModel.getTasks()::add);
+    }
+
+    private void onAddReward() {
+        Dialog<Reward> dialog = new Dialog<>();
+        dialog.setTitle("Add reward");
+        dialog.setHeaderText("Create an item reward");
+        ButtonType addButtonType = new ButtonType("Add", ButtonBar.ButtonData.OK_DONE);
+        dialog.getDialogPane().getButtonTypes().addAll(addButtonType, ButtonType.CANCEL);
+
+        TextField itemIdField = new TextField();
+        itemIdField.setPromptText("namespace:item");
+        Spinner<Integer> countSpinner = new Spinner<>();
+        countSpinner.setValueFactory(new SpinnerValueFactory.IntegerSpinnerValueFactory(1, Integer.MAX_VALUE, 1));
+
+        GridPane grid = new GridPane();
+        grid.setHgap(10);
+        grid.setVgap(10);
+        grid.add(new javafx.scene.control.Label("Item ID:"), 0, 0);
+        grid.add(itemIdField, 1, 0);
+        grid.add(new javafx.scene.control.Label("Count:"), 0, 1);
+        grid.add(countSpinner, 1, 1);
+
+        dialog.getDialogPane().setContent(grid);
+
+        Node addButton = dialog.getDialogPane().lookupButton(addButtonType);
+        addButton.setDisable(true);
+        itemIdField.textProperty().addListener((obs, oldValue, newValue) -> addButton.setDisable(newValue == null || newValue.isBlank()));
+
+        configureDialogOwner(dialog);
+        dialog.setResultConverter(button -> {
+            if (button != addButtonType) {
+                return null;
+            }
+            ItemRef ref = new ItemRef(itemIdField.getText().trim(), countSpinner.getValue());
+            return new ItemReward(ref);
+        });
+        dialog.showAndWait().ifPresent(viewModel.getRewards()::add);
+    }
+
+    private void configureDialogOwner(Dialog<?> dialog) {
+        if (rootPane != null && rootPane.getScene() != null) {
+            Window owner = rootPane.getScene().getWindow();
+            if (owner != null) {
+                dialog.initOwner(owner);
+                dialog.initModality(Modality.WINDOW_MODAL);
+            }
         }
     }
 
