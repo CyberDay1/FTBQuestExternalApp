@@ -26,11 +26,14 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Types;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Objects;
+import java.util.Optional;
+import java.util.stream.Collectors;
 
 public final class StoreDao {
     private static final String UPSERT_ITEM_SQL = """
@@ -70,6 +73,20 @@ public final class StoreDao {
                 icon = excluded.icon,
                 icon_relative_path = excluded.icon_relative_path,
                 visibility = excluded.visibility
+            """;
+
+    private static final String UPSERT_QUEST_POSITION_SQL = """
+            INSERT INTO quest_positions (quest_id, x, y)
+            VALUES (?, ?, ?)
+            ON CONFLICT(quest_id) DO UPDATE SET
+                x = excluded.x,
+                y = excluded.y
+            """;
+
+    private static final String SELECT_QUEST_POSITION_SQL = """
+            SELECT quest_id, x, y
+            FROM quest_positions
+            WHERE quest_id = ?
             """;
 
     private static final String DELETE_QUEST_TASKS_SQL = "DELETE FROM quest_tasks WHERE quest_id = ?";
@@ -318,6 +335,66 @@ public final class StoreDao {
             statement.executeUpdate();
         } catch (SQLException e) {
             throw new UncheckedSqlException("Failed to upsert loot table " + lootTable.name(), e);
+        }
+    }
+
+    public void saveQuestPosition(String questId, double x, double y) {
+        Objects.requireNonNull(questId, "questId");
+        try (PreparedStatement statement = connection.prepareStatement(UPSERT_QUEST_POSITION_SQL)) {
+            statement.setString(1, questId);
+            statement.setDouble(2, x);
+            statement.setDouble(3, y);
+            statement.executeUpdate();
+        } catch (SQLException e) {
+            throw new UncheckedSqlException("Failed to save quest position for " + questId, e);
+        }
+    }
+
+    public Optional<QuestPosition> findQuestPosition(String questId) {
+        Objects.requireNonNull(questId, "questId");
+        try (PreparedStatement statement = connection.prepareStatement(SELECT_QUEST_POSITION_SQL)) {
+            statement.setString(1, questId);
+            try (ResultSet resultSet = statement.executeQuery()) {
+                if (!resultSet.next()) {
+                    return Optional.empty();
+                }
+                double x = resultSet.getDouble("x");
+                double y = resultSet.getDouble("y");
+                return Optional.of(new QuestPosition(resultSet.getString("quest_id"), x, y));
+            }
+        } catch (SQLException e) {
+            throw new UncheckedSqlException("Failed to load quest position for " + questId, e);
+        }
+    }
+
+    public Map<String, QuestPosition> findQuestPositions(Collection<String> questIds) {
+        Objects.requireNonNull(questIds, "questIds");
+        List<String> filteredIds = questIds.stream()
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+        if (filteredIds.isEmpty()) {
+            return Map.of();
+        }
+        String placeholders = filteredIds.stream().map(id -> "?").collect(Collectors.joining(", "));
+        String sql = "SELECT quest_id, x, y FROM quest_positions WHERE quest_id IN (" + placeholders + ")";
+        try (PreparedStatement statement = connection.prepareStatement(sql)) {
+            int index = 1;
+            for (String questId : filteredIds) {
+                statement.setString(index++, questId);
+            }
+            Map<String, QuestPosition> positions = new HashMap<>();
+            try (ResultSet resultSet = statement.executeQuery()) {
+                while (resultSet.next()) {
+                    String questId = resultSet.getString("quest_id");
+                    double x = resultSet.getDouble("x");
+                    double y = resultSet.getDouble("y");
+                    positions.put(questId, new QuestPosition(questId, x, y));
+                }
+            }
+            return positions;
+        } catch (SQLException e) {
+            throw new UncheckedSqlException("Failed to load quest positions", e);
         }
     }
 
@@ -808,6 +885,9 @@ public final class StoreDao {
     }
 
     public record LootTableEntity(String name, String data) {
+    }
+
+    public record QuestPosition(String questId, double x, double y) {
     }
 
     public enum SortMode {

@@ -25,7 +25,8 @@ public final class QuestGraphModel {
     }
 
     public static QuestGraphModel fromChapter(Chapter chapter,
-                                              Map<String, GraphCanvas.ValidationLevel> validationLevels) {
+                                              Map<String, GraphCanvas.ValidationLevel> validationLevels,
+                                              Map<String, Point2D> persistedPositions) {
         Objects.requireNonNull(chapter, "chapter");
         QuestGraphModel model = new QuestGraphModel();
         double nodeSize = 72;
@@ -35,12 +36,15 @@ public final class QuestGraphModel {
         int columns = Math.max(1, (int) Math.ceil(Math.sqrt(quests.size())));
         int row = 0;
         int column = 0;
+        Map<String, Point2D> positions = persistedPositions == null ? Map.of() : persistedPositions;
 
         for (Quest quest : quests) {
             GraphCanvas.ValidationLevel validation = validationLevels.getOrDefault(quest.id(), GraphCanvas.ValidationLevel.OK);
             double x = column * spacingX;
             double y = row * spacingY;
-            Node node = new Node(quest, new Point2D(x, y), validation);
+            Point2D savedPosition = positions.get(quest.id());
+            Point2D initialPosition = savedPosition != null ? savedPosition : new Point2D(x, y);
+            Node node = new Node(quest, initialPosition, validation);
             model.nodes.put(quest.id(), node);
 
             column++;
