@@ -34,7 +34,10 @@ public final class HeadlessLauncher {
     }
 
     private static boolean detectHeadlessEnvironment() {
-        // Use the Java AWT headless flag for cross-platform detection
+        // Respect the standard AWT headless flag before falling back to runtime detection
+        if (Boolean.getBoolean("java.awt.headless")) {
+            return true;
+        }
         return GraphicsEnvironment.isHeadless();
     }
 
