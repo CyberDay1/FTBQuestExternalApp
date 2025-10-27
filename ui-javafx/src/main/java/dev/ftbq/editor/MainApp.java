@@ -1,8 +1,6 @@
 package dev.ftbq.editor;
 
 import dev.ftbq.editor.controller.ChapterEditorController;
-import dev.ftbq.editor.controller.LootTableEditorController;
-import dev.ftbq.editor.controller.QuestEditorController;
 import dev.ftbq.editor.viewmodel.ChapterGroupBrowserViewModel;
 import dev.ftbq.editor.viewmodel.ChapterEditorViewModel;
 import dev.ftbq.editor.view.ChapterGroupBrowserController;
@@ -52,25 +50,9 @@ public class MainApp extends Application {
 
         FXMLLoader lootLoader = new FXMLLoader(getClass().getResource("/dev/ftbq/editor/view/loot_table_editor.fxml"));
         Parent lootRoot = lootLoader.load();
-        LootTableEditorController lootTableController = lootLoader.getController();
         Tab lootTab = new Tab("Loot Tables", lootRoot);
         lootTab.setClosable(false);
         tabPane.getTabs().add(lootTab);
-
-        try {
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("/dev/ftbq/editor/view/quest_editor.fxml"));
-            Parent questRoot = loader.load();
-            QuestEditorController questController = loader.getController();
-            questController.setLootTableLinkHandler(tableId -> {
-                tabPane.getSelectionModel().select(lootTab);
-                lootTableController.focusOnTable(tableId);
-            });
-            Tab questTab = new Tab("Quest Editor", questRoot);
-            questTab.setClosable(false);
-            tabPane.getTabs().add(questTab);
-        } catch (Exception e) {
-            logger.error("Failed to load quest editor UI", e);
-        }
 
         try {
             FXMLLoader settingsLoader = new FXMLLoader(getClass().getResource("/dev/ftbq/editor/view/settings.fxml"));

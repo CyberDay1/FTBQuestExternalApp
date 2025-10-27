@@ -1,6 +1,5 @@
 package dev.ftbq.editor.view.graph;
 
-import dev.ftbq.editor.controller.QuestEditorController;
 import dev.ftbq.editor.domain.BackgroundAlignment;
 import dev.ftbq.editor.domain.BackgroundRef;
 import dev.ftbq.editor.domain.BackgroundRepeat;
@@ -15,11 +14,8 @@ import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
-import javafx.fxml.FXMLLoader;
 import javafx.geometry.Point2D;
 import javafx.scene.Group;
-import javafx.scene.Parent;
-import javafx.scene.Scene;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.control.Label;
@@ -37,13 +33,9 @@ import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
 import javafx.scene.transform.Scale;
 import javafx.scene.transform.Translate;
-import javafx.stage.Modality;
-import javafx.stage.Stage;
-import javafx.stage.Window;
 import javafx.geometry.Pos;
 
 import java.io.ByteArrayInputStream;
-import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
@@ -53,13 +45,14 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.function.Consumer;
 
 /**
  * Canvas based quest graph with pan/zoom and node interaction support.
  *
- * This updated version adds a double‑click handler on each quest node to open
- * the Quest Editor in a separate window. When the user double‑clicks a node,
- * the corresponding quest is loaded into the quest editor.
+ * This updated version adds a double-click handler on each quest node to
+ * expose quest editing through a callback so the chapter editor can present
+ * an inline quest editing pane.
  */
 public class GraphCanvas extends Pane {
 
@@ -88,10 +81,9 @@ public class GraphCanvas extends Pane {
     private final ObservableList<GraphEdge> edges = FXCollections.observableArrayList();
     private final Map<String, ValidationLevel> validationStateByQuest = new HashMap<>();
     private final Map<String, Image> backgroundImages = new HashMap<>();
-    private Stage questEditorStage;
-    private QuestEditorController questEditorController;
     private QuestGraphModel model;
     private final StructuredLogger logger = ServiceLocator.loggerFactory().create(GraphCanvas.class);
+    private Consumer<Quest> questEditHandler;
 
     private double currentScale = 1.0;
     private boolean panning;
@@ -186,6 +178,10 @@ public class GraphCanvas extends Pane {
 
     public ObservableList<GraphEdge> getEdges() {
         return FXCollections.unmodifiableObservableList(edges);
+    }
+
+    public void setQuestEditHandler(Consumer<Quest> questEditHandler) {
+        this.questEditHandler = questEditHandler;
     }
 
     public Optional<QuestNodeView> findNode(String questId) {
@@ -350,58 +346,18 @@ public class GraphCanvas extends Pane {
                     return;
                 }
 
-                try {
-                    ensureQuestEditorStage();
-                    logger.info("Opening quest editor",
+                if (questEditHandler != null) {
+                    logger.info("Dispatching quest edit request",
                             StructuredLogger.field("questId", quest.id()),
                             StructuredLogger.field("questTitle", quest.title()));
-                    questEditorController.loadQuest(quest);
-                    questEditorStage.setTitle("Edit Quest: " + quest.title());
-                    if (!questEditorStage.isShowing()) {
-                        questEditorStage.show();
-                    }
-                    questEditorStage.toFront();
-                    questEditorStage.requestFocus();
-                } catch (IOException e) {
-                    logger.error("Failed to open quest editor window", e,
+                    questEditHandler.accept(quest);
+                } else {
+                    logger.warn("Quest edit handler not configured",
                             StructuredLogger.field("questId", quest.id()));
                 }
                 event.consume();
             }
         });
-    }
-
-    private void ensureQuestEditorStage() throws IOException {
-        if (questEditorStage != null && questEditorController != null) {
-            updateQuestEditorOwner();
-            return;
-        }
-
-        logger.debug("Creating quest editor stage instance");
-        FXMLLoader loader = new FXMLLoader(getClass().getResource("/dev/ftbq/editor/view/quest_editor.fxml"));
-        Parent root = loader.load();
-        questEditorController = loader.getController();
-        questEditorStage = new Stage();
-        questEditorStage.setScene(new Scene(root));
-        questEditorStage.setOnHidden(event -> {
-            questEditorStage = null;
-            questEditorController = null;
-        });
-        updateQuestEditorOwner();
-    }
-
-    private void updateQuestEditorOwner() {
-        if (questEditorStage == null || questEditorStage.getOwner() != null) {
-            return;
-        }
-        if (getScene() == null) {
-            return;
-        }
-        Window owner = getScene().getWindow();
-        if (owner != null) {
-            questEditorStage.initOwner(owner);
-            questEditorStage.initModality(Modality.WINDOW_MODAL);
-        }
     }
 
     private void handleMousePressed(MouseEvent event) {

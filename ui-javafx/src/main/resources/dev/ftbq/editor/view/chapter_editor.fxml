@@ -4,7 +4,15 @@
 <?import javafx.scene.control.Button?>
 <?import javafx.scene.control.Label?>
 <?import javafx.scene.control.ListView?>
+<?import javafx.scene.control.TextArea?>
+<?import javafx.scene.control.TextField?>
 <?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.ColumnConstraints?>
+<?import javafx.scene.layout.GridPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Priority?>
+<?import javafx.scene.layout.Region?>
+<?import javafx.scene.layout.RowConstraints?>
 <?import javafx.scene.layout.StackPane?>
 <?import javafx.scene.layout.VBox?>
 
@@ -21,18 +29,77 @@
         <StackPane fx:id="graphContainer" prefWidth="800" prefHeight="600" />
     </center>
     <right>
-        <VBox fx:id="questDetailBox" spacing="8" prefWidth="260" BorderPane.alignment="CENTER">
+        <StackPane fx:id="questDetailContainer" prefWidth="320" BorderPane.alignment="CENTER">
             <children>
-                <Label text="Tasks" />
-                <ListView fx:id="taskList" VBox.vgrow="ALWAYS" />
-                <Button text="Add Task" onAction="#onAddTask" />
-                <Label text="Rewards" />
-                <ListView fx:id="rewardList" VBox.vgrow="ALWAYS" />
-                <Button text="Add Reward" onAction="#onAddReward" />
-                <Label text="Dependencies" />
-                <ListView fx:id="dependencyList" VBox.vgrow="ALWAYS" />
-                <Button text="Add Dependency" onAction="#onAddDependency" />
+                <VBox fx:id="questDetailBox" spacing="8">
+                    <children>
+                        <Label text="Tasks" />
+                        <ListView fx:id="taskList" VBox.vgrow="ALWAYS" />
+                        <Button text="Add Task" onAction="#onAddTask" />
+                        <Label text="Rewards" />
+                        <ListView fx:id="rewardList" VBox.vgrow="ALWAYS" />
+                        <Button text="Add Reward" onAction="#onAddReward" />
+                        <Label text="Dependencies" />
+                        <ListView fx:id="dependencyList" VBox.vgrow="ALWAYS" />
+                        <Button text="Add Dependency" onAction="#onAddDependency" />
+                    </children>
+                </VBox>
+                <BorderPane fx:id="questEditorPane" visible="false" managed="false">
+                    <top>
+                        <HBox spacing="8" alignment="CENTER_LEFT" BorderPane.alignment="CENTER">
+                            <children>
+                                <Label fx:id="questEditorTitleLabel" text="Quest Editor" />
+                                <Region HBox.hgrow="ALWAYS" />
+                                <Button text="Close" onAction="#onCloseQuestEditor" />
+                            </children>
+                            <padding>
+                                <Insets top="4" right="4" bottom="4" left="4" />
+                            </padding>
+                        </HBox>
+                    </top>
+                    <center>
+                        <GridPane hgap="10" vgap="10">
+                            <columnConstraints>
+                                <ColumnConstraints halignment="RIGHT" minWidth="90" />
+                                <ColumnConstraints halignment="LEFT" hgrow="ALWAYS" />
+                            </columnConstraints>
+                            <rowConstraints>
+                                <RowConstraints minHeight="30" />
+                                <RowConstraints minHeight="80" vgrow="ALWAYS" />
+                                <RowConstraints minHeight="30" />
+                                <RowConstraints minHeight="100" vgrow="ALWAYS" />
+                                <RowConstraints minHeight="100" vgrow="ALWAYS" />
+                                <RowConstraints minHeight="100" vgrow="ALWAYS" />
+                            </rowConstraints>
+                            <Label text="Title:" GridPane.rowIndex="0" GridPane.columnIndex="0" />
+                            <TextField fx:id="questTitleField" promptText="Quest title" GridPane.rowIndex="0" GridPane.columnIndex="1" />
+                            <Label text="Description:" GridPane.rowIndex="1" GridPane.columnIndex="0" />
+                            <TextArea fx:id="questDescriptionArea" promptText="Quest description" prefRowCount="4" GridPane.rowIndex="1" GridPane.columnIndex="1" />
+                            <Label text="Icon:" GridPane.rowIndex="2" GridPane.columnIndex="0" />
+                            <TextField fx:id="questIconField" promptText="minecraft:icon" GridPane.rowIndex="2" GridPane.columnIndex="1" />
+                            <Label text="Dependencies:" GridPane.rowIndex="3" GridPane.columnIndex="0" />
+                            <ListView fx:id="questDependencyList" GridPane.rowIndex="3" GridPane.columnIndex="1" />
+                            <Label text="Tasks:" GridPane.rowIndex="4" GridPane.columnIndex="0" />
+                            <ListView fx:id="questTaskList" GridPane.rowIndex="4" GridPane.columnIndex="1" />
+                            <Label text="Rewards:" GridPane.rowIndex="5" GridPane.columnIndex="0" />
+                            <ListView fx:id="questRewardList" GridPane.rowIndex="5" GridPane.columnIndex="1" />
+                        </GridPane>
+                    </center>
+                    <bottom>
+                        <HBox spacing="8" alignment="CENTER_RIGHT">
+                            <children>
+                                <Button text="Save" onAction="#onSaveQuest" />
+                            </children>
+                            <padding>
+                                <Insets top="6" right="6" bottom="6" left="6" />
+                            </padding>
+                        </HBox>
+                    </bottom>
+                    <padding>
+                        <Insets top="8" right="8" bottom="8" left="8" />
+                    </padding>
+                </BorderPane>
             </children>
-        </VBox>
+        </StackPane>
     </right>
 </BorderPane>
