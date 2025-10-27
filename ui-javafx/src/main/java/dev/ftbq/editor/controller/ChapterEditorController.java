@@ -57,6 +57,7 @@ public class ChapterEditorController {
             graphCanvas.prefHeightProperty().bind(graphContainer.heightProperty());
             graphContainer.getChildren().add(graphCanvas);
         }
+        graphCanvas.rebuildGraph();
         configureDetailLists();
         if (viewModel != null && viewModel.getChapter() != null) {
             applyChapter(viewModel.getChapter());
@@ -88,6 +89,7 @@ public class ChapterEditorController {
             chapterTitleLabel.setText(chapter.title());
         }
         graphCanvas.setChapter(chapter);
+        graphCanvas.rebuildGraph();
         populateQuestDetails(chapter);
     }
 

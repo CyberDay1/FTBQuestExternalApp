@@ -78,3 +78,10 @@ CREATE TABLE IF NOT EXISTS quest_dependencies (
     PRIMARY KEY (quest_id, dependency_quest_id),
     FOREIGN KEY (quest_id) REFERENCES quests(id) ON DELETE CASCADE
 );
+
+CREATE TABLE IF NOT EXISTS quest_positions (
+    quest_id TEXT PRIMARY KEY,
+    x REAL NOT NULL,
+    y REAL NOT NULL,
+    FOREIGN KEY (quest_id) REFERENCES quests(id) ON DELETE CASCADE
+);

@@ -10,6 +10,7 @@ import dev.ftbq.editor.assets.CacheManager;
 import dev.ftbq.editor.services.UiServiceLocator;
 import dev.ftbq.editor.services.bus.ServiceLocator;
 import dev.ftbq.editor.services.logging.StructuredLogger;
+import dev.ftbq.editor.store.StoreDao;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.collections.FXCollections;
@@ -47,6 +48,7 @@ import java.nio.file.Files;
 import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
@@ -205,6 +207,7 @@ public class GraphCanvas extends Pane {
             model.moveNode(questId, layoutX, layoutY);
         }
         drawEdges();
+        persistQuestPosition(questId, layoutX, layoutY);
     }
 
     private void resizeLayers() {
@@ -218,7 +221,7 @@ public class GraphCanvas extends Pane {
         drawEdges();
     }
 
-    private void rebuildGraph() {
+    public void rebuildGraph() {
         // TODO: Verify that CacheManager stores icons for all items ingested. If the cache does not
         // contain an icon for a quest, display the colored circle as a fallback but avoid repeatedly
         // attempting to fetch the missing icon. Consider caching negative lookups or storing this state.
@@ -233,7 +236,8 @@ public class GraphCanvas extends Pane {
             return;
         }
 
-        model = QuestGraphModel.fromChapter(activeChapter, validationStateByQuest);
+        Map<String, Point2D> persistedPositions = loadPersistedPositions(activeChapter);
+        model = QuestGraphModel.fromChapter(activeChapter, validationStateByQuest, persistedPositions);
         backgroundRef.set(activeChapter.background());
 
         for (QuestGraphModel.Node node : model.getNodes()) {
@@ -256,9 +260,54 @@ public class GraphCanvas extends Pane {
         drawEdges();
     }
 
+    private Map<String, Point2D> loadPersistedPositions(Chapter activeChapter) {
+        StoreDao dao = UiServiceLocator.storeDao;
+        if (dao == null || activeChapter.quests().isEmpty()) {
+            return Map.of();
+        }
+        List<String> questIds = activeChapter.quests().stream()
+                .map(Quest::id)
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+        if (questIds.isEmpty()) {
+            return Map.of();
+        }
+        try {
+            Map<String, StoreDao.QuestPosition> stored = dao.findQuestPositions(questIds);
+            if (stored.isEmpty()) {
+                return Map.of();
+            }
+            Map<String, Point2D> positions = new HashMap<>();
+            stored.forEach((questId, position) ->
+                    positions.put(questId, new Point2D(position.x(), position.y())));
+            return positions;
+        } catch (RuntimeException e) {
+            logger.error("Failed to load quest positions", e);
+            return Map.of();
+        }
+    }
+
+    private void persistQuestPosition(String questId, double x, double y) {
+        if (questId == null) {
+            return;
+        }
+        StoreDao dao = UiServiceLocator.storeDao;
+        if (dao == null) {
+            return;
+        }
+        try {
+            dao.saveQuestPosition(questId, x, y);
+        } catch (RuntimeException e) {
+            logger.error("Failed to persist quest position", e,
+                    StructuredLogger.field("questId", questId),
+                    StructuredLogger.field("x", x),
+                    StructuredLogger.field("y", y));
+        }
+    }
+
     private void installNodeHandlers(QuestNodeView view) {
-        // Handle mouse press to start dragging
-        view.addEventFilter(MouseEvent.MOUSE_PRESSED, event -> {
+        view.setOnMousePressed(event -> {
             if (event.getButton() != MouseButton.PRIMARY) {
                 return;
             }
@@ -267,8 +316,7 @@ public class GraphCanvas extends Pane {
             event.consume();
         });
 
-        // Handle mouse drag to reposition node
-        view.addEventFilter(MouseEvent.MOUSE_DRAGGED, event -> {
+        view.setOnMouseDragged(event -> {
             if (!event.isPrimaryButtonDown()) {
                 return;
             }
@@ -282,19 +330,18 @@ public class GraphCanvas extends Pane {
                 model.moveNode(view.getModelNode().getQuest().id(), newX, newY);
             }
             drawEdges();
+            persistQuestPosition(view.getModelNode().getQuest().id(), newX, newY);
             event.consume();
         });
 
-        // Handle mouse release to end dragging
-        view.addEventFilter(MouseEvent.MOUSE_RELEASED, event -> {
+        view.setOnMouseReleased(event -> {
             if (event.getButton() == MouseButton.PRIMARY) {
                 view.endDrag();
                 event.consume();
             }
         });
 
-        // Add double‑click handler to open the quest editor
-        view.addEventFilter(MouseEvent.MOUSE_CLICKED, event -> {
+        view.setOnMouseClicked(event -> {
             if (event.getButton() == MouseButton.PRIMARY && event.getClickCount() == 2) {
                 Quest quest = view.getModelNode().getQuest();
                 if (quest == null) {
