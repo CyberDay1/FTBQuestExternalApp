@@ -50,7 +50,9 @@ import javafx.stage.Window;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import java.util.function.Consumer;
@@ -413,31 +415,59 @@ public class QuestEditorController {
     }
 
     private void onAddDependency() {
+        // Build a dialog that lets the user pick from existing quests instead of typing an ID.
         Dialog<Dependency> dialog = new Dialog<>();
         dialog.setTitle("Add dependency");
         dialog.setHeaderText("Select quest dependency");
         ButtonType addButtonType = new ButtonType("Add", ButtonBar.ButtonData.OK_DONE);
         dialog.getDialogPane().getButtonTypes().addAll(addButtonType, ButtonType.CANCEL);
 
-        TextField questIdField = new TextField();
-        questIdField.setPromptText("quest.id");
+        // Load existing quests from the store. Fallback to empty list on error.
+        List<Quest> quests = new ArrayList<>();
+        if (UiServiceLocator.storeDao != null) {
+            try {
+                quests = UiServiceLocator.storeDao.listQuests();
+            } catch (Exception ex) {
+                logger.error("Failed to load quests for dependency selection", ex);
+            }
+        }
+
+        ListView<Quest> questList = new ListView<>();
+        questList.getItems().addAll(quests);
+        questList.setCellFactory(list -> new ListCell<>() {
+            @Override
+            protected void updateItem(Quest item, boolean empty) {
+                super.updateItem(item, empty);
+                setText(empty || item == null ? null : item.id() + " - " + item.title());
+            }
+        });
         CheckBox requiredBox = new CheckBox("Required dependency");
 
         GridPane grid = new GridPane();
         grid.setHgap(10);
         grid.setVgap(10);
-        grid.add(new javafx.scene.control.Label("Quest ID:"), 0, 0);
-        grid.add(questIdField, 1, 0);
+        grid.add(new javafx.scene.control.Label("Quest:"), 0, 0);
+        grid.add(questList, 1, 0);
         grid.add(requiredBox, 1, 1);
 
         dialog.getDialogPane().setContent(grid);
 
         Node addButton = dialog.getDialogPane().lookupButton(addButtonType);
         addButton.setDisable(true);
-        questIdField.textProperty().addListener((obs, oldValue, newValue) -> addButton.setDisable(newValue == null || newValue.isBlank()));
+        questList.getSelectionModel().selectedItemProperty().addListener(
+                (obs, oldSel, newSel) -> addButton.setDisable(newSel == null));
 
         configureDialogOwner(dialog);
-        dialog.setResultConverter(button -> button == addButtonType ? new Dependency(questIdField.getText().trim(), requiredBox.isSelected()) : null);
+        dialog.setResultConverter(button -> {
+            if (button != addButtonType) {
+                return null;
+            }
+            Quest selected = questList.getSelectionModel().getSelectedItem();
+            if (selected == null) {
+                return null;
+            }
+            return new Dependency(selected.id(), requiredBox.isSelected());
+        });
         dialog.showAndWait().ifPresent(viewModel.getDependencies()::add);
     }
 
