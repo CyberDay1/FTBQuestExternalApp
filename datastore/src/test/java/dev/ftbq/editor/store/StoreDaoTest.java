@@ -9,6 +9,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import dev.ftbq.editor.domain.Quest;
@@ -149,6 +150,37 @@ class StoreDaoTest {
             assertIterableEquals(
                     List.of(block),
                     dao.listItems(null, List.of(), null, null, null, StoreDao.SortMode.VANILLA_FIRST, 1, 1));
+        }
+    }
+
+    @Test
+    void saveQuestPositionPersistsCoordinates() throws Exception {
+        try (Connection connection = Jdbc.openInMemory()) {
+            StoreDao dao = new StoreDao(connection);
+            Quest quest = Quest.builder()
+                    .id("quest-pos")
+                    .title("Quest Position")
+                    .description("Track position")
+                    .build();
+
+            dao.saveQuest(quest);
+
+            dao.saveQuestPosition(quest.id(), 42.25, -12.5);
+            StoreDao.QuestPosition stored = dao.findQuestPosition(quest.id()).orElseThrow();
+            assertEquals(42.25, stored.x());
+            assertEquals(-12.5, stored.y());
+
+            dao.saveQuestPosition(quest.id(), 10.0, 20.0);
+            StoreDao.QuestPosition updated = dao.findQuestPosition(quest.id()).orElseThrow();
+            assertEquals(10.0, updated.x());
+            assertEquals(20.0, updated.y());
+
+            Map<String, StoreDao.QuestPosition> positions =
+                    dao.findQuestPositions(List.of(quest.id(), "missing", quest.id()));
+            assertEquals(1, positions.size());
+            StoreDao.QuestPosition lookup = positions.get(quest.id());
+            assertEquals(10.0, lookup.x());
+            assertEquals(20.0, lookup.y());
         }
     }
 

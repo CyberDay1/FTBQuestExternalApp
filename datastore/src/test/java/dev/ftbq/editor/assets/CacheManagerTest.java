@@ -75,4 +75,14 @@ class CacheManagerTest {
 
         assertEquals(firstHash, secondHash);
     }
+
+    @Test
+    void fetchesFallbackIconForNamespacedResource() {
+        CacheManager cacheManager = new CacheManager(tempDir.resolve(".cache"));
+
+        Optional<byte[]> fallback = cacheManager.fetchIcon("minecraft:apple");
+
+        assertTrue(fallback.isPresent(), "Expected fallback icon for namespaced resource");
+        assertTrue(fallback.get().length > 0, "Fallback icon should contain data");
+    }
 }

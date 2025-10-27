@@ -24,13 +24,17 @@ class GraphCanvasTest {
         validations.put("quest_b", GraphCanvas.ValidationLevel.ERROR);
         validations.put("quest_c", GraphCanvas.ValidationLevel.WARNING);
 
-        QuestGraphModel model = QuestGraphModel.fromChapter(chapter, validations);
+        Map<String, Point2D> persisted = Map.of("quest_b", new Point2D(128.0, 256.0));
+
+        QuestGraphModel model = QuestGraphModel.fromChapter(chapter, validations, persisted);
 
         assertEquals(3, model.getNodes().size(), "Expected three quest nodes");
         assertEquals(2, model.getEdges().size(), "Expected two edges");
 
         QuestGraphModel.Node nodeB = model.findNode("quest_b").orElseThrow();
         Point2D original = nodeB.getPosition();
+        assertEquals(128.0, original.getX(), 0.0001);
+        assertEquals(256.0, original.getY(), 0.0001);
         model.moveNode("quest_b", original.getX() + 40, original.getY() + 30);
         QuestGraphModel.Node moved = model.findNode("quest_b").orElseThrow();
         assertEquals(original.getX() + 40, moved.getPosition().getX(), 0.0001);

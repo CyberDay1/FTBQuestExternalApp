@@ -2,6 +2,8 @@ package dev.ftbq.editor.controller;
 
 import dev.ftbq.editor.ThemeService;
 import dev.ftbq.editor.assets.CacheManager;
+import dev.ftbq.editor.commands.CommandTemplateRegistry;
+import dev.ftbq.editor.domain.CommandReward;
 import dev.ftbq.editor.domain.Dependency;
 import dev.ftbq.editor.domain.IconRef;
 import dev.ftbq.editor.domain.ItemRef;
@@ -21,12 +23,13 @@ import dev.ftbq.editor.services.logging.StructuredLogger;
 import dev.ftbq.editor.viewmodel.QuestEditorViewModel;
 import dev.ftbq.editor.controller.ItemBrowserController;
 import javafx.application.Platform;
+import javafx.collections.FXCollections;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
-import javafx.scene.control.Alert;
 import javafx.scene.Node;
+import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.ButtonBar;
 import javafx.scene.control.ButtonType;
@@ -524,6 +527,12 @@ public class QuestEditorController {
         ComboBox<RewardType> typeBox = new ComboBox<>();
         typeBox.getItems().setAll(RewardType.values());
         typeBox.getSelectionModel().select(RewardType.ITEM);
+        dialog.setHeaderText("Configure quest reward");
+        ButtonType addButtonType = new ButtonType("Add", ButtonBar.ButtonData.OK_DONE);
+        dialog.getDialogPane().getButtonTypes().addAll(addButtonType, ButtonType.CANCEL);
+
+        ComboBox<String> rewardTypeCombo = new ComboBox<>(FXCollections.observableArrayList("Item", "Command"));
+        rewardTypeCombo.setValue("Item");
 
         TextField itemIdField = new TextField();
         itemIdField.setPromptText("namespace:item");
@@ -540,6 +549,30 @@ public class QuestEditorController {
         commandField.setPromptText("/say hello");
         CheckBox runAsServerBox = new CheckBox("Run as server");
         runAsServerBox.setSelected(true);
+        TextField commandField = new TextField();
+        commandField.setPromptText("/say Quest complete!");
+        ComboBox<String> templateCombo = new ComboBox<>(FXCollections.observableArrayList(CommandTemplateRegistry.vanillaTemplateNames()));
+        templateCombo.setPromptText("Select template");
+        CheckBox asPlayerCheckBox = new CheckBox("Run as player");
+
+        GridPane itemPane = new GridPane();
+        itemPane.setHgap(10);
+        itemPane.setVgap(10);
+        itemPane.add(new Label("Item ID:"), 0, 0);
+        itemPane.add(itemIdField, 1, 0);
+        itemPane.add(new Label("Count:"), 0, 1);
+        itemPane.add(countSpinner, 1, 1);
+
+        GridPane commandPane = new GridPane();
+        commandPane.setHgap(10);
+        commandPane.setVgap(10);
+        commandPane.add(new Label("Template:"), 0, 0);
+        commandPane.add(templateCombo, 1, 0);
+        commandPane.add(new Label("Command:"), 0, 1);
+        commandPane.add(commandField, 1, 1);
+        commandPane.add(asPlayerCheckBox, 1, 2);
+        commandPane.setVisible(false);
+        commandPane.setManaged(false);
 
         GridPane grid = new GridPane();
         grid.setHgap(10);
@@ -566,6 +599,10 @@ public class QuestEditorController {
         grid.add(commandLabel, 0, 5);
         grid.add(commandField, 1, 5);
         grid.add(runAsServerBox, 1, 6);
+        grid.add(new Label("Reward Type:"), 0, 0);
+        grid.add(rewardTypeCombo, 1, 0);
+        grid.add(itemPane, 0, 1, 2, 1);
+        grid.add(commandPane, 0, 1, 2, 1);
 
         dialog.getDialogPane().setContent(grid);
 
@@ -604,6 +641,37 @@ public class QuestEditorController {
         lootTableField.textProperty().addListener((obs, oldValue, newValue) -> updateFields.run());
         commandField.textProperty().addListener((obs, oldValue, newValue) -> updateFields.run());
         updateFields.run();
+        addButton.setDisable(true);
+
+        Runnable updateAddButton = () -> {
+            boolean commandSelected = "Command".equals(rewardTypeCombo.getValue());
+            boolean disable = commandSelected
+                    ? commandField.getText() == null || commandField.getText().trim().isEmpty()
+                    : itemIdField.getText() == null || itemIdField.getText().trim().isEmpty();
+            addButton.setDisable(disable);
+        };
+
+        Runnable updateVisibleSection = () -> {
+            boolean commandSelected = "Command".equals(rewardTypeCombo.getValue());
+            itemPane.setVisible(!commandSelected);
+            itemPane.setManaged(!commandSelected);
+            commandPane.setVisible(commandSelected);
+            commandPane.setManaged(commandSelected);
+            dialog.setHeaderText(commandSelected ? "Create a command reward" : "Create an item reward");
+            updateAddButton.run();
+        };
+
+        itemIdField.textProperty().addListener((obs, oldValue, newValue) -> updateAddButton.run());
+        commandField.textProperty().addListener((obs, oldValue, newValue) -> updateAddButton.run());
+        rewardTypeCombo.valueProperty().addListener((obs, oldValue, newValue) -> updateVisibleSection.run());
+        templateCombo.valueProperty().addListener((obs, oldValue, newValue) -> {
+            String command = CommandTemplateRegistry.findVanillaCommand(newValue);
+            if (command != null) {
+                commandField.setText(command);
+            }
+        });
+
+        updateVisibleSection.run();
 
         configureDialogOwner(dialog);
         dialog.setResultConverter(button -> {
@@ -620,6 +688,11 @@ public class QuestEditorController {
                 case EXPERIENCE -> Reward.experience(experienceSpinner.getValue());
                 case COMMAND -> Reward.command(new RewardCommand(commandField.getText().trim(), runAsServerBox.isSelected()));
             };
+            if ("Command".equals(rewardTypeCombo.getValue())) {
+                return new CommandReward(commandField.getText().trim(), asPlayerCheckBox.isSelected());
+            }
+            ItemRef ref = new ItemRef(itemIdField.getText().trim(), countSpinner.getValue());
+            return new ItemReward(ref);
         });
         dialog.showAndWait().ifPresent(viewModel.getRewards()::add);
     }
