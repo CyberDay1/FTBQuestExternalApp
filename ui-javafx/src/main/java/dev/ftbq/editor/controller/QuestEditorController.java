@@ -579,6 +579,10 @@ public class QuestEditorController {
             showValidationError("Quest title must not be empty.");
             return false;
         }
+        if (quest.description() == null || quest.description().isBlank()) {
+            showValidationError("Quest description must not be empty.");
+            return false;
+        }
 
         Set<String> dependencyIds = new HashSet<>();
         for (Dependency dependency : quest.dependencies()) {
