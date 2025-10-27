@@ -219,6 +219,9 @@ public class GraphCanvas extends Pane {
     }
 
     private void rebuildGraph() {
+        // TODO: Verify that CacheManager stores icons for all items ingested. If the cache does not
+        // contain an icon for a quest, display the colored circle as a fallback but avoid repeatedly
+        // attempting to fetch the missing icon. Consider caching negative lookups or storing this state.
         nodeLayer.getChildren().clear();
         nodeViews.clear();
         edges.clear();
