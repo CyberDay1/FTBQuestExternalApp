@@ -35,6 +35,19 @@ public final class QuestGenerationService {
         return extractSnbt(aiOutput);
     }
 
+    /**
+     * Generates a quest chapter draft in SNBT form.
+     *
+     * @param designSpec desired chapter parameters
+     * @param modIntent mod integration requirements
+     * @return SNBT text describing the generated chapter
+     * @deprecated use {@link #generateChapterDraft(QuestDesignSpec, ModIntent)} instead.
+     */
+    @Deprecated(forRemoval = true)
+    public String generateQuestChapter(QuestDesignSpec designSpec, ModIntent modIntent) {
+        return generateChapterDraft(designSpec, modIntent);
+    }
+
     private String buildPrompt(QuestDesignSpec designSpec, ModIntent modIntent) {
         StringBuilder builder = new StringBuilder();
         builder.append("Design a new FTB Quests chapter using SNBT syntax. Focus on the ")
