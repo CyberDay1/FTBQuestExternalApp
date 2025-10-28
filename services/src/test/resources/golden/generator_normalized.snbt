@@ -1,0 +1,35 @@
+{
+  id:"example_pack",
+  title:"Example Pack",
+  chapters:[
+    {
+      id:"steam_intro",
+      title:"Steam Beginnings",
+      icon:"create:steam_engine",
+      background:"minecraft:textures/gui/advancements/backgrounds/adventure.png",
+      visibility:"visible",
+      quests:[
+        {
+          id:"buildboiler",
+          title:"Build a Boiler",
+          description:"Craft a boiler to start generating steam.",
+          icon:"create:boiler",
+          visibility:"visible",
+          tasks:[{type:"item", item:{id:"create:boiler", count:1}, consume:1b}],
+          rewards:[{type:"xp_levels", amount:7}],
+          dependencies:[]
+        },
+        {
+          id:"poweritup",
+          title:"Power It Up",
+          description:"Provide superheated steam to the engine.",
+          icon:"create:steam_engine",
+          visibility:"visible",
+          tasks:[{type:"item", item:{id:"create:steam_engine", count:1}, consume:1b}],
+          rewards:[{type:"item", item:{id:"minecraft:diamond", count:2}}],
+          dependencies:[{quest:"buildboiler", required:1b}]
+        }
+      ]
+    }
+  ]
+}

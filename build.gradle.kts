@@ -32,3 +32,9 @@ dependencies {
 tasks.test {
     useJUnitPlatform()
 }
+
+tasks.register("lint") {
+    group = "verification"
+    description = "Runs repository-wide verification checks."
+    dependsOn("check")
+}

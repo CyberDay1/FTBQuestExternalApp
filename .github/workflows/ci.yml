@@ -27,5 +27,13 @@ jobs:
         uses: gradle/gradle-build-action@v2
 
       - name: Build with Gradle
-        run: ./gradlew build --stacktrace
+        run: ./gradlew clean build --stacktrace
+        shell: bash
+
+      - name: Run lint checks
+        run: ./gradlew lint --stacktrace
+        shell: bash
+
+      - name: Run schema validation tests
+        run: ./gradlew :validation-tests:test --stacktrace
         shell: bash

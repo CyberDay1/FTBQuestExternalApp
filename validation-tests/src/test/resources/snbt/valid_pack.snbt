@@ -1,0 +1,31 @@
+{
+  id:"example_pack",
+  title:"Example Pack",
+  file_version:1,
+  version:1,
+  chapter_groups:[{
+    id:"group",
+    title:"Group",
+    icon:"minecraft:book",
+    chapter_ids:["chapter1"]
+  }],
+  chapters:[{
+    id:"chapter1",
+    title:"Chapter One",
+    description:"Do the thing",
+    icon:"minecraft:apple",
+    background:"minecraft:textures/gui/book.png",
+    quests:[{
+      id:"quest1",
+      title:"Quest One",
+      description:"Collect an item",
+      icon:"minecraft:apple",
+      tasks:[{type:"item", item:{id:"minecraft:stone"}}],
+      rewards:[{type:"xp_levels", amount:5}]
+    }]
+  }],
+  loot_tables:[{
+    id:"loot",
+    pools:[]
+  }]
+}

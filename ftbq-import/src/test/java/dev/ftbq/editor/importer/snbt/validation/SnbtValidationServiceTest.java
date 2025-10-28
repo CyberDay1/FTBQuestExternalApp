@@ -5,50 +5,17 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import dev.ftbq.editor.validation.ValidationIssue;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
 class SnbtValidationServiceTest {
 
-    private static final String VALID_SNBT = """
-            {
-              id:"example_pack",
-              title:"Example Pack",
-              file_version:1,
-              version:1,
-              chapter_groups:[{
-                id:"group",
-                title:"Group",
-                icon:"minecraft:book",
-                chapter_ids:["chapter1"]
-              }],
-              chapters:[{
-                id:"chapter1",
-                title:"Chapter One",
-                description:"Do the thing",
-                icon:"minecraft:apple",
-                background:"minecraft:textures/gui/book.png",
-                quests:[{
-                  id:"quest1",
-                  title:"Quest One",
-                  description:"Collect an item",
-                  icon:"minecraft:apple",
-                  tasks:[{type:"item", item:{id:"minecraft:stone"}}],
-                  rewards:[{type:"xp_levels", amount:5}]
-                }]
-              }],
-              loot_tables:[{
-                id:"loot",
-                pools:[]
-              }]
-            }
-            """;
-
     private final SnbtValidationService service = new SnbtValidationService();
 
     @Test
     void validQuestPackProducesNoIssues() {
-        SnbtValidationReport report = service.validate(VALID_SNBT);
+        SnbtValidationReport report = service.validate(loadExample("valid_pack.snbt"));
 
         assertTrue(report.valid(), () -> "Expected validation to succeed but found issues: " + report.issues());
         assertTrue(report.issues().isEmpty(), () -> "Expected no validation issues but found: " + report.issues());
@@ -56,37 +23,7 @@ class SnbtValidationServiceTest {
 
     @Test
     void missingRequiredQuestFieldProducesError() {
-        String snbt = """
-                {
-                  id:"example_pack",
-                  title:"Example Pack",
-                  file_version:1,
-                  version:1,
-                  chapter_groups:[{
-                    id:"group",
-                    title:"Group",
-                    icon:"minecraft:book",
-                    chapter_ids:["chapter1"]
-                  }],
-                  chapters:[{
-                    id:"chapter1",
-                    title:"Chapter One",
-                    description:"Do the thing",
-                    icon:"minecraft:apple",
-                    background:"minecraft:textures/gui/book.png",
-                    quests:[{
-                      id:"quest1",
-                      title:"Quest One",
-                      description:"Collect an item",
-                      tasks:[{type:"item", item:{id:"minecraft:stone"}}],
-                      rewards:[{type:"xp_levels", amount:5}]
-                    }]
-                  }],
-                  loot_tables:[]
-                }
-                """;
-
-        SnbtValidationReport report = service.validate(snbt);
+        SnbtValidationReport report = service.validate(loadExample("missing_icon_invalid.snbt"));
 
         assertFalse(report.valid(), () -> "Validation unexpectedly succeeded: " + report.issues());
         assertTrue(report.errors().stream()
@@ -97,37 +34,7 @@ class SnbtValidationServiceTest {
 
     @Test
     void chapterGroupMustListChapters() {
-        String snbt = """
-                {
-                  id:"example_pack",
-                  title:"Example Pack",
-                  file_version:1,
-                  version:1,
-                  chapter_groups:[{
-                    id:"group",
-                    title:"Group",
-                    icon:"minecraft:book"
-                  }],
-                  chapters:[{
-                    id:"chapter1",
-                    title:"Chapter One",
-                    description:"Do the thing",
-                    icon:"minecraft:apple",
-                    background:"minecraft:textures/gui/book.png",
-                    quests:[{
-                      id:"quest1",
-                      title:"Quest One",
-                      description:"Collect an item",
-                      icon:"minecraft:apple",
-                      tasks:[{type:"item", item:{id:"minecraft:stone"}}],
-                      rewards:[{type:"xp_levels", amount:5}]
-                    }]
-                  }],
-                  loot_tables:[]
-                }
-                """;
-
-        SnbtValidationReport report = service.validate(snbt);
+        SnbtValidationReport report = service.validate(loadExample("chapter_group_missing_ids_invalid.snbt"));
 
         assertFalse(report.valid(), () -> "Validation unexpectedly succeeded: " + report.issues());
         List<ValidationIssue> errors = report.errors();
@@ -142,7 +49,7 @@ class SnbtValidationServiceTest {
 
     @Test
     void malformedSnbtProducesParseError() {
-        SnbtValidationReport report = service.validate("{id:\"oops");
+        SnbtValidationReport report = service.validate(loadExample("malformed_missing_brace.snbt"));
 
         assertFalse(report.valid(), () -> "Parse failure should report errors but got: " + report.issues());
         assertEquals(1, report.errors().size(), () -> "Expected a single parse error but got: " + report.errors());
@@ -150,5 +57,16 @@ class SnbtValidationServiceTest {
         assertEquals("$", issue.path());
         assertTrue(issue.message().startsWith("SNBT parse error:"),
                 () -> "Unexpected parse error message: " + issue.message());
+    }
+
+    private String loadExample(String name) {
+        try (var input = getClass().getResourceAsStream("/snbt/" + name)) {
+            if (input == null) {
+                throw new IllegalStateException("Missing SNBT example: " + name);
+            }
+            return new String(input.readAllBytes(), StandardCharsets.UTF_8);
+        } catch (Exception ex) {
+            throw new IllegalStateException("Failed to load SNBT example " + name, ex);
+        }
     }
 }
