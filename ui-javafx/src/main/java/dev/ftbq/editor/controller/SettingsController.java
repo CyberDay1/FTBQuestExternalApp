@@ -14,6 +14,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
 import java.util.Optional;
@@ -128,48 +129,62 @@ public class SettingsController {
                 ? addJarButton.getScene().getWindow()
                 : null;
         FileChooser chooser = new FileChooser();
-        chooser.setTitle("Select Minecraft JAR");
+        chooser.setTitle("Select Minecraft JARs");
         chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("JAR Files", "*.jar"));
-        File file = window != null ? chooser.showOpenDialog(window) : chooser.showOpenDialog(null);
-        if (file == null) {
+        List<File> selectedFiles = window != null
+                ? chooser.showOpenMultipleDialog(window)
+                : chooser.showOpenMultipleDialog(null);
+        if (selectedFiles == null || selectedFiles.isEmpty()) {
             updateStatus("Jar selection cancelled.");
             logger.debug("Jar selection cancelled by user");
             return;
         }
 
-        Path jarPath = file.toPath();
         MinecraftVersion targetVersion = Optional.ofNullable(versionBox.getSelectionModel().getSelectedItem())
                 .orElseGet(this::safeGetActiveVersion);
         String versionLabel = targetVersion != null ? targetVersion.getId() : "unknown";
 
-        try {
-            JarScanner.JarScanResult scan = JarScanner.scanModJar(jarPath, versionLabel);
-            var catalog = ItemCatalogExtractor.extract(jarPath, file.getName(), versionLabel, false);
-            catalogImportService.importCatalog(catalog);
-            UiServiceLocator.getModRegistryService().register(catalog);
-            rebuildVersionCatalog(targetVersion);
-            int entryCount = scan.entries().size();
-            updateStatus(String.format(Locale.ROOT,
-                    "Imported %s with %d entries for %s.",
-                    file.getName(),
-                    entryCount,
-                    versionLabel));
-            logger.info("Mod JAR imported",
-                    StructuredLogger.field("jar", file.getAbsolutePath()),
-                    StructuredLogger.field("entries", entryCount),
-                    StructuredLogger.field("version", versionLabel));
-        } catch (IOException ex) {
-            String message = "Failed to scan JAR: " + ex.getMessage();
-            updateStatus(message);
-            logger.warn("Jar scan failed", ex,
-                    StructuredLogger.field("jar", file.getAbsolutePath()),
-                    StructuredLogger.field("version", versionLabel));
-        } catch (RuntimeException ex) {
-            String message = "Failed to import catalog: " + ex.getMessage();
-            updateStatus(message);
-            logger.warn("Catalog import failed", ex,
-                    StructuredLogger.field("jar", file.getAbsolutePath()),
-                    StructuredLogger.field("version", versionLabel));
+        for (File file : selectedFiles) {
+            if (file == null) {
+                continue;
+            }
+            if (!file.exists()) {
+                logger.warn("Jar file missing during import",
+                        StructuredLogger.field("jar", file.getAbsolutePath()));
+                updateStatus("Jar file missing: " + file.getName());
+                continue;
+            }
+
+            Path jarPath = file.toPath();
+            try {
+                JarScanner.JarScanResult scan = JarScanner.scanModJar(jarPath, versionLabel);
+                var catalog = ItemCatalogExtractor.extract(jarPath, file.getName(), versionLabel, false);
+                catalogImportService.importCatalog(catalog);
+                UiServiceLocator.getModRegistryService().register(catalog);
+                rebuildVersionCatalog(targetVersion);
+                int entryCount = scan.entries().size();
+                updateStatus(String.format(Locale.ROOT,
+                        "Imported %s with %d entries for %s.",
+                        file.getName(),
+                        entryCount,
+                        versionLabel));
+                logger.info("Mod JAR imported",
+                        StructuredLogger.field("jar", file.getAbsolutePath()),
+                        StructuredLogger.field("entries", entryCount),
+                        StructuredLogger.field("version", versionLabel));
+            } catch (IOException ex) {
+                String message = "Failed to scan JAR: " + ex.getMessage();
+                updateStatus(message);
+                logger.warn("Jar scan failed", ex,
+                        StructuredLogger.field("jar", file.getAbsolutePath()),
+                        StructuredLogger.field("version", versionLabel));
+            } catch (RuntimeException ex) {
+                String message = "Failed to import catalog: " + ex.getMessage();
+                updateStatus(message);
+                logger.warn("Catalog import failed", ex,
+                        StructuredLogger.field("jar", file.getAbsolutePath()),
+                        StructuredLogger.field("version", versionLabel));
+            }
         }
     }
 
