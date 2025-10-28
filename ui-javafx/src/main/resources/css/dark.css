@@ -262,3 +262,17 @@
     -fx-text-fill: -fg;
     -fx-border-color: derive(-bg, 25%);
 }
+
+.tab-pane .tab-header-background {
+    -fx-background-color: #1e1e1e;
+}
+.tab-pane .tab {
+    -fx-background-color: #2a2a2a;
+    -fx-text-base-color: #cccccc;
+}
+.tab-pane .tab:selected {
+    -fx-background-color: #3a3a3a;
+}
+.tab-pane .tab:hover {
+    -fx-background-color: #333333;
+}

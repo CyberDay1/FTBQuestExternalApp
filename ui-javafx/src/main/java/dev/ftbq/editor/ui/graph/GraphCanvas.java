@@ -6,6 +6,7 @@ import javafx.css.StyleableObjectProperty;
 import javafx.css.StyleableProperty;
 import javafx.css.converter.PaintConverter;
 import javafx.geometry.Point2D;
+import javafx.geometry.Rectangle2D;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.input.MouseButton;
@@ -21,6 +22,12 @@ import java.util.List;
 import java.util.function.Consumer;
 
 public class GraphCanvas extends Canvas {
+    // ========== SAFETY CONSTANTS (NEW) ==========
+    private static final double MAX_CANVAS_DIMENSION = 8192; // Safe limit for most GPUs
+    private static final double MIN_CANVAS_DIMENSION = 1;
+    private static final long MIN_RENDER_INTERVAL_MS = 16; // ~60 FPS throttling
+
+    // ========== ORIGINAL CONSTANTS ==========
     private static final Color DEFAULT_GRID_COLOR = Color.web("#d4d9e2");
     private static final Color DEFAULT_EDGE_REQUIRED_COLOR = Color.web("#3564c2");
     private static final Color DEFAULT_EDGE_OPTIONAL_COLOR = Color.web("#7f9dd6");
@@ -86,6 +93,10 @@ public class GraphCanvas extends Canvas {
     private final Affine world = new Affine();
     private Consumer<Void> onRedraw;
 
+    // NEW: Render safety tracking
+    private long lastRenderTime = 0;
+    private Rectangle2D viewport;
+
     private final StyleableObjectProperty<Paint> gridPaint =
             new StyleableObjectProperty<>(DEFAULT_GRID_COLOR) {
                 @Override
@@ -142,6 +153,11 @@ public class GraphCanvas extends Canvas {
 
     public GraphCanvas(double w, double h) {
         getStyleClass().addAll("graph-canvas", "dark-theme");
+
+        // NEW: Clamp initial dimensions
+        w = Math.max(MIN_CANVAS_DIMENSION, Math.min(MAX_CANVAS_DIMENSION, w));
+        h = Math.max(MIN_CANVAS_DIMENSION, Math.min(MAX_CANVAS_DIMENSION, h));
+
         setWidth(w);
         setHeight(h);
         gridPaint.addListener((obs, oldPaint, newPaint) -> redraw());
@@ -153,8 +169,83 @@ public class GraphCanvas extends Canvas {
                 redraw();
             }
         });
+
+        // NEW: Add dimension validation listeners
+        widthProperty().addListener((obs, oldVal, newVal) -> {
+            double width = newVal.doubleValue();
+            if (width > MAX_CANVAS_DIMENSION) {
+                System.err.println("Canvas width exceeds maximum (" + MAX_CANVAS_DIMENSION + "), clamping");
+                setWidth(MAX_CANVAS_DIMENSION);
+            } else if (width < MIN_CANVAS_DIMENSION && width > 0) {
+                setWidth(MIN_CANVAS_DIMENSION);
+            } else {
+                redraw();
+            }
+        });
+
+        heightProperty().addListener((obs, oldVal, newVal) -> {
+            double height = newVal.doubleValue();
+            if (height > MAX_CANVAS_DIMENSION) {
+                System.err.println("Canvas height exceeds maximum (" + MAX_CANVAS_DIMENSION + "), clamping");
+                setHeight(MAX_CANVAS_DIMENSION);
+            } else if (height < MIN_CANVAS_DIMENSION && height > 0) {
+                setHeight(MIN_CANVAS_DIMENSION);
+            } else {
+                redraw();
+            }
+        });
+
         enableHandlers();
         redraw();
+    }
+
+    // ========== NEW: SAFETY METHODS ==========
+
+    /**
+     * Checks if the canvas dimensions are safe for rendering.
+     */
+    private boolean isRenderSafe() {
+        double w = getWidth();
+        double h = getHeight();
+
+        if (w <= 0 || h <= 0 || Double.isNaN(w) || Double.isNaN(h) ||
+                Double.isInfinite(w) || Double.isInfinite(h)) {
+            return false;
+        }
+
+        if (w > MAX_CANVAS_DIMENSION || h > MAX_CANVAS_DIMENSION) {
+            return false;
+        }
+
+        double totalPixels = w * h;
+        return totalPixels <= (MAX_CANVAS_DIMENSION * MAX_CANVAS_DIMENSION);
+    }
+
+    /**
+     * Throttle rendering to prevent excessive redraws.
+     */
+    private boolean shouldThrottleRender() {
+        long currentTime = System.currentTimeMillis();
+        if (currentTime - lastRenderTime < MIN_RENDER_INTERVAL_MS) {
+            return true;
+        }
+        lastRenderTime = currentTime;
+        return false;
+    }
+
+    /**
+     * Cleanup method to prevent memory leaks.
+     */
+    public void cleanup() {
+        try {
+            GraphicsContext gc = getGraphicsContext2D();
+            if (gc != null) {
+                gc.clearRect(0, 0, getWidth(), getHeight());
+            }
+            viewport = null;
+        } catch (Exception e) {
+            System.err.println("Error during canvas cleanup: " + e.getMessage());
+        }
     }
 
     public void setOnRedraw(Consumer<Void> cb) {
@@ -251,8 +342,6 @@ public class GraphCanvas extends Canvas {
             }
         });
         setOnMouseReleased(e -> panning = false);
-        widthProperty().addListener((obs, a, b) -> redraw());
-        heightProperty().addListener((obs, a, b) -> redraw());
     }
 
     private void apply() {
@@ -260,34 +349,105 @@ public class GraphCanvas extends Canvas {
         redraw();
     }
 
+    // ========== ENHANCED REDRAW METHOD ==========
     public void redraw() {
-        double width = getWidth();
-        double height = getHeight();
-        if (width <= 0 || height <= 0) {
-            return;
-        }
+        try {
+            // NEW: Safety checks
+            if (!isRenderSafe()) {
+                System.err.println("Skipping render - canvas dimensions unsafe: " +
+                        getWidth() + "x" + getHeight());
+                return;
+            }
 
-        GraphicsContext g = getGraphicsContext2D();
-        g.setTransform(new Affine());
-        g.clearRect(0, 0, width, height);
-        drawGrid(g);
-        if (onRedraw != null) {
-            onRedraw.accept(null);
+            // NEW: Throttle excessive redraws
+            if (shouldThrottleRender()) {
+                return;
+            }
+
+            double width = getWidth();
+            double height = getHeight();
+
+            if (width <= 0 || height <= 0) {
+                return;
+            }
+
+            GraphicsContext g = getGraphicsContext2D();
+            if (g == null) {
+                System.err.println("GraphicsContext is null, cannot render");
+                return;
+            }
+
+            g.setTransform(new Affine());
+            g.clearRect(0, 0, width, height);
+            drawGrid(g);
+
+            if (onRedraw != null) {
+                onRedraw.accept(null);
+            }
+
+        } catch (Exception e) {
+            System.err.println("Error during canvas render: " + e.getMessage());
+            e.printStackTrace();
+
+            // Attempt recovery
+            try {
+                GraphicsContext gc = getGraphicsContext2D();
+                if (gc != null) {
+                    gc.clearRect(0, 0, getWidth(), getHeight());
+                }
+            } catch (Exception recoveryError) {
+                System.err.println("Failed to recover from render error");
+            }
         }
     }
 
+    // ========== ENHANCED GRID DRAWING ==========
     private void drawGrid(GraphicsContext g) {
-        g.setTransform(world);
-        g.setStroke(getGridColor());
-        g.setLineWidth(1.0 / scale);
-        double step = gridSize;
-        double w = getWidth();
-        double h = getHeight();
-        for (double x = -w; x < w * 2; x += step) {
-            g.strokeLine(x, -h, x, h * 2);
-        }
-        for (double y = -h; y < h * 2; y += step) {
-            g.strokeLine(-w, y, w * 2, y);
+        try {
+            g.setTransform(world);
+            g.setStroke(getGridColor());
+            g.setLineWidth(1.0 / scale);
+
+            double step = gridSize;
+            double w = getWidth();
+            double h = getHeight();
+
+            // NEW: Calculate visible bounds more conservatively
+            double visibleWidth = w / scale;
+            double visibleHeight = h / scale;
+
+            // NEW: Limit grid drawing to reasonable bounds
+            double maxGridExtent = Math.max(visibleWidth, visibleHeight) * 2;
+            maxGridExtent = Math.min(maxGridExtent, MAX_CANVAS_DIMENSION);
+
+            double startX = Math.floor(-translateX / scale / step) * step;
+            double startY = Math.floor(-translateY / scale / step) * step;
+            double endX = startX + maxGridExtent;
+            double endY = startY + maxGridExtent;
+
+            // NEW: Safety check for grid bounds
+            if (!Double.isFinite(startX) || !Double.isFinite(startY) ||
+                    !Double.isFinite(endX) || !Double.isFinite(endY)) {
+                System.err.println("Invalid grid bounds, skipping grid render");
+                return;
+            }
+
+            // Draw vertical lines
+            int lineCount = 0;
+            for (double x = startX; x <= endX && lineCount < 10000; x += step) {
+                g.strokeLine(x, startY, x, endY);
+                lineCount++;
+            }
+
+            // Draw horizontal lines
+            lineCount = 0;
+            for (double y = startY; y <= endY && lineCount < 10000; y += step) {
+                g.strokeLine(startX, y, endX, y);
+                lineCount++;
+            }
+
+        } catch (Exception e) {
+            System.err.println("Error drawing grid: " + e.getMessage());
         }
     }
 
@@ -398,6 +558,23 @@ public class GraphCanvas extends Canvas {
         }
         return fallback;
     }
+
+    // ========== RESIZE OVERRIDE (NEW) ==========
+    @Override
+    public void resize(double width, double height) {
+        width = Math.max(MIN_CANVAS_DIMENSION, Math.min(MAX_CANVAS_DIMENSION, width));
+        height = Math.max(MIN_CANVAS_DIMENSION, Math.min(MAX_CANVAS_DIMENSION, height));
+        super.resize(width, height);
+    }
+
+    // ========== DIAGNOSTIC METHOD (NEW) ==========
+    public void printDiagnostics() {
+        System.out.println("=== GraphCanvas Diagnostics ===");
+        System.out.println("Canvas dimensions: " + getWidth() + "x" + getHeight());
+        System.out.println("Scale: " + scale);
+        System.out.println("Translation: (" + translateX + ", " + translateY + ")");
+        System.out.println("Grid size: " + gridSize);
+        System.out.println("Render safe: " + isRenderSafe());
+        System.out.println("==============================");
+    }
 }
-
-
