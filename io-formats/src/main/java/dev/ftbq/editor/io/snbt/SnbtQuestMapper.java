@@ -10,6 +10,8 @@ import dev.ftbq.editor.domain.Quest;
 import dev.ftbq.editor.domain.QuestFile;
 import dev.ftbq.editor.domain.Reward;
 import dev.ftbq.editor.domain.Task;
+import dev.ftbq.editor.importer.snbt.model.ImportOptions;
+import dev.ftbq.editor.importer.snbt.service.SnbtQuestImporter;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
@@ -123,7 +125,16 @@ public class SnbtQuestMapper {
     }
 
     public QuestFile fromSnbt(String snbtText) {
-        throw new UnsupportedOperationException("SNBT import requires the dedicated parser module");
+        var importer = new SnbtQuestImporter();
+        var pack = importer.parse(snbtText);
+        var baseFile = QuestFile.builder()
+                .id(pack.id())
+                .title(pack.title())
+                .build();
+        var options = ImportOptions.builder()
+                .copyAssets(false)
+                .build();
+        return importer.merge(baseFile, pack, options).questFile();
     }
 
     private String itemRefToSnbt(ItemRef ref) {

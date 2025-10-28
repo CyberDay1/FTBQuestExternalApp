@@ -7,5 +7,6 @@ include(
     "datastore",
     "services",
     "ui-javafx",
+    "ftbq-import",
     "validation-tests"
 )

@@ -1,13 +1,18 @@
 package dev.ftbq.editor.viewmodel;
 
 import dev.ftbq.editor.domain.BackgroundRef;
+import dev.ftbq.editor.domain.QuestFile;
 import javafx.beans.Observable;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.Objects;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 public class ChapterGroupBrowserViewModel {
     private final ObservableList<ChapterGroup> chapterGroups = FXCollections.observableArrayList(
@@ -88,6 +93,37 @@ public class ChapterGroupBrowserViewModel {
 
     public void moveChapterDown(ChapterGroup group, Chapter chapter) {
         moveChapter(group, chapter, 1);
+    }
+
+    public void loadFromQuestFile(QuestFile questFile) {
+        Objects.requireNonNull(questFile, "questFile");
+        chapterGroups.clear();
+        var chapterMap = questFile.chapters().stream()
+                .collect(Collectors.toMap(dev.ftbq.editor.domain.Chapter::id, chapter -> chapter, (a, b) -> a, LinkedHashMap::new));
+        Set<String> assigned = new LinkedHashSet<>();
+        if (!questFile.chapterGroups().isEmpty()) {
+            for (dev.ftbq.editor.domain.ChapterGroup groupData : questFile.chapterGroups()) {
+                ChapterGroup group = addGroup(groupData.title());
+                for (String chapterId : groupData.chapterIds()) {
+                    dev.ftbq.editor.domain.Chapter domainChapter = chapterMap.get(chapterId);
+                    Chapter chapter = addChapter(group, domainChapter != null ? domainChapter.title() : chapterId);
+                    if (domainChapter != null) {
+                        chapter.setBackground(domainChapter.background());
+                    }
+                    assigned.add(chapterId);
+                }
+            }
+        }
+        var unassigned = questFile.chapters().stream()
+                .filter(chapter -> !assigned.contains(chapter.id()))
+                .toList();
+        if (!unassigned.isEmpty()) {
+            ChapterGroup group = addGroup("Ungrouped Chapters");
+            for (dev.ftbq.editor.domain.Chapter chapter : unassigned) {
+                Chapter viewChapter = addChapter(group, chapter.title());
+                viewChapter.setBackground(chapter.background());
+            }
+        }
     }
 
     private void moveChapter(ChapterGroup group, Chapter chapter, int delta) {
