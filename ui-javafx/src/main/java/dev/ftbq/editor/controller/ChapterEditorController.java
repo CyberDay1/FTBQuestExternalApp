@@ -12,6 +12,7 @@ import dev.ftbq.editor.services.templates.TaskTemplates;
 import dev.ftbq.editor.store.StoreDao;
 import dev.ftbq.editor.ui.graph.GraphCanvas;
 import dev.ftbq.editor.ui.graph.QuestNodeView;
+import dev.ftbq.editor.view.graph.layout.QuestLayoutStore;
 import dev.ftbq.editor.viewmodel.ChapterEditorViewModel;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -232,24 +233,28 @@ public class ChapterEditorController {
         if (chapter == null) {
             return;
         }
-        ChapterGraphState cachedState = chapterStates.get(chapterKey(chapter));
+        String chapterKey = chapterKey(chapter);
+        ChapterGraphState cachedState = chapterStates.get(chapterKey);
         if (cachedState != null) {
             questPositions.putAll(cachedState.positions);
         } else {
-            loadQuestPositionsFromStore(chapter);
+            loadQuestPositionsFromStore(chapterKey, chapter);
         }
         ensureQuestPositions(chapter);
+        persistAllQuestPositions(chapterKey);
     }
 
-    private void loadQuestPositionsFromStore(Chapter chapter) {
-        StoreDao dao = UiServiceLocator.storeDao;
-        List<String> questIds = chapter.quests().stream()
-                .map(Quest::id)
-                .filter(Objects::nonNull)
-                .toList();
-        if (dao != null && !questIds.isEmpty()) {
-            Map<String, StoreDao.QuestPosition> stored = dao.findQuestPositions(questIds);
-            stored.values().forEach(pos -> questPositions.put(pos.questId(), new Point2D(pos.x(), pos.y())));
+    private void loadQuestPositionsFromStore(String chapterKey, Chapter chapter) {
+        QuestLayoutStore layoutStore = UiServiceLocator.questLayoutStore;
+        if (layoutStore == null) {
+            return;
+        }
+        for (Quest quest : chapter.quests()) {
+            if (quest == null || quest.id() == null) {
+                continue;
+            }
+            layoutStore.getNodePos(chapterKey, quest.id())
+                    .ifPresent(position -> questPositions.put(quest.id(), position));
         }
     }
 
@@ -296,6 +301,7 @@ public class ChapterEditorController {
             state.translateX = canvas.getPanX();
             state.translateY = canvas.getPanY();
         }
+        persistAllQuestPositions(key);
     }
 
     private String chapterKey(Chapter chapter) {
@@ -438,9 +444,12 @@ public class ChapterEditorController {
     }
 
     private void persistQuestPosition(String questId, double x, double y) {
-        StoreDao dao = UiServiceLocator.storeDao;
-        if (dao != null) {
-            dao.updateQuestPosition(questId, x, y);
+        if (currentChapter == null) {
+            return;
+        }
+        QuestLayoutStore layoutStore = UiServiceLocator.questLayoutStore;
+        if (layoutStore != null) {
+            layoutStore.putNodePos(chapterKey(currentChapter), questId, x, y);
         }
     }
 
@@ -469,9 +478,14 @@ public class ChapterEditorController {
         if (viewModel == null || targetChapter == null) {
             return;
         }
+        String previousChapterKey = currentChapter != null ? chapterKey(currentChapter) : null;
         viewModel.moveQuestToChapter(questId, targetChapter);
         pendingSelectionQuestId = null;
         selectedQuestId = null;
+        QuestLayoutStore layoutStore = UiServiceLocator.questLayoutStore;
+        if (layoutStore != null && previousChapterKey != null) {
+            layoutStore.removeQuest(previousChapterKey, questId);
+        }
         applyChapter(viewModel.getChapter());
     }
 
@@ -776,6 +790,10 @@ public class ChapterEditorController {
         }
         Chapter updatedChapter = rebuildChapter(currentChapter, updatedQuests);
         questPositions.remove(questId);
+        QuestLayoutStore layoutStore = UiServiceLocator.questLayoutStore;
+        if (layoutStore != null) {
+            layoutStore.removeQuest(chapterKey(currentChapter), questId);
+        }
         clearSelection();
         applyUpdatedChapter(updatedChapter);
         StoreDao dao = UiServiceLocator.storeDao;
@@ -1014,6 +1032,21 @@ public class ChapterEditorController {
         } else {
             applyChapter(updatedChapter);
         }
+    }
+
+    private void persistAllQuestPositions(String chapterKey) {
+        if (chapterKey == null || chapterKey.isBlank()) {
+            return;
+        }
+        QuestLayoutStore layoutStore = UiServiceLocator.questLayoutStore;
+        if (layoutStore == null) {
+            return;
+        }
+        questPositions.forEach((questId, position) -> {
+            if (questId != null && position != null) {
+                layoutStore.putNodePos(chapterKey, questId, position.getX(), position.getY());
+            }
+        });
     }
 
     private String generateQuestId(Chapter chapter) {
