@@ -2,7 +2,6 @@ package dev.ftbq.editor;
 
 import dev.ftbq.editor.controller.ChapterEditorController;
 import dev.ftbq.editor.controller.ImportSnbtDialog;
-import dev.ftbq.editor.controller.LootTableEditorController;
 import dev.ftbq.editor.domain.QuestFile;
 import dev.ftbq.editor.importer.snbt.model.QuestImportResult;
 import dev.ftbq.editor.importer.snbt.model.QuestImportSummary;
@@ -13,6 +12,7 @@ import dev.ftbq.editor.services.UiServiceLocator;
 import dev.ftbq.editor.services.bus.ServiceLocator;
 import dev.ftbq.editor.services.io.SnbtImportExportService;
 import dev.ftbq.editor.services.logging.StructuredLogger;
+import dev.ftbq.editor.ui.AiModGeneratorTab;
 import dev.ftbq.editor.validation.ValidationIssue;
 import dev.ftbq.editor.view.ChapterGroupBrowserController;
 import dev.ftbq.editor.view.graph.layout.JsonQuestLayoutStore;
@@ -90,10 +90,14 @@ public class MainApp extends Application {
 
         FXMLLoader lootLoader = new FXMLLoader(getClass().getResource("/dev/ftbq/editor/view/loot_table_editor.fxml"));
         Parent lootRoot = lootLoader.load();
-        LootTableEditorController lootTableController = lootLoader.getController();
         Tab lootTab = new Tab("Loot Tables", lootRoot);
         lootTab.setClosable(false);
         tabPane.getTabs().add(lootTab);
+
+        AiModGeneratorTab aiModGeneratorTab = new AiModGeneratorTab();
+        aiModGeneratorTab.setQuestFileSupplier(() -> currentQuestFile);
+        aiModGeneratorTab.setWorkspaceRoot(workspace);
+        tabPane.getTabs().add(aiModGeneratorTab);
 
         // Quest editor removed â€” quests are now edited via Chapter Editor directly
         try {
