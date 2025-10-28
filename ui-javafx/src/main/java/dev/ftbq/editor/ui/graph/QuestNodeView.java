@@ -71,6 +71,10 @@ public class QuestNodeView extends Pane {
     private double worldX;
     private double worldY;
     private double dragDX, dragDY;
+    private double pressScreenX;
+    private double pressScreenY;
+    private boolean dragging;
+    private static final double DRAG_THRESHOLD = 4.0;
     private final Circle body = new Circle(18);
     private final Text label = new Text();
     private boolean selected;
@@ -207,8 +211,18 @@ public class QuestNodeView extends Pane {
         addEventFilter(MouseEvent.MOUSE_PRESSED, e -> {
             dragDX = e.getX();
             dragDY = e.getY();
+            pressScreenX = e.getScreenX();
+            pressScreenY = e.getScreenY();
+            dragging = false;
         });
         addEventFilter(MouseEvent.MOUSE_DRAGGED, e -> {
+            if (!dragging) {
+                double dx = e.getScreenX() - pressScreenX;
+                double dy = e.getScreenY() - pressScreenY;
+                if (Math.hypot(dx, dy) >= DRAG_THRESHOLD) {
+                    dragging = true;
+                }
+            }
             double nx = getLayoutX() + (e.getX() - dragDX);
             double ny = getLayoutY() + (e.getY() - dragDY);
             relocate(nx, ny);
@@ -219,12 +233,17 @@ public class QuestNodeView extends Pane {
             if (onMove != null) {
                 onMove.moved(questId, nx, ny);
             }
+            dragging = false;
         });
     }
 
     private void enableEdit() {
-        addEventFilter(MouseEvent.MOUSE_CLICKED, e -> {
-            if (e.getButton() == MouseButton.PRIMARY && e.getClickCount() == 2 && onEdit != null) {
+        addEventHandler(MouseEvent.MOUSE_CLICKED, e -> {
+            if (e.getButton() == MouseButton.PRIMARY
+                    && e.getClickCount() >= 2
+                    && !dragging
+                    && e.isStillSincePress()
+                    && onEdit != null) {
                 onEdit.edit(questId);
             }
         });
