@@ -73,7 +73,25 @@ public final class QuestChapterGenerator {
                 : response.content();
         logs.add(GenerationLogEntry.of("model", "Received model output (first 200 chars): " + preview.replace('\n', ' ')));
 
-        List<Chapter> normalizedChapters = parseAndNormalize(response.content(), questFile, logs);
+        List<Chapter> normalizedChapters;
+        try {
+            normalizedChapters = parseAndNormalize(response.content(), questFile, logs);
+        } catch (IllegalStateException ex) {
+            String reason = extractParseReason(ex);
+            logs.add(GenerationLogEntry.of("postprocess",
+                    "Parse failure detected; retrying with corrective nudge: " + reason));
+
+            ModelPrompt retryPrompt = promptAssembler.buildPromptWithNudge(context, reason);
+            logs.add(GenerationLogEntry.of("prompt", "retry → " + promptAssembler.describe(retryPrompt)));
+
+            ModelResponse retryResponse = modelProvider.generate(retryPrompt);
+            String retryPreview = retryResponse.content().length() > 200
+                    ? retryResponse.content().substring(0, 200) + "..."
+                    : retryResponse.content();
+            logs.add(GenerationLogEntry.of("model", "Retry output (first 200 chars): " + retryPreview.replace('\n', ' ')));
+
+            normalizedChapters = parseAndNormalize(retryResponse.content(), questFile, logs);
+        }
         GenerationValidationReport validationReport = contentValidator.validate(normalizedChapters, designSpec, context);
         logs.add(GenerationLogEntry.of("validation",
                 "Validation produced " + validationReport.issues().size() + " issue(s)."));
@@ -149,6 +167,16 @@ public final class QuestChapterGenerator {
         logs.add(GenerationLogEntry.of("postprocess",
                 "Parsed and normalized " + normalized.size() + " chapter(s) from model output."));
         return normalized;
+    }
+
+    private String extractParseReason(IllegalStateException ex) {
+        if (ex.getCause() != null && ex.getCause().getMessage() != null && !ex.getCause().getMessage().isBlank()) {
+            return ex.getCause().getMessage();
+        }
+        if (ex.getMessage() != null && !ex.getMessage().isBlank()) {
+            return ex.getMessage();
+        }
+        return "SNBT parse failure";
     }
 
     private String sanitizeUnquotedKeys(String snbt) {
