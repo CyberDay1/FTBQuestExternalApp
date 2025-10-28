@@ -67,7 +67,10 @@ class QuestChapterGeneratorGoldenTest {
         goldenSnbt = goldenSnbt.replace("\r\n", "\n");
         normalizedSnbt = normalizedSnbt.replace("\r\n", "\n");
 
-        assertEquals(goldenSnbt, normalizedSnbt, () -> diffMessage(goldenSnbt, normalizedSnbt));
+        final String expected = goldenSnbt;
+        final String actual = normalizedSnbt;
+
+        assertEquals(expected, actual, () -> diffMessage(expected, actual));
 
         QuestFile roundTripped = mapper.fromSnbt(normalizedSnbt);
         String secondPass = mapper.toSnbt(roundTripped);
