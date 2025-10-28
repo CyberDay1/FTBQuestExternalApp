@@ -2,10 +2,12 @@ package dev.ftbq.editor.services.generator;
 
 import dev.ftbq.editor.domain.Chapter;
 import dev.ftbq.editor.domain.Dependency;
+import dev.ftbq.editor.domain.LootTable;
 import dev.ftbq.editor.domain.Quest;
 import dev.ftbq.editor.domain.QuestFile;
 import dev.ftbq.editor.io.snbt.SnbtQuestMapper;
 import dev.ftbq.editor.importer.snbt.parser.SnbtParseException;
+import dev.ftbq.editor.services.mods.ModRegistryService;
 import dev.ftbq.editor.services.mods.RegisteredMod;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -27,6 +29,8 @@ import java.util.stream.Collectors;
  * Coordinates end-to-end generation of quest chapters using an AI provider.
  */
 public final class QuestChapterGenerator {
+
+    public static final int MAX_QUESTS = QuestLimits.MAX_AI_QUESTS;
 
     private static final Pattern LEADING_KEY_PATTERN = Pattern.compile("(?m)^(\\s*)([A-Za-z0-9_\\-]+):");
     private static final Pattern INLINE_KEY_PATTERN = Pattern.compile("(?<=\\{|,)(\\s*)([A-Za-z0-9_\\-]+):");
@@ -58,27 +62,51 @@ public final class QuestChapterGenerator {
                                      List<RegisteredMod> selectedMods,
                                      List<Path> exampleChapterPaths,
                                      Path draftsDirectory) throws IOException {
+        return generate(questFile,
+                designSpec,
+                modIntent,
+                new ModSelection(selectedMods, ModRegistryService.MAX_SELECTION),
+                RewardConfiguration.allowAll(),
+                exampleChapterPaths,
+                draftsDirectory);
+    }
+
+    public GenerationResult generate(QuestFile questFile,
+                                     QuestDesignSpec designSpec,
+                                     ModIntent modIntent,
+                                     ModSelection modSelection,
+                                     RewardConfiguration rewardConfiguration,
+                                     List<Path> exampleChapterPaths,
+                                     Path draftsDirectory) throws IOException {
         Objects.requireNonNull(questFile, "questFile");
         Objects.requireNonNull(designSpec, "designSpec");
         Objects.requireNonNull(modIntent, "modIntent");
-        Objects.requireNonNull(selectedMods, "selectedMods");
+        Objects.requireNonNull(modSelection, "modSelection");
+        Objects.requireNonNull(rewardConfiguration, "rewardConfiguration");
         Objects.requireNonNull(exampleChapterPaths, "exampleChapterPaths");
         Objects.requireNonNull(draftsDirectory, "draftsDirectory");
 
         List<GenerationLogEntry> logs = new ArrayList<>();
-        GenerationContext context = buildContext(questFile, designSpec, modIntent, selectedMods, exampleChapterPaths, logs);
+        GenerationContext context = buildContext(questFile,
+                designSpec,
+                modIntent,
+                modSelection,
+                rewardConfiguration,
+                exampleChapterPaths,
+                logs);
         ModelPrompt prompt = promptAssembler.buildPrompt(context);
         logs.add(GenerationLogEntry.of("prompt", promptAssembler.describe(prompt)));
 
-        ModelResponse response = modelProvider.generate(prompt);
+        AiGenerationRequest request = new AiGenerationRequest(prompt, modSelection, rewardConfiguration, context.questLimits());
+        ModelResponse response = modelProvider.generate(request);
         String preview = response.content().length() > 200
                 ? response.content().substring(0, 200) + "..."
                 : response.content();
         logs.add(GenerationLogEntry.of("model", "Received model output (first 200 chars): " + preview.replace('\n', ' ')));
 
-        List<Chapter> normalizedChapters;
+        ParsedGeneration parsedGeneration;
         try {
-            normalizedChapters = parseAndNormalize(response.content(), questFile, logs);
+            parsedGeneration = parseAndNormalize(response.content(), questFile, logs);
         } catch (IllegalStateException ex) {
             String reason = extractParseReason(ex);
             logs.add(GenerationLogEntry.of("postprocess",
@@ -87,28 +115,34 @@ public final class QuestChapterGenerator {
             ModelPrompt retryPrompt = promptAssembler.buildPromptWithNudge(context, reason);
             logs.add(GenerationLogEntry.of("prompt", "retry → " + promptAssembler.describe(retryPrompt)));
 
-            ModelResponse retryResponse = modelProvider.generate(retryPrompt);
+            AiGenerationRequest retryRequest = new AiGenerationRequest(retryPrompt, modSelection, rewardConfiguration, context.questLimits());
+            ModelResponse retryResponse = modelProvider.generate(retryRequest);
             String retryPreview = retryResponse.content().length() > 200
                     ? retryResponse.content().substring(0, 200) + "..."
                     : retryResponse.content();
             logs.add(GenerationLogEntry.of("model", "Retry output (first 200 chars): " + retryPreview.replace('\n', ' ')));
 
-            normalizedChapters = parseAndNormalize(retryResponse.content(), questFile, logs);
+            parsedGeneration = parseAndNormalize(retryResponse.content(), questFile, logs);
         }
-        GenerationValidationReport validationReport = contentValidator.validate(normalizedChapters, designSpec, context);
+        GenerationValidationReport validationReport = contentValidator.validate(parsedGeneration.chapters(), designSpec, context);
         logs.add(GenerationLogEntry.of("validation",
                 "Validation produced " + validationReport.issues().size() + " issue(s)."));
 
-        Path draftPath = draftWriter.writeDraft(draftsDirectory, normalizedChapters, designSpec, modIntent);
+        Path draftPath = draftWriter.writeDraft(draftsDirectory,
+                parsedGeneration.chapters(),
+                parsedGeneration.lootTables(),
+                designSpec,
+                modIntent);
         logs.add(GenerationLogEntry.of("draft", "Wrote draft SNBT to " + draftPath));
 
-        return new GenerationResult(normalizedChapters, logs, validationReport);
+        return new GenerationResult(parsedGeneration.chapters(), parsedGeneration.lootTables(), logs, validationReport);
     }
 
     private GenerationContext buildContext(QuestFile questFile,
                                            QuestDesignSpec designSpec,
                                            ModIntent modIntent,
-                                           List<RegisteredMod> selectedMods,
+                                           ModSelection modSelection,
+                                           RewardConfiguration rewardConfiguration,
                                            List<Path> exampleChapterPaths,
                                            List<GenerationLogEntry> logs) throws IOException {
         List<ExampleChapterConstraint> examples = new ArrayList<>();
@@ -130,7 +164,16 @@ public final class QuestChapterGenerator {
         }
 
         Map<String, Set<String>> progressionMap = buildProgressionMap(questFile);
-        return new GenerationContext(questFile, designSpec, modIntent, examples, progressionMap, selectedMods);
+        int desiredCount = Math.min(designSpec.chapterLength(), MAX_QUESTS);
+        QuestLimits questLimits = new QuestLimits(desiredCount, MAX_QUESTS);
+        return new GenerationContext(questFile,
+                designSpec,
+                modIntent,
+                examples,
+                progressionMap,
+                modSelection,
+                questLimits,
+                rewardConfiguration);
     }
 
     private Map<String, Set<String>> buildProgressionMap(QuestFile questFile) {
@@ -146,9 +189,9 @@ public final class QuestChapterGenerator {
         return progressionMap;
     }
 
-    private List<Chapter> parseAndNormalize(String snbt,
-                                            QuestFile questFile,
-                                            List<GenerationLogEntry> logs) {
+    private ParsedGeneration parseAndNormalize(String snbt,
+                                               QuestFile questFile,
+                                               List<GenerationLogEntry> logs) {
         QuestFile generatedFile;
         try {
             generatedFile = snbtMapper.fromSnbt(snbt);
@@ -168,10 +211,14 @@ public final class QuestChapterGenerator {
             }
         }
         List<Chapter> normalized = normalizeChapters(generatedFile.chapters(), questFile);
+        List<LootTable> lootTables = new ArrayList<>(generatedFile.lootTables());
+        lootTables.sort(Comparator.comparing(LootTable::id));
         logs.add(GenerationLogEntry.of("postprocess",
                 "Parsed and normalized " + normalized.size() + " chapter(s) from model output."));
-        return normalized;
+        return new ParsedGeneration(normalized, lootTables);
     }
+
+    private record ParsedGeneration(List<Chapter> chapters, List<LootTable> lootTables) {}
 
     private String extractParseReason(IllegalStateException ex) {
         if (ex.getCause() != null && ex.getCause().getMessage() != null && !ex.getCause().getMessage().isBlank()) {

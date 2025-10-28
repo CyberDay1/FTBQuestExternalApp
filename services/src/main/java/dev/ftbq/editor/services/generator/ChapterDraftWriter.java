@@ -1,6 +1,7 @@
 package dev.ftbq.editor.services.generator;
 
 import dev.ftbq.editor.domain.Chapter;
+import dev.ftbq.editor.domain.LootTable;
 import dev.ftbq.editor.domain.QuestFile;
 import dev.ftbq.editor.io.snbt.SnbtQuestMapper;
 import java.io.IOException;
@@ -25,6 +26,7 @@ public final class ChapterDraftWriter {
 
     public Path writeDraft(Path directory,
                            List<Chapter> chapters,
+                           List<LootTable> lootTables,
                            QuestDesignSpec spec,
                            ModIntent intent) throws IOException {
         Files.createDirectories(directory);
@@ -41,7 +43,7 @@ public final class ChapterDraftWriter {
                 .title("Draft for " + intent.modId() + " (" + spec.theme() + ")")
                 .chapterGroups(List.of())
                 .chapters(chapters)
-                .lootTables(List.of())
+                .lootTables(lootTables)
                 .build();
         String snbt = mapper.toSnbt(file);
         Files.writeString(target, snbt);

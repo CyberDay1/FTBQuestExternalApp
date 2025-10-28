@@ -109,8 +109,8 @@ class QuestChapterGeneratorRetryTest {
         }
 
         @Override
-        public ModelResponse generate(ModelPrompt prompt) {
-            requestedPrompts.add(prompt);
+        public ModelResponse generate(AiGenerationRequest request) {
+            requestedPrompts.add(request.prompt());
             if (!responses.hasNext()) {
                 throw new IllegalStateException("No more responses configured");
             }

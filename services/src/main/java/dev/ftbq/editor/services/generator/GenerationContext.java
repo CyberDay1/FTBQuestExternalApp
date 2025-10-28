@@ -21,7 +21,9 @@ public final class GenerationContext {
     private final ModIntent modIntent;
     private final List<ExampleChapterConstraint> examples;
     private final Map<String, Set<String>> progressionMap;
-    private final List<RegisteredMod> selectedMods;
+    private final ModSelection modSelection;
+    private final QuestLimits questLimits;
+    private final RewardConfiguration rewardConfiguration;
 
     public GenerationContext(QuestFile questFile,
                              QuestDesignSpec designSpec,
@@ -29,18 +31,36 @@ public final class GenerationContext {
                              List<ExampleChapterConstraint> examples,
                              Map<String, Set<String>> progressionMap,
                              List<RegisteredMod> selectedMods) {
+        this(questFile,
+                designSpec,
+                modIntent,
+                examples,
+                progressionMap,
+                new ModSelection(selectedMods, ModRegistryService.MAX_SELECTION),
+                new QuestLimits(Math.min(designSpec.chapterLength(), QuestLimits.MAX_AI_QUESTS),
+                        QuestLimits.MAX_AI_QUESTS),
+                RewardConfiguration.allowAll());
+    }
+
+    public GenerationContext(QuestFile questFile,
+                             QuestDesignSpec designSpec,
+                             ModIntent modIntent,
+                             List<ExampleChapterConstraint> examples,
+                             Map<String, Set<String>> progressionMap,
+                             ModSelection modSelection,
+                             QuestLimits questLimits,
+                             RewardConfiguration rewardConfiguration) {
         this.questFile = Objects.requireNonNull(questFile, "questFile");
         this.designSpec = Objects.requireNonNull(designSpec, "designSpec");
         this.modIntent = Objects.requireNonNull(modIntent, "modIntent");
         this.examples = Collections.unmodifiableList(new ArrayList<>(Objects.requireNonNull(examples, "examples")));
         this.progressionMap = Collections.unmodifiableMap(Objects.requireNonNull(progressionMap, "progressionMap"));
-        Objects.requireNonNull(selectedMods, "selectedMods");
-        if (selectedMods.size() > ModRegistryService.MAX_SELECTION) {
-            throw new IllegalArgumentException("A maximum of "
-                    + ModRegistryService.MAX_SELECTION
-                    + " mods may be supplied. Received " + selectedMods.size());
+        this.modSelection = Objects.requireNonNull(modSelection, "modSelection");
+        if (modSelection.limit() > ModRegistryService.MAX_SELECTION) {
+            throw new IllegalArgumentException("modSelection limit exceeds registry maximum");
         }
-        this.selectedMods = Collections.unmodifiableList(new ArrayList<>(selectedMods));
+        this.questLimits = Objects.requireNonNull(questLimits, "questLimits");
+        this.rewardConfiguration = Objects.requireNonNull(rewardConfiguration, "rewardConfiguration");
     }
 
     public QuestFile questFile() {
@@ -64,7 +84,19 @@ public final class GenerationContext {
     }
 
     public List<RegisteredMod> selectedMods() {
-        return selectedMods;
+        return modSelection.mods();
+    }
+
+    public ModSelection modSelection() {
+        return modSelection;
+    }
+
+    public QuestLimits questLimits() {
+        return questLimits;
+    }
+
+    public RewardConfiguration rewardConfiguration() {
+        return rewardConfiguration;
     }
 
     public List<ChapterGroup> chapterGroups() {

@@ -56,7 +56,7 @@ class AiQuestIntegrationTest {
         QuestChapterGenerator generator = new QuestChapterGenerator(provider);
         Path draftsDir = tempDir.resolve("drafts");
 
-        GenerationResult result = generator.generate(base, spec, intent, List.of(), draftsDir);
+        GenerationResult result = generator.generate(base, spec, intent, List.of(), List.of(), draftsDir);
         assertTrue(result.validationReport().passed(), "Generated content should pass validation");
 
         QuestFile normalizedFile = QuestFile.builder()
@@ -64,7 +64,7 @@ class AiQuestIntegrationTest {
                 .title(base.title())
                 .chapterGroups(List.of())
                 .chapters(result.chapters())
-                .lootTables(List.of())
+                .lootTables(result.lootTables())
                 .build();
 
         String normalizedSnbt = mapper.toSnbt(normalizedFile).replace("\r\n", "\n");
@@ -144,7 +144,7 @@ class AiQuestIntegrationTest {
         }
 
         @Override
-        public ModelResponse generate(ModelPrompt prompt) {
+        public ModelResponse generate(AiGenerationRequest request) {
             return new ModelResponse(response, Map.of());
         }
     }

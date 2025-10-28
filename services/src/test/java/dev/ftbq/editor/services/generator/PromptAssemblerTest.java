@@ -58,9 +58,11 @@ class PromptAssemblerTest {
                 .filter(block -> "pack-context".equals(block.metadata().get("block")))
                 .findFirst()
                 .orElseThrow();
-        assertTrue(packContext.content().contains("Selected mods:"));
         assertTrue(packContext.content().contains("Example Integration"));
         assertTrue(packContext.content().contains("example:item_a"));
+        assertTrue(packContext.content().contains("Quest target: 5 (hard cap "));
+        assertTrue(packContext.content().contains("Selected mods (2/5):"));
+        assertTrue(packContext.content().contains("Rewards: items ✅ · xp ❌ · loot tables ✅ (loot/core)"));
     }
 
     @Test
@@ -144,6 +146,9 @@ class PromptAssemblerTest {
                 new RegisteredMod("aux_mod", "Auxiliary", "1.5", List.of("aux:item"), "aux.jar")
         );
 
-        return new GenerationContext(questFile, spec, modIntent, List.of(example), progression, selectedMods);
+        ModSelection modSelection = new ModSelection(selectedMods, 5);
+        QuestLimits questLimits = new QuestLimits(5, QuestLimits.MAX_AI_QUESTS);
+        RewardConfiguration rewards = new RewardConfiguration(true, false, true, List.of("loot/core"));
+        return new GenerationContext(questFile, spec, modIntent, List.of(example), progression, modSelection, questLimits, rewards);
     }
 }
