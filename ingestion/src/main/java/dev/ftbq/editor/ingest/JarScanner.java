@@ -66,7 +66,12 @@ public final class JarScanner {
         Objects.requireNonNull(jar, "jar");
 
         Map<String, ProxyItemDescriptor> descriptors = new LinkedHashMap<>();
-        try (ZipFile zipFile = new ZipFile(jar.toFile())) {
+        var resolvedFile = jar.toAbsolutePath().toFile();
+        if (!resolvedFile.exists()) {
+            LOGGER.warn("Jar file not found for proxy scan: {}", resolvedFile);
+            return List.of();
+        }
+        try (ZipFile zipFile = new ZipFile(resolvedFile)) {
             Enumeration<? extends ZipEntry> entries = zipFile.entries();
             while (entries.hasMoreElements()) {
                 ZipEntry entry = entries.nextElement();
