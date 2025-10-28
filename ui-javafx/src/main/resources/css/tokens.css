@@ -10,6 +10,9 @@
     -selection-bg-muted: #d6e4ff;
     -selection-fg: #0b2f6b;
     -selection-border: #1967d2;
+    -menu-bg: #ffffff;
+    -menu-fg: #1a1a1a;
+    -menu-border: #d0d0d0;
     -grid: #dddddd;
     -edge-required: #cc8b00;
     -edge-optional: #6a3dad;
