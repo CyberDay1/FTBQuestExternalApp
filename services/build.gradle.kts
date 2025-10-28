@@ -9,6 +9,7 @@ val junitVersion: String by project
 dependencies {
     api(project(":core-domain"))
     api(project(":io-formats"))
+    implementation(project(":ftbq-import"))
     implementation(project(":datastore"))
     implementation(project(":ingestion"))
     implementation("org.slf4j:slf4j-simple:$slf4jVersion")

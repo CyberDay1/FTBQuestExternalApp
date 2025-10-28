@@ -1,39 +1,58 @@
 package dev.ftbq.editor;
 
 import dev.ftbq.editor.controller.ChapterEditorController;
+import dev.ftbq.editor.controller.ImportSnbtDialog;
 import dev.ftbq.editor.controller.LootTableEditorController;
-import dev.ftbq.editor.viewmodel.ChapterGroupBrowserViewModel;
-import dev.ftbq.editor.viewmodel.ChapterEditorViewModel;
-import dev.ftbq.editor.view.ChapterGroupBrowserController;
+import dev.ftbq.editor.domain.QuestFile;
+import dev.ftbq.editor.importer.snbt.model.QuestImportResult;
+import dev.ftbq.editor.importer.snbt.model.QuestImportSummary;
 import dev.ftbq.editor.services.UiServiceLocator;
 import dev.ftbq.editor.services.bus.ServiceLocator;
+import dev.ftbq.editor.services.io.SnbtImportExportService;
 import dev.ftbq.editor.services.logging.StructuredLogger;
+import dev.ftbq.editor.view.ChapterGroupBrowserController;
 import dev.ftbq.editor.view.graph.layout.JsonQuestLayoutStore;
 import dev.ftbq.editor.view.graph.layout.QuestLayoutStore;
+import dev.ftbq.editor.viewmodel.ChapterEditorViewModel;
+import dev.ftbq.editor.viewmodel.ChapterGroupBrowserViewModel;
 import javafx.application.Application;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
+import javafx.scene.control.Alert;
+import javafx.scene.control.Menu;
+import javafx.scene.control.MenuBar;
+import javafx.scene.control.MenuItem;
 import javafx.scene.control.Tab;
 import javafx.scene.control.TabPane;
+import javafx.scene.layout.BorderPane;
 import javafx.stage.Stage;
 
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
 
 public class MainApp extends Application {
     private final StructuredLogger logger = ServiceLocator.loggerFactory().create(MainApp.class);
+    private final SnbtImportExportService importExportService = new SnbtImportExportService();
+    private ChapterGroupBrowserViewModel chapterGroupBrowserViewModel;
+    private ChapterEditorViewModel chapterEditorViewModel;
+    private QuestFile currentQuestFile;
+    private Path workspace;
+    private Stage primaryStage;
 
     @Override
     public void start(Stage primaryStage) throws IOException {
+        this.primaryStage = primaryStage;
         logger.info("Starting FTB Quest Editor UI");
         ensureLayoutStore();
         FXMLLoader chapterLoader = new FXMLLoader(getClass().getResource("/dev/ftbq/editor/view/chapter_group_browser.fxml"));
         Parent chapterRoot = chapterLoader.load();
 
         ChapterGroupBrowserController chapterController = chapterLoader.getController();
-        ChapterGroupBrowserViewModel chapterViewModel = new ChapterGroupBrowserViewModel();
-        chapterController.setViewModel(chapterViewModel);
+        chapterGroupBrowserViewModel = new ChapterGroupBrowserViewModel();
+        chapterController.setViewModel(chapterGroupBrowserViewModel);
 
         TabPane tabPane = new TabPane();
         tabPane.setTabClosingPolicy(TabPane.TabClosingPolicy.UNAVAILABLE);
@@ -47,9 +66,17 @@ public class MainApp extends Application {
         FXMLLoader chapterEditorLoader = new FXMLLoader(getClass().getResource("/dev/ftbq/editor/view/chapter_editor.fxml"));
         Parent chapterEditorRoot = chapterEditorLoader.load();
         ChapterEditorController chapterEditorController = chapterEditorLoader.getController();
-        ChapterEditorViewModel chapterEditorViewModel = new ChapterEditorViewModel();
+        chapterEditorViewModel = new ChapterEditorViewModel();
         chapterEditorController.setViewModel(chapterEditorViewModel);
         chapterEditorViewModel.loadSampleChapters();
+        currentQuestFile = QuestFile.builder()
+                .id("ftbquests:editor")
+                .title("Quest Editor Pack")
+                .chapters(new ArrayList<>(chapterEditorViewModel.getChapters()))
+                .chapterGroups(List.of())
+                .lootTables(List.of())
+                .build();
+        chapterGroupBrowserViewModel.loadFromQuestFile(currentQuestFile);
         Tab chapterEditorTab = new Tab("Chapter Editor", chapterEditorRoot);
         chapterEditorTab.setClosable(false);
         tabPane.getTabs().add(chapterEditorTab);
@@ -78,7 +105,12 @@ public class MainApp extends Application {
             logger.error("Failed to load settings UI", e);
         }
 
-        Scene scene = new Scene(tabPane);
+        MenuBar menuBar = createMenuBar(primaryStage);
+        BorderPane root = new BorderPane();
+        root.setTop(menuBar);
+        root.setCenter(tabPane);
+
+        Scene scene = new Scene(root);
 
         ThemeService themeService = ThemeService.getInstance();
         themeService.registerStage(primaryStage);
@@ -106,12 +138,100 @@ public class MainApp extends Application {
     }
 
     private void ensureLayoutStore() {
-        if (UiServiceLocator.questLayoutStore != null) {
+        if (workspace == null) {
+            String workspaceProperty = System.getProperty("ftbq.editor.workspace", ".");
+            workspace = Path.of(workspaceProperty).toAbsolutePath().normalize();
+        }
+        if (UiServiceLocator.questLayoutStore == null) {
+            UiServiceLocator.questLayoutStore = new JsonQuestLayoutStore(workspace);
+        }
+    }
+
+    private MenuBar createMenuBar(Stage owner) {
+        MenuBar menuBar = new MenuBar();
+        Menu fileMenu = new Menu("File");
+        MenuItem importItem = new MenuItem("Import Quests from SNBT...");
+        importItem.setOnAction(event -> showImportDialog(owner));
+        fileMenu.getItems().add(importItem);
+        menuBar.getMenus().add(fileMenu);
+        return menuBar;
+    }
+
+    private void showImportDialog(Stage owner) {
+        ImportSnbtDialog dialog = new ImportSnbtDialog(owner, importExportService, currentQuestFile, workspace);
+        dialog.showAndWait().ifPresent(this::applyImportResult);
+    }
+
+    private void applyImportResult(QuestImportResult result) {
+        if (result == null) {
             return;
         }
-        String workspaceProperty = System.getProperty("ftbq.editor.workspace", ".");
-        Path workspace = Path.of(workspaceProperty).toAbsolutePath().normalize();
-        UiServiceLocator.questLayoutStore = new JsonQuestLayoutStore(workspace);
+        currentQuestFile = result.questFile();
+        updateViewModelsFromQuestFile();
+        persistQuestFile();
+        showImportSummary(result.summary());
+    }
+
+    private void updateViewModelsFromQuestFile() {
+        chapterEditorViewModel.loadFromQuestFile(currentQuestFile);
+        chapterGroupBrowserViewModel.loadFromQuestFile(currentQuestFile);
+    }
+
+    private void persistQuestFile() {
+        try {
+            importExportService.exportPack(currentQuestFile, workspace.toFile());
+        } catch (Exception ex) {
+            logger.error("Failed to write quest SNBT", ex);
+            showError("Failed to write quest data", ex.getMessage());
+        }
+    }
+
+    private void showImportSummary(QuestImportSummary summary) {
+        if (summary == null) {
+            return;
+        }
+        StringBuilder builder = new StringBuilder();
+        builder.append("Added chapters: ").append(summary.addedChapters().size()).append('\n');
+        if (!summary.addedChapters().isEmpty()) {
+            builder.append("  ").append(String.join(", ", summary.addedChapters())).append('\n');
+        }
+        builder.append("Merged chapters: ").append(summary.mergedChapters().size()).append('\n');
+        builder.append("Added quests: ").append(summary.addedQuests().size()).append('\n');
+        if (!summary.renamedIds().isEmpty()) {
+            builder.append("Renamed IDs: ").append(String.join(", ", summary.renamedIds())).append('\n');
+        }
+        List<String> warnings = new ArrayList<>();
+        if (summary.warnings() != null) {
+            warnings.addAll(summary.warnings());
+        }
+        if (summary.assetWarnings() != null) {
+            warnings.addAll(summary.assetWarnings());
+        }
+        if (!warnings.isEmpty()) {
+            builder.append('\n').append("Warnings:").append('\n');
+            for (String warning : warnings) {
+                builder.append(" - ").append(warning).append('\n');
+            }
+        }
+        Alert alert = new Alert(Alert.AlertType.INFORMATION);
+        if (primaryStage != null) {
+            alert.initOwner(primaryStage);
+        }
+        alert.setTitle("Import complete");
+        alert.setHeaderText("Quest import summary");
+        alert.setContentText(builder.toString());
+        alert.showAndWait();
+    }
+
+    private void showError(String title, String message) {
+        Alert alert = new Alert(Alert.AlertType.ERROR);
+        if (primaryStage != null) {
+            alert.initOwner(primaryStage);
+        }
+        alert.setTitle(title);
+        alert.setHeaderText(title);
+        alert.setContentText(message == null ? "An unknown error occurred." : message);
+        alert.showAndWait();
     }
 }
 

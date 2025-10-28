@@ -20,6 +20,7 @@ dependencies {
     implementation(project(":core-domain"))
     implementation(project(":services"))
     implementation(project(":ingestion"))
+    implementation(project(":ftbq-import"))
     val slf4jVersion: String by project
     implementation("org.slf4j:slf4j-api:$slf4jVersion")
     val jacksonVersion: String by project

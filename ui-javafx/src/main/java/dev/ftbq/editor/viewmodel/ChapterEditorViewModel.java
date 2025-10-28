@@ -6,6 +6,7 @@ import dev.ftbq.editor.domain.Dependency;
 import dev.ftbq.editor.domain.IconRef;
 import dev.ftbq.editor.domain.Quest;
 import dev.ftbq.editor.domain.Visibility;
+import dev.ftbq.editor.domain.QuestFile;
 import dev.ftbq.editor.services.UiServiceLocator;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
@@ -149,6 +150,11 @@ public class ChapterEditorViewModel {
         Chapter technology = createTechnologyChapter();
 
         setChapters(List.of(gettingStarted, exploration, technology));
+    }
+
+    public void loadFromQuestFile(QuestFile questFile) {
+        Objects.requireNonNull(questFile, "questFile");
+        setChapters(questFile.chapters());
     }
 
     private void applyFilter(String filterText) {
