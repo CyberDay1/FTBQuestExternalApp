@@ -102,7 +102,7 @@ public final class SnbtParser {
         int start = index;
         while (hasNext()) {
             char c = peek();
-            if (Character.isLetterOrDigit(c) || c == '_' || c == '-' || c == '.' || c == ':' || c == '/') {
+            if (Character.isLetterOrDigit(c) || c == '_' || c == '-' || c == '.' || c == '/') {
                 index++;
             } else {
                 break;
