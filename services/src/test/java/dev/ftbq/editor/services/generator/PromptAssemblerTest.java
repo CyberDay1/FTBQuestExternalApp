@@ -10,6 +10,7 @@ import dev.ftbq.editor.domain.Quest;
 import dev.ftbq.editor.domain.QuestFile;
 import dev.ftbq.editor.domain.Reward;
 import dev.ftbq.editor.domain.Visibility;
+import dev.ftbq.editor.services.mods.RegisteredMod;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
@@ -52,6 +53,14 @@ class PromptAssemblerTest {
         assertEquals(EXAMPLE_SNBT.length(), exampleBlock.content().length(), "Example SNBT must remain verbatim");
 
         assertFalse(blockKinds.contains("system-nudge"));
+
+        PromptBlock packContext = prompt.blocks().stream()
+                .filter(block -> "pack-context".equals(block.metadata().get("block")))
+                .findFirst()
+                .orElseThrow();
+        assertTrue(packContext.content().contains("Selected mods:"));
+        assertTrue(packContext.content().contains("Example Integration"));
+        assertTrue(packContext.content().contains("example:item_a"));
     }
 
     @Test
@@ -129,6 +138,12 @@ class PromptAssemblerTest {
                 "Integrate with early power progression",
                 List.of("ExamplePack v1"));
 
-        return new GenerationContext(questFile, spec, modIntent, List.of(example), progression);
+        List<RegisteredMod> selectedMods = List.of(
+                new RegisteredMod("example_mod", "Example Integration", "2.0",
+                        List.of("example:item_a", "example:item_b", "example:block_c"), "example.jar"),
+                new RegisteredMod("aux_mod", "Auxiliary", "1.5", List.of("aux:item"), "aux.jar")
+        );
+
+        return new GenerationContext(questFile, spec, modIntent, List.of(example), progression, selectedMods);
     }
 }

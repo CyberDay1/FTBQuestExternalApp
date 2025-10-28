@@ -6,6 +6,7 @@ import dev.ftbq.editor.domain.Quest;
 import dev.ftbq.editor.domain.QuestFile;
 import dev.ftbq.editor.io.snbt.SnbtQuestMapper;
 import dev.ftbq.editor.importer.snbt.parser.SnbtParseException;
+import dev.ftbq.editor.services.mods.RegisteredMod;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -54,16 +55,18 @@ public final class QuestChapterGenerator {
     public GenerationResult generate(QuestFile questFile,
                                      QuestDesignSpec designSpec,
                                      ModIntent modIntent,
+                                     List<RegisteredMod> selectedMods,
                                      List<Path> exampleChapterPaths,
                                      Path draftsDirectory) throws IOException {
         Objects.requireNonNull(questFile, "questFile");
         Objects.requireNonNull(designSpec, "designSpec");
         Objects.requireNonNull(modIntent, "modIntent");
+        Objects.requireNonNull(selectedMods, "selectedMods");
         Objects.requireNonNull(exampleChapterPaths, "exampleChapterPaths");
         Objects.requireNonNull(draftsDirectory, "draftsDirectory");
 
         List<GenerationLogEntry> logs = new ArrayList<>();
-        GenerationContext context = buildContext(questFile, designSpec, modIntent, exampleChapterPaths, logs);
+        GenerationContext context = buildContext(questFile, designSpec, modIntent, selectedMods, exampleChapterPaths, logs);
         ModelPrompt prompt = promptAssembler.buildPrompt(context);
         logs.add(GenerationLogEntry.of("prompt", promptAssembler.describe(prompt)));
 
@@ -105,6 +108,7 @@ public final class QuestChapterGenerator {
     private GenerationContext buildContext(QuestFile questFile,
                                            QuestDesignSpec designSpec,
                                            ModIntent modIntent,
+                                           List<RegisteredMod> selectedMods,
                                            List<Path> exampleChapterPaths,
                                            List<GenerationLogEntry> logs) throws IOException {
         List<ExampleChapterConstraint> examples = new ArrayList<>();
@@ -126,7 +130,7 @@ public final class QuestChapterGenerator {
         }
 
         Map<String, Set<String>> progressionMap = buildProgressionMap(questFile);
-        return new GenerationContext(questFile, designSpec, modIntent, examples, progressionMap);
+        return new GenerationContext(questFile, designSpec, modIntent, examples, progressionMap, selectedMods);
     }
 
     private Map<String, Set<String>> buildProgressionMap(QuestFile questFile) {

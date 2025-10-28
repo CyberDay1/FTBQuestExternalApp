@@ -53,7 +53,7 @@ class QuestChapterGeneratorTest {
         AiModelProvider provider = prompt -> new ModelResponse(modelSnbt, Map.of("blocks", prompt.blocks().size()));
 
         QuestChapterGenerator generator = new QuestChapterGenerator(provider, mapper, new PromptAssembler(), new GeneratedContentValidator());
-        GenerationResult result = generator.generate(existing, designSpec, modIntent, List.of(examplePath), tempDir);
+        GenerationResult result = generator.generate(existing, designSpec, modIntent, List.of(), List.of(examplePath), tempDir);
 
         assertFalse(result.chapters().isEmpty(), "Expected generated chapters");
         Chapter generated = result.chapters().get(0);

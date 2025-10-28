@@ -8,12 +8,20 @@ import dev.ftbq.editor.io.snbt.AiQuestBridge;
 import dev.ftbq.editor.services.ai.QuestGenerationService;
 import dev.ftbq.editor.services.generator.ModIntent;
 import dev.ftbq.editor.services.generator.QuestDesignSpec;
+import dev.ftbq.editor.services.mods.ModRegistryService;
+import dev.ftbq.editor.services.mods.RegisteredMod;
 import dev.ftbq.editor.ui.dialogs.AiPromptDialog;
+import dev.ftbq.editor.ui.model.ModSelectionModel;
+import dev.ftbq.editor.support.UiServiceLocator;
+import javafx.beans.value.ChangeListener;
 import javafx.application.Platform;
+import javafx.collections.ListChangeListener;
 import javafx.fxml.FXML;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.ButtonType;
+import javafx.scene.control.CheckMenuItem;
+import javafx.scene.control.MenuButton;
 import javafx.scene.control.ToolBar;
 import javafx.scene.control.TreeItem;
 import javafx.scene.control.TreeView;
@@ -23,10 +31,13 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
+import java.util.IdentityHashMap;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Supplier;
+import java.util.function.Consumer;
 
 /**
  * Controller responsible for surfacing the AI quest generation workflow.
@@ -43,27 +54,55 @@ public class QuestEditorController {
 
     private final QuestGenerationService questGenerationService;
     private final AiQuestBridge aiQuestBridge;
+    private final ModRegistryService modRegistryService;
+    private final ModSelectionModel modSelectionModel;
+    private final Consumer<List<RegisteredMod>> registryListener;
+    private final Map<ModSelectionModel.ModOption, ChangeListener<Boolean>> optionListeners = new IdentityHashMap<>();
     private Supplier<QuestDesignSpec> designSpecSupplier;
     private Supplier<ModIntent> modIntentSupplier;
+    private MenuButton modSelectionMenu;
     private Button saveDraftButton;
     private Path workspaceRoot;
 
     public QuestEditorController() {
-        this(new QuestGenerationService(), new AiQuestBridge());
+        this(new QuestGenerationService(), new AiQuestBridge(), UiServiceLocator.getModRegistryService(), new ModSelectionModel());
     }
 
-    QuestEditorController(QuestGenerationService questGenerationService, AiQuestBridge aiQuestBridge) {
+    QuestEditorController(QuestGenerationService questGenerationService,
+                          AiQuestBridge aiQuestBridge,
+                          ModRegistryService modRegistryService,
+                          ModSelectionModel modSelectionModel) {
         this.questGenerationService = Objects.requireNonNull(questGenerationService, "questGenerationService");
         this.aiQuestBridge = Objects.requireNonNull(aiQuestBridge, "aiQuestBridge");
+        this.modRegistryService = Objects.requireNonNull(modRegistryService, "modRegistryService");
+        this.modSelectionModel = Objects.requireNonNull(modSelectionModel, "modSelectionModel");
+        this.registryListener = mods -> Platform.runLater(() -> this.modSelectionModel.setAvailableMods(mods));
+        this.modRegistryService.addListener(registryListener);
+        this.modSelectionModel.setAvailableMods(this.modRegistryService.listMods());
     }
 
     @FXML
     private void initialize() {
         if (topToolbar != null) {
+            modSelectionMenu = new MenuButton();
+            modSelectionMenu.getStyleClass().add("combo-box");
+            modSelectionMenu.setAccessibleText("Select mods for AI generation context");
+            modSelectionMenu.textProperty().bind(modSelectionModel.summaryProperty());
+            topToolbar.getItems().add(0, modSelectionMenu);
+
+            modSelectionModel.options().addListener((ListChangeListener<ModSelectionModel.ModOption>) change ->
+                    refreshModSelectionMenu());
+            modSelectionModel.warningMessageProperty().addListener((obs, oldValue, newValue) -> {
+                if (newValue != null && !newValue.isBlank()) {
+                    showWarning("Selection limit reached", newValue);
+                }
+            });
+            refreshModSelectionMenu();
+
             Button generateViaAiButton = new Button("Generate via AI");
             generateViaAiButton.getStyleClass().add("accent-button");
             generateViaAiButton.setOnAction(event -> onGenerateViaAi());
-            topToolbar.getItems().add(0, generateViaAiButton);
+            topToolbar.getItems().add(1, generateViaAiButton);
 
             saveDraftButton = new Button("Save to Drafts");
             saveDraftButton.setDisable(true);
@@ -216,12 +255,58 @@ public class QuestEditorController {
         );
     }
 
+    private void refreshModSelectionMenu() {
+        if (modSelectionMenu == null) {
+            return;
+        }
+        optionListeners.forEach((option, listener) -> option.selectedProperty().removeListener(listener));
+        optionListeners.clear();
+        modSelectionMenu.getItems().clear();
+
+        for (ModSelectionModel.ModOption option : modSelectionModel.options()) {
+            CheckMenuItem item = new CheckMenuItem(buildModLabel(option.mod()));
+            item.setSelected(option.isSelected());
+            item.setOnAction(event -> {
+                boolean success = modSelectionModel.toggle(option);
+                if (!success) {
+                    item.setSelected(option.isSelected());
+                }
+            });
+            ChangeListener<Boolean> listener = (obs, oldValue, newValue) -> {
+                if (item.isSelected() != newValue) {
+                    item.setSelected(newValue);
+                }
+            };
+            option.selectedProperty().addListener(listener);
+            optionListeners.put(option, listener);
+            modSelectionMenu.getItems().add(item);
+        }
+    }
+
+    private String buildModLabel(RegisteredMod mod) {
+        StringBuilder builder = new StringBuilder(mod.displayName())
+                .append(" [")
+                .append(mod.modId())
+                .append(']');
+        if (mod.version() != null && !mod.version().isBlank()) {
+            builder.append(" v").append(mod.version());
+        }
+        builder.append(" • ")
+                .append(mod.itemCount())
+                .append(mod.itemCount() == 1 ? " item" : " items");
+        return builder.toString();
+    }
+
     private void showError(String title, String message) {
         showAlert(Alert.AlertType.ERROR, title, message);
     }
 
     private void showInfo(String title, String message) {
         showAlert(Alert.AlertType.INFORMATION, title, message);
+    }
+
+    private void showWarning(String title, String message) {
+        showAlert(Alert.AlertType.WARNING, title, message);
     }
 
     private void showAlert(Alert.AlertType type, String title, String message) {
