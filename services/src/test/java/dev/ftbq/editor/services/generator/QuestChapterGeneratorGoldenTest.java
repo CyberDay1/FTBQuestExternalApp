@@ -64,6 +64,9 @@ class QuestChapterGeneratorGoldenTest {
         String normalizedSnbt = mapper.toSnbt(normalizedFile);
         String goldenSnbt = readResource("golden/generator_normalized.snbt");
 
+        goldenSnbt = goldenSnbt.replace("\r\n", "\n");
+        normalizedSnbt = normalizedSnbt.replace("\r\n", "\n");
+
         assertEquals(goldenSnbt, normalizedSnbt, () -> diffMessage(goldenSnbt, normalizedSnbt));
 
         QuestFile roundTripped = mapper.fromSnbt(normalizedSnbt);
