@@ -1,9 +1,10 @@
 package dev.ftbq.editor.support;
 
 import dev.ftbq.editor.assets.CacheManager;
+import dev.ftbq.editor.domain.version.VersionCatalog;
+import dev.ftbq.editor.services.mods.ModRegistryService;
 import dev.ftbq.editor.store.Jdbc;
 import dev.ftbq.editor.store.StoreDao;
-import dev.ftbq.editor.domain.version.VersionCatalog;
 
 import java.nio.file.Path;
 import java.sql.Connection;
@@ -19,6 +20,7 @@ public final class UiServiceLocator {
     private static Connection connection;
     private static CacheManager cacheManager;
     private static VersionCatalog versionCatalog;
+    private static ModRegistryService modRegistryService;
 
     private UiServiceLocator() {
     }
@@ -49,6 +51,13 @@ public final class UiServiceLocator {
         versionCatalog = null;
     }
 
+    public static synchronized ModRegistryService getModRegistryService() {
+        if (modRegistryService == null) {
+            modRegistryService = new ModRegistryService();
+        }
+        return modRegistryService;
+    }
+
     public static synchronized void overrideStoreDao(StoreDao customDao) {
         storeDao = Objects.requireNonNull(customDao, "customDao");
     }
@@ -59,6 +68,10 @@ public final class UiServiceLocator {
 
     public static synchronized void overrideVersionCatalog(VersionCatalog customCatalog) {
         versionCatalog = Objects.requireNonNull(customCatalog, "customCatalog");
+    }
+
+    public static synchronized void overrideModRegistryService(ModRegistryService customService) {
+        modRegistryService = Objects.requireNonNull(customService, "customService");
     }
 }
 

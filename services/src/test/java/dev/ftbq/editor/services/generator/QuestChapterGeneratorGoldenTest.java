@@ -51,7 +51,7 @@ class QuestChapterGeneratorGoldenTest {
         QuestChapterGenerator generator = new QuestChapterGenerator(provider);
         Path draftsDir = tempDir.resolve("drafts");
 
-        GenerationResult result = generator.generate(base, spec, intent, List.of(), draftsDir);
+        GenerationResult result = generator.generate(base, spec, intent, List.of(), List.of(), draftsDir);
 
         QuestFile normalizedFile = QuestFile.builder()
                 .id(base.id())

@@ -63,7 +63,7 @@ class QuestChapterGeneratorRetryTest {
         QuestChapterGenerator generator = new QuestChapterGenerator(modelProvider, mapper, assembler, validator);
 
         Path draftsDir = Files.createTempDirectory("drafts");
-        GenerationResult result = generator.generate(baseQuestFile, spec, intent, Collections.emptyList(), draftsDir);
+        GenerationResult result = generator.generate(baseQuestFile, spec, intent, List.of(), Collections.emptyList(), draftsDir);
 
         assertEquals(2, modelProvider.requestedPrompts.size(), "Generator should perform a retry");
         ModelPrompt retryPrompt = modelProvider.requestedPrompts.get(1);

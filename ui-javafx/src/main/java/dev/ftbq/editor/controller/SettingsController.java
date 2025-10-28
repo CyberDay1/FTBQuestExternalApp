@@ -146,6 +146,7 @@ public class SettingsController {
             JarScanner.JarScanResult scan = JarScanner.scanModJar(jarPath, versionLabel);
             var catalog = ItemCatalogExtractor.extract(jarPath, file.getName(), versionLabel, false);
             catalogImportService.importCatalog(catalog);
+            UiServiceLocator.getModRegistryService().register(catalog);
             rebuildVersionCatalog(targetVersion);
             int entryCount = scan.entries().size();
             updateStatus(String.format(Locale.ROOT,

@@ -19,6 +19,7 @@
 .text  { -fx-fill: -fg; }
 
 .button,
+.menu-button,
 .text-field,
 .combo-box,
 .choice-box,
@@ -33,6 +34,7 @@
 }
 
 .button:hover,
+.menu-button:hover,
 .combo-box:hover,
 .choice-box:hover,
 .text-field:hover {
@@ -40,6 +42,7 @@
 }
 
 .button:pressed,
+.menu-button:pressed,
 .button:default:hover {
     -fx-background-color: -selection-bg;
     -fx-text-fill: -selection-fg;
@@ -47,7 +50,8 @@
 
 .text-field:focused,
 .combo-box:focused,
-.choice-box:focused {
+.choice-box:focused,
+.menu-button:focused {
     -fx-border-color: -selection-border;
     -fx-background-color: -bg-elev;
 }

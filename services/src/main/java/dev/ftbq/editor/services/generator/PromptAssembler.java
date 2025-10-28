@@ -3,6 +3,7 @@ package dev.ftbq.editor.services.generator;
 import dev.ftbq.editor.domain.ChapterGroup;
 import dev.ftbq.editor.domain.LootTable;
 import dev.ftbq.editor.domain.QuestFile;
+import dev.ftbq.editor.services.mods.RegisteredMod;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -123,6 +124,24 @@ public final class PromptAssembler {
                     .append(String.join(", ", context.modIntent().exampleReferences()))
                     .append('\n');
         }
+        if (!context.selectedMods().isEmpty()) {
+            builder.append('\n').append("Selected mods:\n");
+            for (RegisteredMod mod : context.selectedMods()) {
+                builder.append(" - ")
+                        .append(mod.displayName())
+                        .append(" [")
+                        .append(mod.modId())
+                        .append(']');
+                if (mod.version() != null && !mod.version().isBlank()) {
+                    builder.append(" v").append(mod.version());
+                }
+                if (!mod.itemIds().isEmpty()) {
+                    builder.append(" items: ")
+                            .append(summarizeItems(mod.itemIds()));
+                }
+                builder.append('\n');
+            }
+        }
         builder.append('\n').append("Chapter groups:\n");
         for (ChapterGroup group : context.chapterGroups()) {
             builder.append(" - ").append(group.id()).append(" (" + group.title() + ") → ")
@@ -158,6 +177,19 @@ public final class PromptAssembler {
     private String buildCorrectiveNudge(String correctiveNudge) {
         return "Corrective action: " + correctiveNudge
                 + "\nRegenerate strictly valid SNBT adhering to the style, constraints, and output contract.";
+    }
+
+    private String summarizeItems(List<String> itemIds) {
+        if (itemIds.isEmpty()) {
+            return "";
+        }
+        final int limit = 15;
+        if (itemIds.size() <= limit) {
+            return String.join(", ", itemIds);
+        }
+        String joined = String.join(", ", itemIds.subList(0, limit));
+        int remaining = itemIds.size() - limit;
+        return joined + " … +" + remaining + " more";
     }
 
     public String describe(ModelPrompt prompt) {
