@@ -54,7 +54,11 @@ public final class CatalogImportService {
             String source = catalog.source();
             if (source != null && !source.isBlank()) {
                 try {
-                    Path sourcePath = Paths.get(source);
+                    Path sourcePath = Paths.get(
+                            source.contains(":\\") ? source :
+                                    System.getProperty("user.dir") + java.io.File.separator + source
+                    );
+                    logger.info("Resolved JAR path for proxy scan: {}", sourcePath);
                     var proxyItems = JarScanner.extractProxyItems(sourcePath, catalog.version());
                     if (!proxyItems.isEmpty()) {
                         ItemCatalog proxyCatalog = new ItemCatalog(
