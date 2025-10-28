@@ -6,6 +6,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -49,6 +50,10 @@ public final class AiQuestBridge {
         Path draftFile = draftsDirectory.resolve(nextDraftFileName());
         Files.writeString(draftFile, result.formattedText(), StandardCharsets.UTF_8);
         return draftFile;
+    }
+
+    public Optional<String> lastFormattedText() {
+        return Optional.ofNullable(lastResult).map(SnbtFormatter.FormatResult::formattedText);
     }
 
     private String nextDraftFileName() {
