@@ -16,6 +16,7 @@ dependencies {
     implementation("org.xerial:sqlite-jdbc:$sqliteVersion")
     implementation("com.fasterxml.jackson.core:jackson-databind:$jacksonVersion")
     implementation("org.slf4j:slf4j-api:$slf4jVersion")
+    implementation("commons-io:commons-io:2.15.1")
     testImplementation("org.junit.jupiter:junit-jupiter:$junitVersion")
 }
 

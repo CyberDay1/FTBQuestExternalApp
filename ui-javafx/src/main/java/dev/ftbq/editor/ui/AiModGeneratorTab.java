@@ -4,6 +4,7 @@ import dev.ftbq.editor.ThemeService;
 import dev.ftbq.editor.domain.LootTable;
 import dev.ftbq.editor.domain.QuestFile;
 import dev.ftbq.editor.io.snbt.AiQuestBridge;
+import dev.ftbq.editor.ingest.JarScanner;
 import dev.ftbq.editor.services.ai.QuestGenerationService;
 import dev.ftbq.editor.services.generator.ModIntent;
 import dev.ftbq.editor.services.generator.QuestDesignSpec;
@@ -42,6 +43,7 @@ import javafx.util.StringConverter;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.HashMap;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
@@ -51,6 +53,8 @@ import java.util.Set;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Tab that surfaces the AI chapter generation workflow with full dark theme styling.
@@ -59,6 +63,7 @@ public final class AiModGeneratorTab extends Tab {
 
     private static final int DEFAULT_QUEST_COUNT = 8;
     private static final String DEFAULT_PROMPT_PREFIX = "User prompt:";
+    private static final Logger LOGGER = LoggerFactory.getLogger(AiModGeneratorTab.class);
 
     private final QuestGenerationService questGenerationService;
     private final AiQuestBridge aiQuestBridge;
@@ -67,6 +72,7 @@ public final class AiModGeneratorTab extends Tab {
     private final RewardSelectionModel rewardSelectionModel;
     private final Consumer<List<RegisteredMod>> registryListener;
     private final Map<ModSelectionModel.ModOption, ChangeListener<Boolean>> optionListeners = new IdentityHashMap<>();
+    private final Map<String, Integer> proxyItemCounts = new HashMap<>();
 
     private Supplier<QuestDesignSpec> designSpecSupplier;
     private Supplier<ModIntent> modIntentSupplier;
@@ -340,8 +346,15 @@ public final class AiModGeneratorTab extends Tab {
         optionListeners.clear();
         modSelectionMenu.getItems().clear();
 
+        Set<String> activeKeys = modSelectionModel.options().stream()
+                .map(option -> proxyCacheKey(option.mod()))
+                .collect(Collectors.toSet());
+        proxyItemCounts.keySet().retainAll(activeKeys);
+
         for (ModSelectionModel.ModOption option : modSelectionModel.options()) {
-            CheckMenuItem item = new CheckMenuItem(buildModLabel(option.mod()));
+            RegisteredMod mod = option.mod();
+            int itemCount = resolveItemCount(mod);
+            CheckMenuItem item = new CheckMenuItem(buildModLabel(mod, itemCount));
             item.setSelected(option.isSelected());
             item.setOnAction(event -> {
                 boolean success = modSelectionModel.setOptionSelected(option, !option.isSelected());
@@ -502,6 +515,10 @@ public final class AiModGeneratorTab extends Tab {
     }
 
     private String buildModLabel(RegisteredMod mod) {
+        return buildModLabel(mod, resolveItemCount(mod));
+    }
+
+    private String buildModLabel(RegisteredMod mod, int itemCount) {
         StringBuilder builder = new StringBuilder(mod.displayName())
                 .append(" [")
                 .append(mod.modId())
@@ -510,9 +527,40 @@ public final class AiModGeneratorTab extends Tab {
             builder.append(" v").append(mod.version());
         }
         builder.append(" • ")
-                .append(mod.itemCount())
-                .append(mod.itemCount() == 1 ? " item" : " items");
+                .append(itemCount)
+                .append(itemCount == 1 ? " item" : " items");
         return builder.toString();
+    }
+
+    private int resolveItemCount(RegisteredMod mod) {
+        if (mod == null) {
+            return 0;
+        }
+        int actual = mod.itemCount();
+        if (actual > 0) {
+            return actual;
+        }
+        String key = proxyCacheKey(mod);
+        return proxyItemCounts.computeIfAbsent(key, ignored -> loadProxyItemCount(mod));
+    }
+
+    private int loadProxyItemCount(RegisteredMod mod) {
+        String sourceJar = mod.sourceJar();
+        if (sourceJar == null || sourceJar.isBlank()) {
+            return 0;
+        }
+        try {
+            var proxyItems = JarScanner.extractProxyItems(Paths.get(sourceJar), mod.version());
+            return proxyItems.size();
+        } catch (Exception ex) {
+            LOGGER.warn("Failed to resolve proxy items for mod {} from {}", mod.modId(), sourceJar, ex);
+            return 0;
+        }
+    }
+
+    private String proxyCacheKey(RegisteredMod mod) {
+        String source = mod.sourceJar() == null ? "" : mod.sourceJar();
+        return mod.modId() + "@" + source;
     }
 
     private void updateRewardLootTables() {

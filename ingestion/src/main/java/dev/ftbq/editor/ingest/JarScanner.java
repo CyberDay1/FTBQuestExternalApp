@@ -5,10 +5,15 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Enumeration;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import org.apache.commons.io.FilenameUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -22,6 +27,9 @@ import org.slf4j.LoggerFactory;
 public final class JarScanner {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(JarScanner.class);
+
+    private static final Pattern MOD_ASSET_PATTERN =
+            Pattern.compile("assets/([^/]+)/(?:(?:models|textures)/item)/([^/]+)\\.[a-zA-Z0-9]+");
 
     private JarScanner() {
         throw new AssertionError("JarScanner cannot be instantiated");
@@ -51,6 +59,67 @@ public final class JarScanner {
         return scanJar(jar, "mod", versionHint);
     }
 
+    /**
+     * Extract proxy items from models and textures when formal JSON definitions are missing.
+     */
+    public static List<ItemMeta> extractProxyItems(Path jar, String version) throws IOException {
+        Objects.requireNonNull(jar, "jar");
+
+        Map<String, ProxyItemDescriptor> descriptors = new LinkedHashMap<>();
+        try (ZipFile zipFile = new ZipFile(jar.toFile())) {
+            Enumeration<? extends ZipEntry> entries = zipFile.entries();
+            while (entries.hasMoreElements()) {
+                ZipEntry entry = entries.nextElement();
+                if (entry.isDirectory()) {
+                    continue;
+                }
+                String path = entry.getName();
+                Matcher matcher = MOD_ASSET_PATTERN.matcher(path);
+                if (!matcher.find()) {
+                    continue;
+                }
+
+                String modId = matcher.group(1);
+                String fileName = matcher.group(2);
+                String itemName = FilenameUtils.getBaseName(fileName);
+                if (itemName == null || itemName.isBlank()) {
+                    continue;
+                }
+
+                String id = modId + ":" + itemName;
+                ProxyItemDescriptor descriptor = descriptors.computeIfAbsent(id, ignored ->
+                        new ProxyItemDescriptor(id, toDisplayName(itemName), modId, resolveModName(jar, modId)));
+
+                if (descriptor.texturePath == null || path.contains("/textures/item/")) {
+                    descriptor.texturePath = path;
+                }
+            }
+        }
+
+        List<String> ids = new ArrayList<>(descriptors.keySet());
+        Collections.sort(ids);
+
+        List<ItemMeta> proxyItems = new ArrayList<>(ids.size());
+        for (String id : ids) {
+            ProxyItemDescriptor descriptor = descriptors.get(id);
+            proxyItems.add(new ItemMeta(
+                    descriptor.id,
+                    descriptor.displayName,
+                    descriptor.modId,
+                    "proxy_item",
+                    false,
+                    descriptor.texturePath,
+                    null,
+                    descriptor.modId,
+                    descriptor.modName,
+                    version
+            ));
+        }
+
+        LOGGER.info("Proxy item scan complete | path={} items={}", jar, proxyItems.size());
+        return proxyItems;
+    }
+
     private static JarScanResult scanJar(Path jar, String kind, String versionLabel) throws IOException {
         Objects.requireNonNull(jar, "jar");
         Objects.requireNonNull(kind, "kind");
@@ -73,6 +142,38 @@ public final class JarScanner {
         JarScanResult result = new JarScanResult(kind, versionLabel, Collections.unmodifiableList(entries));
         LOGGER.info("Jar scan complete | path={} kind={} version={} entries={}", jar, kind, versionLabel, entries.size());
         return result;
+    }
+
+    private static String resolveModName(Path jar, String modId) {
+        Path fileName = jar.getFileName();
+        if (fileName != null) {
+            String baseName = FilenameUtils.getBaseName(fileName.toString());
+            if (!baseName.isBlank()) {
+                return baseName;
+            }
+        }
+        return modId;
+    }
+
+    private static String toDisplayName(String itemName) {
+        if (itemName == null || itemName.isBlank()) {
+            return "Item";
+        }
+        String[] parts = itemName.split("[_-]");
+        StringBuilder builder = new StringBuilder(itemName.length());
+        for (String part : parts) {
+            if (part.isBlank()) {
+                continue;
+            }
+            if (builder.length() > 0) {
+                builder.append(' ');
+            }
+            builder.append(Character.toUpperCase(part.charAt(0)));
+            if (part.length() > 1) {
+                builder.append(part.substring(1));
+            }
+        }
+        return builder.length() > 0 ? builder.toString() : itemName;
     }
 
     /**
@@ -100,6 +201,21 @@ public final class JarScanner {
         public JarScanResult {
             Objects.requireNonNull(kind, "kind");
             Objects.requireNonNull(entries, "entries");
+        }
+    }
+
+    private static final class ProxyItemDescriptor {
+        private final String id;
+        private final String displayName;
+        private final String modId;
+        private final String modName;
+        private String texturePath;
+
+        private ProxyItemDescriptor(String id, String displayName, String modId, String modName) {
+            this.id = id;
+            this.displayName = displayName;
+            this.modId = modId;
+            this.modName = modName;
         }
     }
 }

@@ -2,9 +2,12 @@ package dev.ftbq.editor.services.catalog;
 
 import dev.ftbq.editor.ingest.ItemCatalog;
 import dev.ftbq.editor.ingest.ItemMeta;
+import dev.ftbq.editor.ingest.JarScanner;
 import dev.ftbq.editor.services.logging.AppLoggerFactory;
 import dev.ftbq.editor.services.logging.StructuredLogger;
 import dev.ftbq.editor.store.StoreDao;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
@@ -45,6 +48,30 @@ public final class CatalogImportService {
                 StructuredLogger.field("version", catalog.version()),
                 StructuredLogger.field("vanilla", catalog.isVanilla()),
                 StructuredLogger.field("items", catalog.items().size()));
+
+        if (catalog.items().isEmpty()) {
+            logger.warn("Catalog empty, checking for proxy assets in jar source");
+            String source = catalog.source();
+            if (source != null && !source.isBlank()) {
+                try {
+                    Path sourcePath = Paths.get(source);
+                    var proxyItems = JarScanner.extractProxyItems(sourcePath, catalog.version());
+                    if (!proxyItems.isEmpty()) {
+                        ItemCatalog proxyCatalog = new ItemCatalog(
+                                catalog.source(),
+                                catalog.version(),
+                                catalog.isVanilla(),
+                                proxyItems,
+                                Map.of()
+                        );
+                        importCatalog(proxyCatalog);
+                        return;
+                    }
+                } catch (Exception e) {
+                    logger.warn("Proxy asset import failed", e);
+                }
+            }
+        }
 
         int upserted = 0;
         for (ItemMeta item : catalog.items()) {
