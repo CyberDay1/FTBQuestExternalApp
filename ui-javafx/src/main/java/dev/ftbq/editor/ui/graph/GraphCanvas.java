@@ -214,7 +214,7 @@ public class GraphCanvas extends Canvas {
             e.consume();
         });
         setOnMousePressed(e -> {
-            if (e.getButton() == MouseButton.MIDDLE) {
+            if (e.getButton() == MouseButton.MIDDLE || (e.getButton() == MouseButton.PRIMARY && e.isShiftDown())) {
                 panning = true;
                 dragStartX = e.getX();
                 dragStartY = e.getY();
@@ -311,6 +311,12 @@ public class GraphCanvas extends Canvas {
         } catch (NonInvertibleTransformException e) {
             return new double[]{0, 0};
         }
+    }
+
+    public double[] screenToWorldDelta(double sx, double sy, double sx2, double sy2) {
+        double[] start = screenToWorld(sx, sy);
+        double[] end = screenToWorld(sx2, sy2);
+        return new double[]{end[0] - start[0], end[1] - start[1]};
     }
 
     public double[] worldToScreen(double wx, double wy) {
