@@ -85,13 +85,14 @@ public final class PromptAssembler {
 
     private String buildConstraints(GenerationContext context) {
         QuestDesignSpec spec = context.designSpec();
+        QuestLimits questLimits = context.questLimits();
         String difficulty = String.join(" → ", spec.difficultyCurve());
         String gatingRules = String.join(", ", spec.gatingRules());
         String lootTables = context.lootTables().isEmpty()
                 ? "no existing reward tables"
                 : String.join(", ", context.lootTables().stream().map(LootTable::id).toList());
         return "Constraints:\n"
-                + "- Hard cap " + spec.chapterLength() + " quests in the chapter.\n"
+                + "- Target " + questLimits.requestedCount() + " quests; never exceed " + questLimits.hardCap() + ".\n"
                 + "- Soft target " + SOFT_TASK_MIN + "-" + SOFT_TASK_MAX + " tasks per quest; avoid exceeding " + SOFT_TASK_MAX + ".\n"
                 + "- Difficulty progression: " + difficulty + ".\n"
                 + "- Apply gating rules: " + gatingRules + ".\n"
@@ -112,6 +113,7 @@ public final class PromptAssembler {
         QuestFile questFile = context.questFile();
         StringBuilder builder = new StringBuilder();
         builder.append("Existing pack: ").append(questFile.id()).append(" - ").append(questFile.title()).append('\n');
+        QuestLimits questLimits = context.questLimits();
         builder.append("Mod intent: ").append(context.modIntent().modId()).append('\n');
         if (!context.modIntent().features().isEmpty()) {
             builder.append("Target features: ").append(String.join(", ", context.modIntent().features())).append('\n');
@@ -124,8 +126,17 @@ public final class PromptAssembler {
                     .append(String.join(", ", context.modIntent().exampleReferences()))
                     .append('\n');
         }
+        builder.append("Quest target: ")
+                .append(questLimits.requestedCount())
+                .append(" (hard cap ")
+                .append(questLimits.hardCap())
+                .append(")\n");
         if (!context.selectedMods().isEmpty()) {
-            builder.append('\n').append("Selected mods:\n");
+            builder.append('\n').append("Selected mods (")
+                    .append(context.modSelection().count())
+                    .append('/')
+                    .append(context.modSelection().limit())
+                    .append("):\n");
             for (RegisteredMod mod : context.selectedMods()) {
                 builder.append(" - ")
                         .append(mod.displayName())
@@ -142,6 +153,7 @@ public final class PromptAssembler {
                 builder.append('\n');
             }
         }
+        builder.append("Rewards: ").append(formatRewardConfiguration(context.rewardConfiguration())).append('\n');
         builder.append('\n').append("Chapter groups:\n");
         for (ChapterGroup group : context.chapterGroups()) {
             builder.append(" - ").append(group.id()).append(" (" + group.title() + ") → ")
@@ -190,6 +202,22 @@ public final class PromptAssembler {
         String joined = String.join(", ", itemIds.subList(0, limit));
         int remaining = itemIds.size() - limit;
         return joined + " … +" + remaining + " more";
+    }
+
+    private String formatRewardConfiguration(RewardConfiguration configuration) {
+        StringBuilder summary = new StringBuilder();
+        summary.append(configuration.allowItemRewards() ? "items ✅" : "items ❌");
+        summary.append(" · ");
+        summary.append(configuration.allowXpRewards() ? "xp ✅" : "xp ❌");
+        summary.append(" · ");
+        summary.append(configuration.allowLootTableRewards() ? "loot tables ✅" : "loot tables ❌");
+        if (configuration.allowLootTableRewards() && !configuration.preferredLootTables().isEmpty()) {
+            summary.append(" (" + String.join(", ", configuration.preferredLootTables()) + ")");
+        }
+        if (!configuration.hasAnyRewardTypeEnabled()) {
+            summary.append(" — no rewards permitted");
+        }
+        return summary.toString();
     }
 
     public String describe(ModelPrompt prompt) {

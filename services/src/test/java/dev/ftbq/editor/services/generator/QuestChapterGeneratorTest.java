@@ -46,18 +46,22 @@ class QuestChapterGeneratorTest {
 
         Path tempDir = Files.createTempDirectory("generator-test");
         Path examplePath = tempDir.resolve("example.snbt");
+        SnbtQuestMapper mapper = new SnbtQuestMapper();
         Files.writeString(examplePath, mapper.toSnbt(createExampleQuestFile()));
 
         QuestFile modelOutput = createModelOutput();
         String modelSnbt = mapper.toSnbt(modelOutput);
-        AiModelProvider provider = prompt -> new ModelResponse(modelSnbt, Map.of("blocks", prompt.blocks().size()));
+        StubSnbtQuestMapper stubMapper = new StubSnbtQuestMapper(modelOutput);
+        AiModelProvider provider = request -> new ModelResponse(modelSnbt, Map.of("blocks", request.prompt().blocks().size()));
 
-        QuestChapterGenerator generator = new QuestChapterGenerator(provider, mapper, new PromptAssembler(), new GeneratedContentValidator());
+        QuestChapterGenerator generator = new QuestChapterGenerator(provider, stubMapper, new PromptAssembler(), new GeneratedContentValidator());
         GenerationResult result = generator.generate(existing, designSpec, modIntent, List.of(), List.of(examplePath), tempDir);
 
         assertFalse(result.chapters().isEmpty(), "Expected generated chapters");
         Chapter generated = result.chapters().get(0);
         assertFalse(generated.quests().isEmpty(), "Chapter should contain quests");
+        assertFalse(result.lootTables().isEmpty(), "Loot tables should be captured");
+        assertTrue(result.lootTables().stream().anyMatch(table -> table.id().equals("ae2/intro")));
         assertTrue(result.validationReport().passed(), "Validation should pass with no errors");
         assertTrue(result.logs().stream().anyMatch(entry -> entry.stage().equals("draft")), "Draft write should be logged");
 
@@ -150,6 +154,20 @@ class QuestChapterGeneratorTest {
                 .id("generated")
                 .title("Generated")
                 .addChapter(generatedChapter)
+                .addLootTable(LootTable.builder().id("ae2/intro").build())
                 .build();
+    }
+
+    private static final class StubSnbtQuestMapper extends SnbtQuestMapper {
+        private final QuestFile questFile;
+
+        StubSnbtQuestMapper(QuestFile questFile) {
+            this.questFile = questFile;
+        }
+
+        @Override
+        public QuestFile fromSnbt(String snbtText) {
+            return questFile;
+        }
     }
 }

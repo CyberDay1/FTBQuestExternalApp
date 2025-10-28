@@ -2,16 +2,19 @@ package dev.ftbq.editor.ui;
 
 import dev.ftbq.editor.ThemeService;
 import dev.ftbq.editor.domain.Chapter;
+import dev.ftbq.editor.domain.LootTable;
 import dev.ftbq.editor.domain.Quest;
 import dev.ftbq.editor.domain.QuestFile;
 import dev.ftbq.editor.io.snbt.AiQuestBridge;
 import dev.ftbq.editor.services.ai.QuestGenerationService;
 import dev.ftbq.editor.services.generator.ModIntent;
 import dev.ftbq.editor.services.generator.QuestDesignSpec;
+import dev.ftbq.editor.services.generator.QuestLimits;
 import dev.ftbq.editor.services.mods.ModRegistryService;
 import dev.ftbq.editor.services.mods.RegisteredMod;
 import dev.ftbq.editor.ui.dialogs.AiPromptDialog;
 import dev.ftbq.editor.ui.model.ModSelectionModel;
+import dev.ftbq.editor.ui.model.RewardSelectionModel;
 import dev.ftbq.editor.support.UiServiceLocator;
 import javafx.beans.value.ChangeListener;
 import javafx.application.Platform;
@@ -56,29 +59,48 @@ public class QuestEditorController {
     private final AiQuestBridge aiQuestBridge;
     private final ModRegistryService modRegistryService;
     private final ModSelectionModel modSelectionModel;
+    private final RewardSelectionModel rewardSelectionModel;
     private final Consumer<List<RegisteredMod>> registryListener;
     private final Map<ModSelectionModel.ModOption, ChangeListener<Boolean>> optionListeners = new IdentityHashMap<>();
     private Supplier<QuestDesignSpec> designSpecSupplier;
     private Supplier<ModIntent> modIntentSupplier;
+    private Supplier<QuestFile> questFileSupplier;
     private MenuButton modSelectionMenu;
+    private MenuButton rewardMenu;
     private Button saveDraftButton;
     private Path workspaceRoot;
 
     public QuestEditorController() {
-        this(new QuestGenerationService(), new AiQuestBridge(), UiServiceLocator.getModRegistryService(), new ModSelectionModel());
+        this(new QuestGenerationService(),
+                new AiQuestBridge(),
+                UiServiceLocator.getModRegistryService(),
+                new ModSelectionModel(),
+                new RewardSelectionModel());
     }
 
     QuestEditorController(QuestGenerationService questGenerationService,
                           AiQuestBridge aiQuestBridge,
                           ModRegistryService modRegistryService,
-                          ModSelectionModel modSelectionModel) {
+                          ModSelectionModel modSelectionModel,
+                          RewardSelectionModel rewardSelectionModel) {
         this.questGenerationService = Objects.requireNonNull(questGenerationService, "questGenerationService");
         this.aiQuestBridge = Objects.requireNonNull(aiQuestBridge, "aiQuestBridge");
         this.modRegistryService = Objects.requireNonNull(modRegistryService, "modRegistryService");
         this.modSelectionModel = Objects.requireNonNull(modSelectionModel, "modSelectionModel");
+        this.rewardSelectionModel = Objects.requireNonNull(rewardSelectionModel, "rewardSelectionModel");
         this.registryListener = mods -> Platform.runLater(() -> this.modSelectionModel.setAvailableMods(mods));
         this.modRegistryService.addListener(registryListener);
         this.modSelectionModel.setAvailableMods(this.modRegistryService.listMods());
+        this.rewardSelectionModel.summaryProperty().addListener((obs, oldValue, newValue) -> {
+            if (rewardMenu != null) {
+                refreshRewardMenu();
+            }
+        });
+        this.rewardSelectionModel.lootTableRewardsEnabledProperty().addListener((obs, oldValue, newValue) -> {
+            if (rewardMenu != null) {
+                refreshRewardMenu();
+            }
+        });
     }
 
     @FXML
@@ -99,10 +121,17 @@ public class QuestEditorController {
             });
             refreshModSelectionMenu();
 
+            rewardMenu = new MenuButton();
+            rewardMenu.getStyleClass().add("combo-box");
+            rewardMenu.setAccessibleText("Configure AI reward generation preferences");
+            rewardMenu.textProperty().bind(rewardSelectionModel.summaryProperty());
+            topToolbar.getItems().add(1, rewardMenu);
+            refreshRewardMenu();
+
             Button generateViaAiButton = new Button("Generate via AI");
             generateViaAiButton.getStyleClass().add("accent-button");
             generateViaAiButton.setOnAction(event -> onGenerateViaAi());
-            topToolbar.getItems().add(1, generateViaAiButton);
+            topToolbar.getItems().add(2, generateViaAiButton);
 
             saveDraftButton = new Button("Save to Drafts");
             saveDraftButton.setDisable(true);
@@ -123,6 +152,11 @@ public class QuestEditorController {
         this.modIntentSupplier = modIntentSupplier;
     }
 
+    public void setQuestFileSupplier(Supplier<QuestFile> questFileSupplier) {
+        this.questFileSupplier = questFileSupplier;
+        updateRewardLootTables();
+    }
+
     public void setWorkspaceRoot(Path workspaceRoot) {
         this.workspaceRoot = workspaceRoot;
     }
@@ -133,6 +167,13 @@ public class QuestEditorController {
 
         if (designSpec == null || modIntent == null) {
             showError("Generation unavailable", "Design specification or mod intent is not configured.");
+            return;
+        }
+
+        if (designSpec.chapterLength() > QuestLimits.MAX_AI_QUESTS) {
+            showWarning("Quest limit exceeded",
+                    "AI generation supports up to " + QuestLimits.MAX_AI_QUESTS
+                            + " quests per chapter. Adjust the design spec before retrying.");
             return;
         }
 
@@ -283,6 +324,42 @@ public class QuestEditorController {
         }
     }
 
+    private void refreshRewardMenu() {
+        if (rewardMenu == null) {
+            return;
+        }
+        rewardMenu.getItems().clear();
+
+        CheckMenuItem itemsToggle = new CheckMenuItem("Item rewards");
+        itemsToggle.setSelected(rewardSelectionModel.itemRewardsEnabledProperty().get());
+        itemsToggle.selectedProperty().bindBidirectional(rewardSelectionModel.itemRewardsEnabledProperty());
+
+        CheckMenuItem xpToggle = new CheckMenuItem("XP rewards");
+        xpToggle.setSelected(rewardSelectionModel.xpRewardsEnabledProperty().get());
+        xpToggle.selectedProperty().bindBidirectional(rewardSelectionModel.xpRewardsEnabledProperty());
+
+        CheckMenuItem lootToggle = new CheckMenuItem("Loot tables");
+        lootToggle.setSelected(rewardSelectionModel.lootTableRewardsEnabledProperty().get());
+        lootToggle.selectedProperty().bindBidirectional(rewardSelectionModel.lootTableRewardsEnabledProperty());
+
+        rewardMenu.getItems().addAll(itemsToggle, xpToggle, lootToggle);
+
+        if (!rewardSelectionModel.availableLootTables().isEmpty()) {
+            rewardMenu.getItems().add(new javafx.scene.control.SeparatorMenuItem());
+            boolean lootEnabled = rewardSelectionModel.lootTableRewardsEnabledProperty().get();
+            for (String tableId : rewardSelectionModel.availableLootTables()) {
+                CheckMenuItem lootItem = new CheckMenuItem(tableId);
+                lootItem.setDisable(!lootEnabled);
+                lootItem.setSelected(rewardSelectionModel.selectedLootTables().contains(tableId));
+                lootItem.setOnAction(event -> {
+                    rewardSelectionModel.toggleLootTable(tableId);
+                    lootItem.setSelected(rewardSelectionModel.selectedLootTables().contains(tableId));
+                });
+                rewardMenu.getItems().add(lootItem);
+            }
+        }
+    }
+
     private String buildModLabel(RegisteredMod mod) {
         StringBuilder builder = new StringBuilder(mod.displayName())
                 .append(" [")
@@ -336,6 +413,13 @@ public class QuestEditorController {
             return questTreeView.getScene().getWindow();
         }
         return null;
+    }
+
+    private void updateRewardLootTables() {
+        QuestFile questFile = questFileSupplier != null ? questFileSupplier.get() : null;
+        List<LootTable> lootTables = questFile != null ? questFile.lootTables() : List.of();
+        rewardSelectionModel.setAvailableLootTables(lootTables);
+        refreshRewardMenu();
     }
 
     private Path defaultWorkspace() {

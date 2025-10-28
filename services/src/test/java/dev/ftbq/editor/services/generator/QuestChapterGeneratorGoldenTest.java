@@ -58,7 +58,7 @@ class QuestChapterGeneratorGoldenTest {
                 .title(base.title())
                 .chapterGroups(List.of())
                 .chapters(result.chapters())
-                .lootTables(List.of())
+                .lootTables(result.lootTables())
                 .build();
 
         String normalizedSnbt = mapper.toSnbt(normalizedFile);
@@ -152,7 +152,7 @@ class QuestChapterGeneratorGoldenTest {
         }
 
         @Override
-        public ModelResponse generate(ModelPrompt prompt) {
+        public ModelResponse generate(AiGenerationRequest request) {
             return new ModelResponse(response, Map.of());
         }
     }
