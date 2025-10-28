@@ -196,19 +196,29 @@
 /* Menu and context menu */
 .menu-bar,
 .context-menu {
-    -fx-background-color: -bg-elev;
-    -fx-text-fill: -fg;
-    -fx-border-color: derive(-bg, -15%);
+    -fx-background-color: -menu-bg;
+    -fx-text-fill: -menu-fg;
+    -fx-border-color: -menu-border;
 }
 
 .menu-item {
-    -fx-text-fill: -fg;
+    -fx-text-fill: -menu-fg;
     -fx-background-color: transparent;
+}
+
+.menu .label,
+.context-menu .label {
+    -fx-text-fill: -menu-fg;
 }
 
 .menu-item:focused,
 .menu-item:hover {
     -fx-background-color: -selection-bg-muted;
+    -fx-text-fill: -selection-fg;
+}
+
+.menu-item:focused .label,
+.menu-item:hover .label {
     -fx-text-fill: -selection-fg;
 }
 
