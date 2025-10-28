@@ -1,4 +1,4 @@
-﻿/* Shared palette tokens */
+/* Shared palette tokens */
 .root {
     /* Light defaults */
     -bg: #f7f7f7;
@@ -6,6 +6,10 @@
     -fg: #1a1a1a;
     -fg-muted: #5a5a5a;
     -accent: #1967d2;
+    -selection-bg: #e0edff;
+    -selection-bg-muted: #d6e4ff;
+    -selection-fg: #0b2f6b;
+    -selection-border: #1967d2;
     -grid: #dddddd;
     -edge-required: #cc8b00;
     -edge-optional: #6a3dad;
