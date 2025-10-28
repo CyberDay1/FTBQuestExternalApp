@@ -5,6 +5,7 @@ import javafx.css.Styleable;
 import javafx.css.StyleableObjectProperty;
 import javafx.css.StyleableProperty;
 import javafx.css.converter.PaintConverter;
+import javafx.geometry.Point2D;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.Pane;
@@ -16,6 +17,7 @@ import javafx.scene.text.Text;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 
 public class QuestNodeView extends Pane {
     private static final Color DEFAULT_FILL_COLOR = Color.web("#2f4f4f");
@@ -70,9 +72,9 @@ public class QuestNodeView extends Pane {
     public final String questId;
     private double worldX;
     private double worldY;
-    private double dragDX, dragDY;
-    private double pressScreenX;
-    private double pressScreenY;
+    private final GraphCanvas graphCanvas;
+    private double pressSceneX;
+    private double pressSceneY;
     private boolean dragging;
     private static final double DRAG_THRESHOLD = 4.0;
     private final Circle body = new Circle(18);
@@ -139,11 +141,12 @@ public class QuestNodeView extends Pane {
         void edit(String questId);
     }
 
-    public QuestNodeView(String questId, String title, double worldX, double worldY) {
+    public QuestNodeView(String questId, String title, double worldX, double worldY, GraphCanvas graphCanvas) {
         this.questId = questId;
+        this.graphCanvas = Objects.requireNonNull(graphCanvas, "graphCanvas");
         this.worldX = worldX;
         this.worldY = worldY;
-        getStyleClass().add("quest-node");
+        getStyleClass().addAll("quest-node", "dark-theme");
         label.getStyleClass().add("quest-node-label");
         body.setFill(DEFAULT_FILL_COLOR);
         body.setStroke(DEFAULT_STROKE_COLOR);
@@ -157,7 +160,7 @@ public class QuestNodeView extends Pane {
         bindStyleProperties();
         getChildren().addAll(body, label);
         setPickOnBounds(false);
-        updateScreenPosition(worldX, worldY);
+        updateFromWorldPosition();
         enableDrag();
         enableEdit();
     }
@@ -209,29 +212,32 @@ public class QuestNodeView extends Pane {
 
     private void enableDrag() {
         addEventFilter(MouseEvent.MOUSE_PRESSED, e -> {
-            dragDX = e.getX();
-            dragDY = e.getY();
-            pressScreenX = e.getScreenX();
-            pressScreenY = e.getScreenY();
+            pressSceneX = e.getSceneX();
+            pressSceneY = e.getSceneY();
             dragging = false;
         });
         addEventFilter(MouseEvent.MOUSE_DRAGGED, e -> {
+            double dx = e.getSceneX() - pressSceneX;
+            double dy = e.getSceneY() - pressSceneY;
             if (!dragging) {
-                double dx = e.getScreenX() - pressScreenX;
-                double dy = e.getScreenY() - pressScreenY;
                 if (Math.hypot(dx, dy) >= DRAG_THRESHOLD) {
                     dragging = true;
+                } else {
+                    return;
                 }
             }
-            double nx = getLayoutX() + (e.getX() - dragDX);
-            double ny = getLayoutY() + (e.getY() - dragDY);
-            relocate(nx, ny);
+            double[] world = graphCanvas.screenToWorld(e.getScreenX(), e.getScreenY());
+            setWorldPosition(world[0], world[1]);
+            updateFromWorldPosition();
+            e.consume();
         });
         addEventFilter(MouseEvent.MOUSE_RELEASED, e -> {
-            double nx = getLayoutX() + body.getRadius();
-            double ny = getLayoutY() + body.getRadius();
+            double[] world = graphCanvas.screenToWorld(e.getScreenX(), e.getScreenY());
+            setWorldPosition(world[0], world[1]);
+            updateFromWorldPosition();
             if (onMove != null) {
-                onMove.moved(questId, nx, ny);
+                Point2D screen = graphCanvas.getWorld().transform(worldX, worldY);
+                onMove.moved(questId, screen.getX(), screen.getY());
             }
             dragging = false;
         });
@@ -270,6 +276,11 @@ public class QuestNodeView extends Pane {
             return color;
         }
         return fallback;
+    }
+
+    private void updateFromWorldPosition() {
+        Point2D screen = graphCanvas.getWorld().transform(worldX, worldY);
+        updateScreenPosition(screen.getX(), screen.getY());
     }
 }
 

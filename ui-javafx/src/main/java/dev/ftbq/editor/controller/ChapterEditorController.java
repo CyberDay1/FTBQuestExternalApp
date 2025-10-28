@@ -327,7 +327,7 @@ public class ChapterEditorController {
                 continue;
             }
             Point2D world = questPositions.getOrDefault(quest.id(), new Point2D(0, 0));
-            QuestNodeView node = new QuestNodeView(quest.id(), quest.title(), world.getX(), world.getY());
+            QuestNodeView node = new QuestNodeView(quest.id(), quest.title(), world.getX(), world.getY(), canvas);
             positionNode(node, world);
             configureNodeInteractions(node, quest);
             nodes.put(quest.id(), node);

@@ -9,6 +9,8 @@ import dev.ftbq.editor.ingest.JarScanner;
 import dev.ftbq.editor.services.bus.ServiceLocator;
 import dev.ftbq.editor.services.catalog.CatalogImportService;
 import dev.ftbq.editor.services.logging.StructuredLogger;
+import dev.ftbq.editor.services.mods.ModRegistryService;
+import dev.ftbq.editor.services.mods.RegisteredMod;
 import dev.ftbq.editor.support.UiServiceLocator;
 import java.io.File;
 import java.io.IOException;
@@ -46,6 +48,7 @@ public class SettingsController {
     private VersionCatalog versionCatalog;
     private final CacheManager cacheManager;
     private final CatalogImportService catalogImportService;
+    private final ModRegistryService modRegistryService;
     private final StructuredLogger logger;
     private final ThemeService themeService;
     private boolean updatingThemeSelection;
@@ -57,6 +60,7 @@ public class SettingsController {
                 new CatalogImportService(
                         UiServiceLocator.getStoreDao(),
                         ServiceLocator.loggerFactory()),
+                UiServiceLocator.getModRegistryService(),
                 ServiceLocator.loggerFactory().create(SettingsController.class),
                 ThemeService.getInstance());
     }
@@ -64,11 +68,13 @@ public class SettingsController {
     SettingsController(VersionCatalog versionCatalog,
                        CacheManager cacheManager,
                        CatalogImportService catalogImportService,
+                       ModRegistryService modRegistryService,
                        StructuredLogger logger,
                        ThemeService themeService) {
         this.versionCatalog = Objects.requireNonNull(versionCatalog, "versionCatalog");
         this.cacheManager = Objects.requireNonNull(cacheManager, "cacheManager");
         this.catalogImportService = Objects.requireNonNull(catalogImportService, "catalogImportService");
+        this.modRegistryService = Objects.requireNonNull(modRegistryService, "modRegistryService");
         this.logger = Objects.requireNonNull(logger, "logger");
         this.themeService = Objects.requireNonNull(themeService, "themeService");
     }
@@ -129,8 +135,14 @@ public class SettingsController {
                 ? addJarButton.getScene().getWindow()
                 : null;
         FileChooser chooser = new FileChooser();
-        chooser.setTitle("Select Minecraft JARs");
-        chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("JAR Files", "*.jar"));
+        chooser.setTitle("Select Mod JARs");
+        FileChooser.ExtensionFilter jarFilter = new FileChooser.ExtensionFilter("Mod JARs", "*.jar");
+        chooser.getExtensionFilters().setAll(jarFilter);
+        chooser.setSelectedExtensionFilter(jarFilter);
+        File initialDir = resolveInitialDirectory();
+        if (initialDir != null) {
+            chooser.setInitialDirectory(initialDir);
+        }
         List<File> selectedFiles = window != null
                 ? chooser.showOpenMultipleDialog(window)
                 : chooser.showOpenMultipleDialog(null);
@@ -160,7 +172,7 @@ public class SettingsController {
                 JarScanner.JarScanResult scan = JarScanner.scanModJar(jarPath, versionLabel);
                 var catalog = ItemCatalogExtractor.extract(jarPath, file.getName(), versionLabel, false);
                 catalogImportService.importCatalog(catalog);
-                UiServiceLocator.getModRegistryService().register(catalog);
+                List<RegisteredMod> registeredMods = modRegistryService.registerMod(catalog);
                 rebuildVersionCatalog(targetVersion);
                 int entryCount = scan.entries().size();
                 updateStatus(String.format(Locale.ROOT,
@@ -171,7 +183,8 @@ public class SettingsController {
                 logger.info("Mod JAR imported",
                         StructuredLogger.field("jar", file.getAbsolutePath()),
                         StructuredLogger.field("entries", entryCount),
-                        StructuredLogger.field("version", versionLabel));
+                        StructuredLogger.field("version", versionLabel),
+                        StructuredLogger.field("registeredMods", registeredMods.size()));
             } catch (IOException ex) {
                 String message = "Failed to scan JAR: " + ex.getMessage();
                 updateStatus(message);
@@ -199,6 +212,24 @@ public class SettingsController {
             updateStatus(message);
             logger.warn("Icon cache clear failed", ex);
         }
+    }
+
+    private File resolveInitialDirectory() {
+        String configured = System.getProperty("ftbq.modJarDir");
+        if (configured != null && !configured.isBlank()) {
+            File dir = new File(configured);
+            if (dir.exists() && dir.isDirectory()) {
+                return dir;
+            }
+        }
+        String userDir = System.getProperty("user.dir");
+        if (userDir != null && !userDir.isBlank()) {
+            File dir = new File(userDir);
+            if (dir.exists() && dir.isDirectory()) {
+                return dir;
+            }
+        }
+        return null;
     }
 
     private void onVersionChanged(MinecraftVersion newVersion) {

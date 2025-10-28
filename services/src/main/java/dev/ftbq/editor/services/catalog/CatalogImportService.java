@@ -6,6 +6,9 @@ import dev.ftbq.editor.ingest.JarScanner;
 import dev.ftbq.editor.services.logging.AppLoggerFactory;
 import dev.ftbq.editor.services.logging.StructuredLogger;
 import dev.ftbq.editor.store.StoreDao;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -47,33 +50,46 @@ public final class CatalogImportService {
                 StructuredLogger.field("source", catalog.source()),
                 StructuredLogger.field("version", catalog.version()),
                 StructuredLogger.field("vanilla", catalog.isVanilla()),
-                StructuredLogger.field("items", catalog.items().size()));
+                StructuredLogger.field("items", catalog.items().size()),
+                StructuredLogger.field("tagGroups", catalog.tags() != null ? catalog.tags().size() : 0));
 
         if (catalog.items().isEmpty()) {
-            logger.warn("Catalog empty, checking for proxy assets in jar source");
-            String source = catalog.source();
-            if (source != null && !source.isBlank()) {
-                try {
-                    Path sourcePath = Paths.get(
-                            source.contains(":\\") ? source :
-                                    System.getProperty("user.dir") + java.io.File.separator + source
-                    );
-                    logger.info("Resolved JAR path for proxy scan: {}", sourcePath);
-                    var proxyItems = JarScanner.extractProxyItems(sourcePath, catalog.version());
-                    if (!proxyItems.isEmpty()) {
-                        ItemCatalog proxyCatalog = new ItemCatalog(
-                                catalog.source(),
-                                catalog.version(),
-                                catalog.isVanilla(),
-                                proxyItems,
-                                Map.of()
-                        );
-                        importCatalog(proxyCatalog);
-                        return;
+            logger.warn("Catalog empty, checking for proxy assets in jar source",
+                    StructuredLogger.field("source", catalog.source()),
+                    StructuredLogger.field("version", catalog.version()));
+            Path sourcePath = resolveSourcePath(catalog.source());
+            if (sourcePath != null) {
+                if (!Files.exists(sourcePath)) {
+                    logger.warn("Jar not found for proxy scan",
+                            StructuredLogger.field("path", sourcePath.toString()));
+                } else {
+                    try {
+                        List<ItemMeta> proxyItems = JarScanner.extractProxyItems(sourcePath, catalog.version());
+                        if (!proxyItems.isEmpty()) {
+                            logger.info("Proxy item catalog generated",
+                                    StructuredLogger.field("path", sourcePath.toString()),
+                                    StructuredLogger.field("count", proxyItems.size()));
+                            ItemCatalog proxyCatalog = new ItemCatalog(
+                                    sourcePath.toString(),
+                                    catalog.version(),
+                                    catalog.isVanilla(),
+                                    proxyItems,
+                                    Map.of()
+                            );
+                            importCatalog(proxyCatalog);
+                            return;
+                        } else {
+                            logger.info("No proxy items discovered",
+                                    StructuredLogger.field("path", sourcePath.toString()));
+                        }
+                    } catch (IOException e) {
+                        logger.warn("Proxy asset import failed", e,
+                                StructuredLogger.field("path", sourcePath.toString()));
                     }
-                } catch (Exception e) {
-                    logger.warn("Proxy asset import failed", e);
                 }
+            } else {
+                logger.warn("Unable to resolve source jar for proxy scan",
+                        StructuredLogger.field("source", catalog.source()));
             }
         }
 
@@ -106,6 +122,31 @@ public final class CatalogImportService {
                 StructuredLogger.field("source", catalog.source()),
                 StructuredLogger.field("version", catalog.version()),
                 StructuredLogger.field("upserted", upserted));
+    }
+
+    private Path resolveSourcePath(String source) {
+        if (source == null || source.isBlank()) {
+            return null;
+        }
+        try {
+            Path direct = Paths.get(source);
+            if (Files.exists(direct)) {
+                return direct.toAbsolutePath().normalize();
+            }
+            Path fallbackBase = Paths.get(System.getProperty("user.dir", ""));
+            Path fallback = fallbackBase.resolve(source).normalize();
+            if (Files.exists(fallback)) {
+                logger.info("Resolved jar path via working directory fallback",
+                        StructuredLogger.field("source", source),
+                        StructuredLogger.field("resolved", fallback.toString()));
+                return fallback;
+            }
+            return direct.toAbsolutePath().normalize();
+        } catch (InvalidPathException ex) {
+            logger.warn("Invalid jar path provided for proxy scan", ex,
+                    StructuredLogger.field("source", source));
+            return null;
+        }
     }
 
     private static Map<String, List<String>> buildTagsByItem(Map<String, List<String>> tags) {
