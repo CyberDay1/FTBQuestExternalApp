@@ -6,10 +6,14 @@ import dev.ftbq.editor.controller.LootTableEditorController;
 import dev.ftbq.editor.domain.QuestFile;
 import dev.ftbq.editor.importer.snbt.model.QuestImportResult;
 import dev.ftbq.editor.importer.snbt.model.QuestImportSummary;
+import dev.ftbq.editor.importer.snbt.validation.SnbtValidationReport;
+import dev.ftbq.editor.importer.snbt.validation.SnbtValidationService;
+import dev.ftbq.editor.io.snbt.SnbtQuestMapper;
 import dev.ftbq.editor.services.UiServiceLocator;
 import dev.ftbq.editor.services.bus.ServiceLocator;
 import dev.ftbq.editor.services.io.SnbtImportExportService;
 import dev.ftbq.editor.services.logging.StructuredLogger;
+import dev.ftbq.editor.validation.ValidationIssue;
 import dev.ftbq.editor.view.ChapterGroupBrowserController;
 import dev.ftbq.editor.view.graph.layout.JsonQuestLayoutStore;
 import dev.ftbq.editor.view.graph.layout.QuestLayoutStore;
@@ -25,6 +29,7 @@ import javafx.scene.control.MenuBar;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.Tab;
 import javafx.scene.control.TabPane;
+import javafx.scene.control.TextArea;
 import javafx.scene.layout.BorderPane;
 import javafx.stage.Stage;
 
@@ -36,6 +41,8 @@ import java.util.List;
 public class MainApp extends Application {
     private final StructuredLogger logger = ServiceLocator.loggerFactory().create(MainApp.class);
     private final SnbtImportExportService importExportService = new SnbtImportExportService();
+    private final SnbtValidationService validationService = new SnbtValidationService();
+    private final SnbtQuestMapper snbtQuestMapper = new SnbtQuestMapper();
     private ChapterGroupBrowserViewModel chapterGroupBrowserViewModel;
     private ChapterEditorViewModel chapterEditorViewModel;
     private QuestFile currentQuestFile;
@@ -153,13 +160,61 @@ public class MainApp extends Application {
         MenuItem importItem = new MenuItem("Import Quests from SNBT...");
         importItem.setOnAction(event -> showImportDialog(owner));
         fileMenu.getItems().add(importItem);
-        menuBar.getMenus().add(fileMenu);
+        Menu toolsMenu = new Menu("Tools");
+        MenuItem validateItem = new MenuItem("Validate Quest Pack");
+        validateItem.setOnAction(event -> validateCurrentPack());
+        toolsMenu.getItems().add(validateItem);
+        menuBar.getMenus().addAll(fileMenu, toolsMenu);
         return menuBar;
     }
 
     private void showImportDialog(Stage owner) {
         ImportSnbtDialog dialog = new ImportSnbtDialog(owner, importExportService, currentQuestFile, workspace);
         dialog.showAndWait().ifPresent(this::applyImportResult);
+    }
+
+    private void validateCurrentPack() {
+        Alert alert;
+        try {
+            String snbt = snbtQuestMapper.toSnbt(currentQuestFile);
+            SnbtValidationReport report = validationService.validate(snbt);
+            if (report.issues().isEmpty()) {
+                alert = new Alert(Alert.AlertType.INFORMATION);
+                alert.setTitle("Validation complete");
+                alert.setHeaderText("No issues detected");
+                alert.setContentText("The quest pack conforms to the supported SNBT schema.");
+            } else {
+                Alert.AlertType type = report.errors().isEmpty() ? Alert.AlertType.WARNING : Alert.AlertType.ERROR;
+                alert = new Alert(type);
+                alert.setTitle("Validation issues found");
+                alert.setHeaderText(report.errors().isEmpty() ? "Warnings detected" : "Errors detected");
+                StringBuilder builder = new StringBuilder();
+                for (ValidationIssue issue : report.issues()) {
+                    builder.append(issue.severity())
+                            .append(' ')
+                            .append(issue.path())
+                            .append(" - ")
+                            .append(issue.message())
+                            .append('\n');
+                }
+                TextArea details = new TextArea(builder.toString());
+                details.setEditable(false);
+                details.setWrapText(false);
+                details.setPrefColumnCount(80);
+                details.setPrefRowCount(Math.min(10, report.issues().size() + 1));
+                alert.getDialogPane().setContent(details);
+            }
+        } catch (Exception ex) {
+            logger.error("Validation failed", ex);
+            alert = new Alert(Alert.AlertType.ERROR);
+            alert.setTitle("Validation failed");
+            alert.setHeaderText("Unable to validate quest pack");
+            alert.setContentText(ex.getMessage());
+        }
+        if (primaryStage != null) {
+            alert.initOwner(primaryStage);
+        }
+        alert.showAndWait();
     }
 
     private void applyImportResult(QuestImportResult result) {
