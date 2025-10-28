@@ -59,11 +59,11 @@ import org.slf4j.LoggerFactory;
 /**
  * Tab that surfaces the AI chapter generation workflow with full dark theme styling.
  */
-public final class AiModGeneratorTab extends Tab {
+public final class AiQuestCreationTab extends Tab {
 
     private static final int DEFAULT_QUEST_COUNT = 8;
     private static final String DEFAULT_PROMPT_PREFIX = "User prompt:";
-    private static final Logger LOGGER = LoggerFactory.getLogger(AiModGeneratorTab.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(AiQuestCreationTab.class);
 
     private final QuestGenerationService questGenerationService;
     private final AiQuestBridge aiQuestBridge;
@@ -89,7 +89,7 @@ public final class AiModGeneratorTab extends Tab {
     private TextArea snbtPreview;
     private Button saveDraftButton;
 
-    public AiModGeneratorTab() {
+    public AiQuestCreationTab() {
         this(new QuestGenerationService(),
                 new AiQuestBridge(),
                 UiServiceLocator.getModRegistryService(),
@@ -97,12 +97,12 @@ public final class AiModGeneratorTab extends Tab {
                 new RewardSelectionModel());
     }
 
-    AiModGeneratorTab(QuestGenerationService questGenerationService,
-                      AiQuestBridge aiQuestBridge,
-                      ModRegistryService modRegistryService,
-                      ModSelectionModel modSelectionModel,
-                      RewardSelectionModel rewardSelectionModel) {
-        super("AI Mod Generator");
+    AiQuestCreationTab(QuestGenerationService questGenerationService,
+                       AiQuestBridge aiQuestBridge,
+                       ModRegistryService modRegistryService,
+                       ModSelectionModel modSelectionModel,
+                       RewardSelectionModel rewardSelectionModel) {
+        super("AI Quest Creation");
         this.questGenerationService = Objects.requireNonNull(questGenerationService, "questGenerationService");
         this.aiQuestBridge = Objects.requireNonNull(aiQuestBridge, "aiQuestBridge");
         this.modRegistryService = Objects.requireNonNull(modRegistryService, "modRegistryService");
@@ -113,12 +113,14 @@ public final class AiModGeneratorTab extends Tab {
         this.modSelectionModel.setAvailableMods(this.modRegistryService.listMods());
 
         setClosable(false);
+        getStyleClass().add("dark-theme");
         setContent(buildContent());
         initialiseBindings();
     }
 
     private Node buildContent() {
         BorderPane root = new BorderPane();
+        root.getStyleClass().add("dark-theme");
         root.setPadding(new Insets(16));
 
         SplitPane splitPane = new SplitPane();

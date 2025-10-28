@@ -31,7 +31,8 @@ class QuestNodeViewTest {
 
     @Test
     void doubleClickInvokesEditListener() {
-        QuestNodeView node = new QuestNodeView("quest1", "Quest", 48, 48);
+        GraphCanvas canvas = new GraphCanvas(200, 200);
+        QuestNodeView node = new QuestNodeView("quest1", "Quest", 48, 48, canvas);
         var edited = new java.util.concurrent.atomic.AtomicReference<String>();
         node.setOnEdit(edited::set);
 
@@ -47,7 +48,8 @@ class QuestNodeViewTest {
 
     @Test
     void releasingNodePersistsScreenCoordinates() {
-        QuestNodeView node = new QuestNodeView("quest2", "Quest", 32, 32);
+        GraphCanvas canvas = new GraphCanvas(200, 200);
+        QuestNodeView node = new QuestNodeView("quest2", "Quest", 32, 32, canvas);
         var moved = new java.util.concurrent.atomic.AtomicReference<Point2D>();
         node.setOnMove((id, x, y) -> moved.set(new Point2D(x, y)));
 

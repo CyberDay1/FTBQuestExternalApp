@@ -12,7 +12,7 @@ import dev.ftbq.editor.services.UiServiceLocator;
 import dev.ftbq.editor.services.bus.ServiceLocator;
 import dev.ftbq.editor.services.io.SnbtImportExportService;
 import dev.ftbq.editor.services.logging.StructuredLogger;
-import dev.ftbq.editor.ui.AiModGeneratorTab;
+import dev.ftbq.editor.ui.AiQuestCreationTab;
 import dev.ftbq.editor.validation.ValidationIssue;
 import dev.ftbq.editor.view.ChapterGroupBrowserController;
 import dev.ftbq.editor.view.graph.layout.JsonQuestLayoutStore;
@@ -94,10 +94,10 @@ public class MainApp extends Application {
         lootTab.setClosable(false);
         tabPane.getTabs().add(lootTab);
 
-        AiModGeneratorTab aiModGeneratorTab = new AiModGeneratorTab();
-        aiModGeneratorTab.setQuestFileSupplier(() -> currentQuestFile);
-        aiModGeneratorTab.setWorkspaceRoot(workspace);
-        tabPane.getTabs().add(aiModGeneratorTab);
+        AiQuestCreationTab aiQuestCreationTab = new AiQuestCreationTab();
+        aiQuestCreationTab.setQuestFileSupplier(() -> currentQuestFile);
+        aiQuestCreationTab.setWorkspaceRoot(workspace);
+        tabPane.getTabs().add(aiQuestCreationTab);
 
         // Quest editor removed â€” quests are now edited via Chapter Editor directly
         try {

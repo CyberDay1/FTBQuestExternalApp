@@ -5,6 +5,7 @@ import javafx.css.Styleable;
 import javafx.css.StyleableObjectProperty;
 import javafx.css.StyleableProperty;
 import javafx.css.converter.PaintConverter;
+import javafx.geometry.Point2D;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.input.MouseButton;
@@ -140,7 +141,7 @@ public class GraphCanvas extends Canvas {
             };
 
     public GraphCanvas(double w, double h) {
-        getStyleClass().add("graph-canvas");
+        getStyleClass().addAll("graph-canvas", "dark-theme");
         setWidth(w);
         setHeight(h);
         gridPaint.addListener((obs, oldPaint, newPaint) -> redraw());
@@ -237,9 +238,15 @@ public class GraphCanvas extends Canvas {
     }
 
     public void redraw() {
+        double width = getWidth();
+        double height = getHeight();
+        if (width <= 0 || height <= 0) {
+            return;
+        }
+
         GraphicsContext g = getGraphicsContext2D();
         g.setTransform(new Affine());
-        g.clearRect(0, 0, getWidth(), getHeight());
+        g.clearRect(0, 0, width, height);
         drawGrid(g);
         if (onRedraw != null) {
             onRedraw.accept(null);
@@ -274,8 +281,32 @@ public class GraphCanvas extends Canvas {
     }
 
     public double[] screenToWorld(double sx, double sy) {
+        Point2D local = new Point2D(sx, sy);
+        if (getScene() != null) {
+            boolean converted = false;
+            try {
+                Point2D scenePoint = getScene().getRoot().screenToLocal(sx, sy);
+                Point2D candidate = sceneToLocal(scenePoint);
+                if (!Double.isNaN(candidate.getX()) && !Double.isNaN(candidate.getY())) {
+                    local = candidate;
+                    converted = true;
+                }
+            } catch (RuntimeException ignored) {
+                // fall back to other coordinate conversions
+            }
+            if (!converted) {
+                try {
+                    Point2D candidate = sceneToLocal(sx, sy, true);
+                    if (!Double.isNaN(candidate.getX()) && !Double.isNaN(candidate.getY())) {
+                        local = candidate;
+                    }
+                } catch (RuntimeException ignored) {
+                    // use original coordinates when conversion fails
+                }
+            }
+        }
         try {
-            javafx.geometry.Point2D p = world.inverseTransform(sx, sy);
+            Point2D p = world.inverseTransform(local);
             return new double[]{p.getX(), p.getY()};
         } catch (NonInvertibleTransformException e) {
             return new double[]{0, 0};

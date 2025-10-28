@@ -78,6 +78,13 @@ public final class ModRegistryService {
     }
 
     /**
+     * Alias for {@link #register(ItemCatalog)} maintained for clarity in UI integrations.
+     */
+    public List<RegisteredMod> registerMod(ItemCatalog catalog) {
+        return register(catalog);
+    }
+
+    /**
      * Replaces the registry contents with the supplied mods.
      * Primarily intended for tests.
      */
