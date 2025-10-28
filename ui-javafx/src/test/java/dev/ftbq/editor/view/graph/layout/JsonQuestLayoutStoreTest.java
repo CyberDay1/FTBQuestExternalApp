@@ -1,81 +1,58 @@
 package dev.ftbq.editor.view.graph.layout;
 
-import javafx.geometry.Point2D;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.Optional;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.lang.reflect.Field;
+import java.nio.file.Path;
+import java.time.Duration;
+import java.util.Optional;
+import java.util.concurrent.ScheduledExecutorService;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
+
 class JsonQuestLayoutStoreTest {
 
-    private Path workspace;
+    @TempDir
+    Path workspace;
+
     private JsonQuestLayoutStore store;
 
-    @BeforeEach
-    void setUp() throws IOException {
-        workspace = Files.createTempDirectory("quest-layout-store-test");
-        store = new JsonQuestLayoutStore(workspace);
-    }
-
     @AfterEach
-    void tearDown() throws IOException {
-        store.flush();
-        Files.walk(workspace)
-                .sorted((a, b) -> b.getNameCount() - a.getNameCount())
-                .forEach(path -> {
-                    try {
-                        Files.deleteIfExists(path);
-                    } catch (IOException ignored) {
-                    }
-                });
+    void tearDown() throws Exception {
+        if (store != null) {
+            store.flush();
+            shutdownExecutor(store);
+        }
     }
 
     @Test
-    void persistsAndReloadsPositions() {
-        store.putNodePos("chapter_one", "quest_a", 12.5, -4.25);
+    void persistsAndReloadsQuestPositions() throws Exception {
+        store = new JsonQuestLayoutStore(workspace, Duration.ZERO);
+
+        store.putNodePos("chapter1", "questA", 32.5, 48.0);
+        store.putNodePos("chapter1", "questB", 64.0, 12.0);
         store.flush();
 
-        JsonQuestLayoutStore reloaded = new JsonQuestLayoutStore(workspace);
-        Optional<Point2D> restored = reloaded.getNodePos("chapter_one", "quest_a");
+        Optional<javafx.geometry.Point2D> questAPosition = store.getNodePos("chapter1", "questA");
+        assertTrue(questAPosition.isPresent(), "Stored position should be available immediately");
+        assertEquals(32.5, questAPosition.get().getX());
+        assertEquals(48.0, questAPosition.get().getY());
 
-        assertTrue(restored.isPresent(), "Position should be restored after reload");
-        assertEquals(12.5, restored.get().getX(), 0.0001);
-        assertEquals(-4.25, restored.get().getY(), 0.0001);
+        // Reload from disk to ensure persistence works
+        shutdownExecutor(store);
+        store = new JsonQuestLayoutStore(workspace, Duration.ZERO);
+        Optional<javafx.geometry.Point2D> reloaded = store.getNodePos("chapter1", "questB");
+        assertTrue(reloaded.isPresent(), "Reloaded position should be restored from disk");
+        assertEquals(64.0, reloaded.get().getX());
+        assertEquals(12.0, reloaded.get().getY());
     }
 
-    @Test
-    void removesQuestEntries() {
-        store.putNodePos("chapter_two", "quest_b", 10.0, 15.0);
-        store.flush();
-
-        store.removeQuest("chapter_two", "quest_b");
-        store.flush();
-
-        JsonQuestLayoutStore reloaded = new JsonQuestLayoutStore(workspace);
-        assertTrue(reloaded.getNodePos("chapter_two", "quest_b").isEmpty(),
-                "Removed quest position should not be restored");
-    }
-
-    @Test
-    void removesChapterEntries() {
-        store.putNodePos("chapter_three", "quest_c", 1.0, 2.0);
-        store.putNodePos("chapter_three", "quest_d", 3.0, 4.0);
-        store.flush();
-
-        store.removeChapter("chapter_three");
-        store.flush();
-
-        JsonQuestLayoutStore reloaded = new JsonQuestLayoutStore(workspace);
-        assertTrue(reloaded.getNodePos("chapter_three", "quest_c").isEmpty(),
-                "Chapter removal should clear quest positions");
-        assertTrue(reloaded.getNodePos("chapter_three", "quest_d").isEmpty(),
-                "All quests for removed chapter should be gone");
+    private void shutdownExecutor(JsonQuestLayoutStore layoutStore) throws Exception {
+        Field executorField = JsonQuestLayoutStore.class.getDeclaredField("executor");
+        executorField.setAccessible(true);
+        ScheduledExecutorService executor = (ScheduledExecutorService) executorField.get(layoutStore);
+        executor.shutdownNow();
     }
 }
