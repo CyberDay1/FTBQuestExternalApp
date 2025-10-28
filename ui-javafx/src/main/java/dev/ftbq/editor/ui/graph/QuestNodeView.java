@@ -74,8 +74,14 @@ public class QuestNodeView extends Pane {
     private final GraphCanvas graphCanvas;
     private double dragDX;
     private double dragDY;
-    private double pressReferenceX;
-    private double pressReferenceY;
+    private double pressScreenX;
+    private double pressScreenY;
+    private double pressLocalX;
+    private double pressLocalY;
+    private double pressOffsetX;
+    private double pressOffsetY;
+    private double lastPointerWorldX;
+    private double lastPointerWorldY;
     private boolean dragging;
     private static final double DRAG_THRESHOLD = 4.0;
     private final Circle body = new Circle(18);
@@ -214,66 +220,118 @@ public class QuestNodeView extends Pane {
 
     private void enableDrag() {
         addEventFilter(MouseEvent.MOUSE_PRESSED, e -> {
-            dragDX = e.getX();
-            dragDY = e.getY();
-            double sceneX = e.getSceneX();
-            double sceneY = e.getSceneY();
-            pressReferenceX = Double.isNaN(sceneX) ? e.getScreenX() : sceneX;
-            pressReferenceY = Double.isNaN(sceneY) ? e.getScreenY() : sceneY;
+            double pointerX = coordinateWithFallback(e);
+            double pointerY = coordinateWithFallbackY(e);
+            dragDX = pointerX;
+            dragDY = pointerY;
+            pressScreenX = pointerX;
+            pressScreenY = pointerY;
+            pressLocalX = e.getX();
+            pressLocalY = e.getY();
+            double scale = graphCanvas != null ? graphCanvas.getScale() : 1.0;
+            if (scale == 0.0) {
+                scale = 1.0;
+            }
+            pressOffsetX = (pressLocalX - body.getRadius()) / scale;
+            pressOffsetY = (pressLocalY - body.getRadius()) / scale;
+            if (graphCanvas != null) {
+                double[] pointerWorld = pointerWorld(e);
+                lastPointerWorldX = pointerWorld[0];
+                lastPointerWorldY = pointerWorld[1];
+            } else {
+                lastPointerWorldX = worldX;
+                lastPointerWorldY = worldY;
+            }
             dragging = false;
         });
         addEventFilter(MouseEvent.MOUSE_DRAGGED, e -> {
-            double sceneX = e.getSceneX();
-            double sceneY = e.getSceneY();
-            double referenceX = Double.isNaN(sceneX) ? e.getScreenX() : sceneX;
-            double referenceY = Double.isNaN(sceneY) ? e.getScreenY() : sceneY;
+            if (graphCanvas == null) {
+                return;
+            }
+            double pointerX = coordinateWithFallback(e);
+            double pointerY = coordinateWithFallbackY(e);
+            double[] pointerWorld = pointerWorld(e);
             if (!dragging) {
-                double dx = referenceX - pressReferenceX;
-                double dy = referenceY - pressReferenceY;
+                double dx = pointerX - pressScreenX;
+                double dy = pointerY - pressScreenY;
                 if (Math.hypot(dx, dy) >= DRAG_THRESHOLD) {
                     dragging = true;
                 } else {
+                    lastPointerWorldX = pointerWorld[0];
+                    lastPointerWorldY = pointerWorld[1];
                     return;
                 }
             }
-            applyDragPosition(sceneX, sceneY, e.getScreenX(), e.getScreenY(), false);
-            e.consume();
+            double deltaX = pointerWorld[0] - lastPointerWorldX;
+            double deltaY = pointerWorld[1] - lastPointerWorldY;
+            worldX += deltaX;
+            worldY += deltaY;
+            lastPointerWorldX = pointerWorld[0];
+            lastPointerWorldY = pointerWorld[1];
+            dragDX = pointerX;
+            dragDY = pointerY;
+            updateScreenPosition();
         });
         addEventFilter(MouseEvent.MOUSE_RELEASED, e -> {
-            applyDragPosition(e.getSceneX(), e.getSceneY(), e.getScreenX(), e.getScreenY(), true);
+            if (graphCanvas != null) {
+                double[] pointerWorld = pointerWorld(e);
+                lastPointerWorldX = pointerWorld[0];
+                lastPointerWorldY = pointerWorld[1];
+                worldX = pointerWorld[0] - pressOffsetX;
+                worldY = pointerWorld[1] - pressOffsetY;
+                updateScreenPosition();
+            }
+            if (graphCanvas != null && onMove != null) {
+                onMove.moved(questId, worldX, worldY);
+            }
             dragging = false;
         });
     }
 
     private void enableEdit() {
         addEventHandler(MouseEvent.MOUSE_CLICKED, e -> {
-            if (e.getButton() == MouseButton.PRIMARY
-                    && e.getClickCount() >= 2
-                    && !dragging
-                    && e.isStillSincePress()
-                    && onEdit != null) {
-                onEdit.edit(questId);
+            if (e.getButton() == MouseButton.PRIMARY && e.getClickCount() >= 2 && !dragging) {
+                if (onEdit != null) {
+                    onEdit.edit(questId);
+                    e.consume();
+                }
             }
         });
     }
 
-    private void applyDragPosition(double sceneX, double sceneY, double screenX, double screenY, boolean notifyMove) {
-        double targetX = Double.isNaN(sceneX) ? screenX : sceneX;
-        double targetY = Double.isNaN(sceneY) ? screenY : sceneY;
-        double[] pointerWorld = graphCanvas.screenToWorld(targetX, targetY);
-        double scale = graphCanvas.getScale();
-        if (scale == 0.0) {
-            scale = 1.0;
+    private double coordinateWithFallback(MouseEvent event) {
+        double scene = event.getSceneX();
+        if (!Double.isNaN(scene)) {
+            return scene;
         }
-        double offsetX = (dragDX - body.getRadius()) / scale;
-        double offsetY = (dragDY - body.getRadius()) / scale;
-        double newWorldX = pointerWorld[0] - offsetX;
-        double newWorldY = pointerWorld[1] - offsetY;
-        setWorldPosition(newWorldX, newWorldY);
-        updateScreenPosition();
-        if (notifyMove && onMove != null) {
-            onMove.moved(questId, newWorldX, newWorldY);
+        double screen = event.getScreenX();
+        if (!Double.isNaN(screen)) {
+            return screen;
         }
+        return event.getX();
+    }
+
+    private double coordinateWithFallbackY(MouseEvent event) {
+        double scene = event.getSceneY();
+        if (!Double.isNaN(scene)) {
+            return scene;
+        }
+        double screen = event.getScreenY();
+        if (!Double.isNaN(screen)) {
+            return screen;
+        }
+        return event.getY();
+    }
+
+    private double[] pointerWorld(MouseEvent event) {
+        if (graphCanvas == null) {
+            return new double[]{worldX, worldY};
+        }
+        double sceneX = event.getSceneX();
+        double sceneY = event.getSceneY();
+        double targetX = Double.isNaN(sceneX) ? event.getScreenX() : sceneX;
+        double targetY = Double.isNaN(sceneY) ? event.getScreenY() : sceneY;
+        return graphCanvas.screenToWorld(targetX, targetY);
     }
 
     private void bindStyleProperties() {
