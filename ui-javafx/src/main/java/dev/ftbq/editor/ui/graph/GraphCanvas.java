@@ -169,6 +169,29 @@ public class GraphCanvas extends Canvas {
         return scale;
     }
 
+    public double getGridSize() {
+        return gridSize;
+    }
+
+    public void setGridSize(double gridSize) {
+        if (!Double.isFinite(gridSize) || gridSize <= 0) {
+            throw new IllegalArgumentException("gridSize must be positive and finite");
+        }
+        if (Math.abs(this.gridSize - gridSize) < 1e-9) {
+            return;
+        }
+        this.gridSize = gridSize;
+        redraw();
+    }
+
+    public boolean isSnapToGrid() {
+        return snapToGrid;
+    }
+
+    public void setSnapToGrid(boolean snapToGrid) {
+        this.snapToGrid = snapToGrid;
+    }
+
     public double getPanX() {
         return translateX;
     }
@@ -268,16 +291,52 @@ public class GraphCanvas extends Canvas {
         }
     }
 
+    public Paint getGridPaint() {
+        return gridPaint.get();
+    }
+
+    public void setGridPaint(Paint paint) {
+        gridPaint.set(paint);
+    }
+
+    public StyleableObjectProperty<Paint> gridPaintProperty() {
+        return gridPaint;
+    }
+
     public Color getGridColor() {
-        return toColor(gridPaint.get(), DEFAULT_GRID_COLOR);
+        return toColor(getGridPaint(), DEFAULT_GRID_COLOR);
+    }
+
+    public Paint getEdgeRequiredPaint() {
+        return edgeRequiredPaint.get();
+    }
+
+    public void setEdgeRequiredPaint(Paint paint) {
+        edgeRequiredPaint.set(paint);
+    }
+
+    public StyleableObjectProperty<Paint> edgeRequiredPaintProperty() {
+        return edgeRequiredPaint;
     }
 
     public Color getEdgeRequiredColor() {
-        return toColor(edgeRequiredPaint.get(), DEFAULT_EDGE_REQUIRED_COLOR);
+        return toColor(getEdgeRequiredPaint(), DEFAULT_EDGE_REQUIRED_COLOR);
+    }
+
+    public Paint getEdgeOptionalPaint() {
+        return edgeOptionalPaint.get();
+    }
+
+    public void setEdgeOptionalPaint(Paint paint) {
+        edgeOptionalPaint.set(paint);
+    }
+
+    public StyleableObjectProperty<Paint> edgeOptionalPaintProperty() {
+        return edgeOptionalPaint;
     }
 
     public Color getEdgeOptionalColor() {
-        return toColor(edgeOptionalPaint.get(), DEFAULT_EDGE_OPTIONAL_COLOR);
+        return toColor(getEdgeOptionalPaint(), DEFAULT_EDGE_OPTIONAL_COLOR);
     }
 
     public double[] screenToWorld(double sx, double sy) {
