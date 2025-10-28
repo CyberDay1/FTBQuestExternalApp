@@ -40,6 +40,7 @@ import javafx.scene.input.KeyCode;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.ClipboardContent;
 import javafx.scene.input.Dragboard;
+import javafx.scene.input.KeyEvent;
 import javafx.scene.input.TransferMode;
 import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.GridPane;
@@ -153,6 +154,8 @@ public class ChapterEditorController {
         canvas.widthProperty().bind(canvasHost.widthProperty());
         canvas.heightProperty().bind(canvasHost.heightProperty());
         nodeLayer.setPickOnBounds(false);
+        nodeLayer.setFocusTraversable(true);
+        nodeLayer.addEventHandler(KeyEvent.KEY_PRESSED, this::handleNodeLayerKeyPressed);
         canvasHost.getChildren().setAll(canvas, nodeLayer);
         AnchorPane.setTopAnchor(canvas, 0.0);
         AnchorPane.setBottomAnchor(canvas, 0.0);
@@ -378,6 +381,7 @@ public class ChapterEditorController {
         node.setOnMouseClicked(event -> {
             if (event.getButton() == MouseButton.PRIMARY) {
                 selectQuest(node.questId);
+                nodeLayer.requestFocus();
                 event.consume();
             }
         });
@@ -386,6 +390,25 @@ public class ChapterEditorController {
             menu.show(node, event.getScreenX(), event.getScreenY());
             event.consume();
         });
+    }
+
+    private void handleNodeLayerKeyPressed(KeyEvent event) {
+        if (event.getCode() == KeyCode.ENTER && openSelectedQuestForEditing()) {
+            event.consume();
+        }
+    }
+
+    private boolean openSelectedQuestForEditing() {
+        if (selectedQuestId == null || currentChapter == null || currentChapter.quests() == null) {
+            return false;
+        }
+        for (Quest quest : currentChapter.quests()) {
+            if (quest != null && Objects.equals(quest.id(), selectedQuestId)) {
+                showQuestEditDialog(quest);
+                return true;
+            }
+        }
+        return false;
     }
 
     private ContextMenu buildNodeContextMenu(String questId) {

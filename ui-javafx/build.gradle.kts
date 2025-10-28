@@ -36,6 +36,7 @@ val junitVersion: String by project
 
 dependencies {
     testImplementation("org.junit.jupiter:junit-jupiter:${junitVersion}")
+    testImplementation("org.testfx:openjfx-monocle:8u76-b04")
 }
 
 
