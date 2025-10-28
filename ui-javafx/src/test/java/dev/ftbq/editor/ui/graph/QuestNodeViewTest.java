@@ -47,7 +47,7 @@ class QuestNodeViewTest {
     }
 
     @Test
-    void releasingNodePersistsScreenCoordinates() {
+    void releasingNodePersistsWorldCoordinates() {
         GraphCanvas canvas = new GraphCanvas(200, 200);
         QuestNodeView node = new QuestNodeView("quest2", "Quest", 32, 32, canvas);
         var moved = new java.util.concurrent.atomic.AtomicReference<Point2D>();
@@ -56,6 +56,7 @@ class QuestNodeViewTest {
         Platform.runLater(() -> {
             stage.getScene().setRoot(new Group(node));
             node.relocate(70, 90);
+            node.fireEvent(mouseEvent(MouseEvent.MOUSE_PRESSED, 18, 18, 88, 108, 1, true));
             node.fireEvent(mouseEvent(MouseEvent.MOUSE_RELEASED, 18, 18, 88, 108, 1, false));
         });
         WaitForAsyncUtils.waitForFxEvents();

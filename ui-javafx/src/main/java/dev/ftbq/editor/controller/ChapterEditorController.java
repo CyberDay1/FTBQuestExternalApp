@@ -371,12 +371,11 @@ public class ChapterEditorController {
             return;
         }
         node.setWorldPosition(world.getX(), world.getY());
-        Point2D screen = canvas.getWorld().transform(world);
-        node.updateScreenPosition(screen.getX(), screen.getY());
+        node.updateScreenPosition();
     }
 
     private void configureNodeInteractions(QuestNodeView node, Quest quest) {
-        node.setOnMove((id, screenX, screenY) -> handleNodeMove(id, screenX, screenY));
+        node.setOnMove((id, worldX, worldY) -> handleNodeMove(id, worldX, worldY));
         node.setOnEdit(id -> showQuestEditDialog(quest));
         node.setOnMouseClicked(event -> {
             if (event.getButton() == MouseButton.PRIMARY) {
@@ -447,13 +446,12 @@ public class ChapterEditorController {
         return menu;
     }
 
-    private void handleNodeMove(String questId, double screenX, double screenY) {
+    private void handleNodeMove(String questId, double worldX, double worldY) {
         if (canvas == null) {
             return;
         }
-        double[] world = canvas.screenToWorld(screenX, screenY);
-        double snappedX = canvas.snap(world[0]);
-        double snappedY = canvas.snap(world[1]);
+        double snappedX = canvas.snap(worldX);
+        double snappedY = canvas.snap(worldY);
         questPositions.put(questId, new Point2D(snappedX, snappedY));
         ChapterGraphState state = chapterStates.get(chapterKey(currentChapter));
         if (state != null) {
