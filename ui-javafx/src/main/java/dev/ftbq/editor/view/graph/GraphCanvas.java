@@ -9,7 +9,7 @@ import dev.ftbq.editor.assets.CacheManager;
 import dev.ftbq.editor.services.UiServiceLocator;
 import dev.ftbq.editor.services.bus.ServiceLocator;
 import dev.ftbq.editor.services.logging.StructuredLogger;
-import dev.ftbq.editor.store.StoreDao;
+import dev.ftbq.editor.view.graph.layout.QuestLayoutStore;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.collections.FXCollections;
@@ -246,7 +246,7 @@ public class GraphCanvas extends Pane {
             model.moveNode(questId, layoutX, layoutY);
         }
         drawEdges();
-        persistQuestPosition(questId, layoutX, layoutY);
+        persistQuestPosition(resolveChapterKey(getChapter()), questId, layoutX, layoutY);
     }
 
     private void resizeLayers() {
@@ -276,6 +276,7 @@ public class GraphCanvas extends Pane {
             return;
         }
 
+        String chapterKey = resolveChapterKey(activeChapter);
         Map<String, Point2D> persistedPositions = loadPersistedPositions(activeChapter);
         model = QuestGraphModel.fromChapter(activeChapter, validationStateByQuest, persistedPositions);
         backgroundRef.set(activeChapter.background());
@@ -296,53 +297,85 @@ public class GraphCanvas extends Pane {
             }
         }
 
+        if (!chapterKey.isBlank()) {
+            persistAllNodePositions(chapterKey);
+        }
+
         drawBackground();
         drawEdges();
     }
 
     private Map<String, Point2D> loadPersistedPositions(Chapter activeChapter) {
-        StoreDao dao = UiServiceLocator.storeDao;
-        if (dao == null || activeChapter.quests().isEmpty()) {
+        QuestLayoutStore layoutStore = UiServiceLocator.questLayoutStore;
+        if (layoutStore == null || activeChapter == null || activeChapter.quests().isEmpty()) {
             return Map.of();
         }
-        List<String> questIds = activeChapter.quests().stream()
-                .map(Quest::id)
-                .filter(Objects::nonNull)
-                .distinct()
-                .toList();
-        if (questIds.isEmpty()) {
+        String chapterKey = resolveChapterKey(activeChapter);
+        if (chapterKey.isBlank()) {
             return Map.of();
         }
-        try {
-            Map<String, StoreDao.QuestPosition> stored = dao.findQuestPositions(questIds);
-            if (stored.isEmpty()) {
-                return Map.of();
+        Map<String, Point2D> positions = new HashMap<>();
+        for (Quest quest : activeChapter.quests()) {
+            if (quest == null || quest.id() == null) {
+                continue;
             }
-            Map<String, Point2D> positions = new HashMap<>();
-            stored.forEach((questId, position) ->
-                    positions.put(questId, new Point2D(position.x(), position.y())));
-            return positions;
-        } catch (RuntimeException e) {
-            logger.error("Failed to load quest positions", e);
-            return Map.of();
+            layoutStore.getNodePos(chapterKey, quest.id())
+                    .ifPresent(position -> positions.put(quest.id(), position));
         }
+        return positions;
     }
 
-    private void persistQuestPosition(String questId, double x, double y) {
-        if (questId == null) {
+    private String resolveChapterKey(Chapter chapter) {
+        if (chapter == null) {
+            return "";
+        }
+        String id = chapter.id();
+        if (id != null && !id.isBlank()) {
+            return id;
+        }
+        String title = chapter.title();
+        return title == null ? "" : title;
+    }
+
+    private void persistQuestPosition(String chapterKey, String questId, double x, double y) {
+        if (questId == null || chapterKey == null || chapterKey.isBlank()) {
             return;
         }
-        StoreDao dao = UiServiceLocator.storeDao;
-        if (dao == null) {
+        QuestLayoutStore layoutStore = UiServiceLocator.questLayoutStore;
+        if (layoutStore == null) {
             return;
         }
         try {
-            dao.saveQuestPosition(questId, x, y);
+            layoutStore.putNodePos(chapterKey, questId, x, y);
         } catch (RuntimeException e) {
             logger.error("Failed to persist quest position", e,
                     StructuredLogger.field("questId", questId),
+                    StructuredLogger.field("chapterId", chapterKey),
                     StructuredLogger.field("x", x),
                     StructuredLogger.field("y", y));
+        }
+    }
+
+    private void persistAllNodePositions(String chapterKey) {
+        QuestLayoutStore layoutStore = UiServiceLocator.questLayoutStore;
+        if (layoutStore == null || chapterKey == null || chapterKey.isBlank() || model == null) {
+            return;
+        }
+        for (QuestGraphModel.Node node : model.getNodes()) {
+            Quest quest = node.getQuest();
+            if (quest == null) {
+                continue;
+            }
+            Point2D position = node.getPosition();
+            try {
+                layoutStore.putNodePos(chapterKey, quest.id(), position.getX(), position.getY());
+            } catch (RuntimeException e) {
+                logger.error("Failed to persist quest position", e,
+                        StructuredLogger.field("questId", quest.id()),
+                        StructuredLogger.field("chapterId", chapterKey),
+                        StructuredLogger.field("x", position.getX()),
+                        StructuredLogger.field("y", position.getY()));
+            }
         }
     }
 
@@ -366,18 +399,24 @@ public class GraphCanvas extends Pane {
             double newX = view.getInitialLayout().getX() + delta.getX();
             double newY = view.getInitialLayout().getY() + delta.getY();
             view.relocate(newX, newY);
-            view.getModelNode().setPosition(newX, newY);
-            if (model != null) {
-                model.moveNode(view.getModelNode().getQuest().id(), newX, newY);
+            QuestGraphModel.Node node = view.getModelNode();
+            node.setPosition(newX, newY);
+            if (model != null && node.getQuest() != null) {
+                model.moveNode(node.getQuest().id(), newX, newY);
             }
             drawEdges();
-            persistQuestPosition(view.getModelNode().getQuest().id(), newX, newY);
             event.consume();
         });
 
         view.setOnMouseReleased(event -> {
             if (event.getButton() == MouseButton.PRIMARY) {
                 view.endDrag();
+                QuestGraphModel.Node node = view.getModelNode();
+                Quest quest = node.getQuest();
+                if (quest != null) {
+                    Point2D position = node.getPosition();
+                    persistQuestPosition(resolveChapterKey(getChapter()), quest.id(), position.getX(), position.getY());
+                }
                 event.consume();
             }
         });
