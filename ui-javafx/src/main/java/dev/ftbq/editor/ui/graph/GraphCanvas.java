@@ -313,6 +313,11 @@ public class GraphCanvas extends Canvas {
         }
     }
 
+    public double[] worldToScreen(double wx, double wy) {
+        Point2D p = world.transform(wx, wy);
+        return new double[]{p.getX(), p.getY()};
+    }
+
     public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
         return CSS_META_DATA;
     }

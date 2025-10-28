@@ -5,7 +5,6 @@ import javafx.css.Styleable;
 import javafx.css.StyleableObjectProperty;
 import javafx.css.StyleableProperty;
 import javafx.css.converter.PaintConverter;
-import javafx.geometry.Point2D;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.Pane;
@@ -73,8 +72,10 @@ public class QuestNodeView extends Pane {
     private double worldX;
     private double worldY;
     private final GraphCanvas graphCanvas;
-    private double pressSceneX;
-    private double pressSceneY;
+    private double dragDX;
+    private double dragDY;
+    private double pressReferenceX;
+    private double pressReferenceY;
     private boolean dragging;
     private static final double DRAG_THRESHOLD = 4.0;
     private final Circle body = new Circle(18);
@@ -131,7 +132,7 @@ public class QuestNodeView extends Pane {
     };
 
     public interface MoveListener {
-        void moved(String questId, double screenX, double screenY);
+        void moved(String questId, double worldX, double worldY);
     }
 
     private MoveListener onMove;
@@ -160,7 +161,7 @@ public class QuestNodeView extends Pane {
         bindStyleProperties();
         getChildren().addAll(body, label);
         setPickOnBounds(false);
-        updateFromWorldPosition();
+        updateScreenPosition();
         enableDrag();
         enableEdit();
     }
@@ -195,8 +196,9 @@ public class QuestNodeView extends Pane {
         this.worldY = y;
     }
 
-    public void updateScreenPosition(double screenX, double screenY) {
-        relocate(screenX - body.getRadius(), screenY - body.getRadius());
+    public void updateScreenPosition() {
+        double[] screen = graphCanvas.worldToScreen(worldX, worldY);
+        relocate(screen[0] - body.getRadius(), screen[1] - body.getRadius());
     }
 
     public void setSelected(boolean selected) {
@@ -212,33 +214,33 @@ public class QuestNodeView extends Pane {
 
     private void enableDrag() {
         addEventFilter(MouseEvent.MOUSE_PRESSED, e -> {
-            pressSceneX = e.getSceneX();
-            pressSceneY = e.getSceneY();
+            dragDX = e.getX();
+            dragDY = e.getY();
+            double sceneX = e.getSceneX();
+            double sceneY = e.getSceneY();
+            pressReferenceX = Double.isNaN(sceneX) ? e.getScreenX() : sceneX;
+            pressReferenceY = Double.isNaN(sceneY) ? e.getScreenY() : sceneY;
             dragging = false;
         });
         addEventFilter(MouseEvent.MOUSE_DRAGGED, e -> {
-            double dx = e.getSceneX() - pressSceneX;
-            double dy = e.getSceneY() - pressSceneY;
+            double sceneX = e.getSceneX();
+            double sceneY = e.getSceneY();
+            double referenceX = Double.isNaN(sceneX) ? e.getScreenX() : sceneX;
+            double referenceY = Double.isNaN(sceneY) ? e.getScreenY() : sceneY;
             if (!dragging) {
+                double dx = referenceX - pressReferenceX;
+                double dy = referenceY - pressReferenceY;
                 if (Math.hypot(dx, dy) >= DRAG_THRESHOLD) {
                     dragging = true;
                 } else {
                     return;
                 }
             }
-            double[] world = graphCanvas.screenToWorld(e.getScreenX(), e.getScreenY());
-            setWorldPosition(world[0], world[1]);
-            updateFromWorldPosition();
+            applyDragPosition(sceneX, sceneY, e.getScreenX(), e.getScreenY(), false);
             e.consume();
         });
         addEventFilter(MouseEvent.MOUSE_RELEASED, e -> {
-            double[] world = graphCanvas.screenToWorld(e.getScreenX(), e.getScreenY());
-            setWorldPosition(world[0], world[1]);
-            updateFromWorldPosition();
-            if (onMove != null) {
-                Point2D screen = graphCanvas.getWorld().transform(worldX, worldY);
-                onMove.moved(questId, screen.getX(), screen.getY());
-            }
+            applyDragPosition(e.getSceneX(), e.getSceneY(), e.getScreenX(), e.getScreenY(), true);
             dragging = false;
         });
     }
@@ -253,6 +255,25 @@ public class QuestNodeView extends Pane {
                 onEdit.edit(questId);
             }
         });
+    }
+
+    private void applyDragPosition(double sceneX, double sceneY, double screenX, double screenY, boolean notifyMove) {
+        double targetX = Double.isNaN(sceneX) ? screenX : sceneX;
+        double targetY = Double.isNaN(sceneY) ? screenY : sceneY;
+        double[] pointerWorld = graphCanvas.screenToWorld(targetX, targetY);
+        double scale = graphCanvas.getScale();
+        if (scale == 0.0) {
+            scale = 1.0;
+        }
+        double offsetX = (dragDX - body.getRadius()) / scale;
+        double offsetY = (dragDY - body.getRadius()) / scale;
+        double newWorldX = pointerWorld[0] - offsetX;
+        double newWorldY = pointerWorld[1] - offsetY;
+        setWorldPosition(newWorldX, newWorldY);
+        updateScreenPosition();
+        if (notifyMove && onMove != null) {
+            onMove.moved(questId, newWorldX, newWorldY);
+        }
     }
 
     private void bindStyleProperties() {
@@ -278,10 +299,6 @@ public class QuestNodeView extends Pane {
         return fallback;
     }
 
-    private void updateFromWorldPosition() {
-        Point2D screen = graphCanvas.getWorld().transform(worldX, worldY);
-        updateScreenPosition(screen.getX(), screen.getY());
-    }
 }
 
 
