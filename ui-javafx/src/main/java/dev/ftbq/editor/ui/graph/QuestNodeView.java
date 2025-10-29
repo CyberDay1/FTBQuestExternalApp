@@ -81,6 +81,7 @@ public class QuestNodeView extends Pane {
     private double worldY;
     private boolean selected;
     private boolean dragging;
+    private boolean dragOccurred;
 
     // NEW: Double-click detection
     private long lastClickTime = 0;
@@ -190,7 +191,7 @@ public class QuestNodeView extends Pane {
                 long currentTime = System.currentTimeMillis();
                 long timeSinceLastClick = currentTime - lastClickTime;
 
-                if (timeSinceLastClick < DOUBLE_CLICK_DELAY && !dragging) {
+                if ((timeSinceLastClick < DOUBLE_CLICK_DELAY || event.getClickCount() > 1) && !dragging) {
                     // Double-click detected
                     System.out.println("Double-click detected on quest: " + questId);
                     if (onEdit != null) {
@@ -217,6 +218,7 @@ public class QuestNodeView extends Pane {
         setOnMouseDragged(event -> {
             if (event.getButton() == MouseButton.PRIMARY && !event.isShiftDown()) {
                 dragging = true;
+                dragOccurred = true;
                 double[] delta = graphCanvas.screenToWorldDelta(
                         dragStart[0], dragStart[1],
                         event.getSceneX(), event.getSceneY()
@@ -231,8 +233,18 @@ public class QuestNodeView extends Pane {
         });
 
         setOnMouseReleased(event -> {
+            dragging = dragging || !event.isStillSincePress();
             if (dragging) {
-                if (graphCanvas.isSnapToGrid()) {
+                double[] releaseWorld = graphCanvas.screenToWorld(event.getScreenX(), event.getScreenY());
+                if (releaseWorld.length == 2) {
+                    if (Double.isFinite(releaseWorld[0])) {
+                        worldX = releaseWorld[0];
+                    }
+                    if (Double.isFinite(releaseWorld[1])) {
+                        worldY = releaseWorld[1];
+                    }
+                }
+                if (dragOccurred && graphCanvas.isSnapToGrid()) {
                     worldX = graphCanvas.snap(worldX);
                     worldY = graphCanvas.snap(worldY);
                     updateScreenPosition();
@@ -241,6 +253,7 @@ public class QuestNodeView extends Pane {
                     onMove.accept(questId, worldX, worldY);
                 }
                 dragging = false;
+                dragOccurred = false;
                 event.consume();
             }
         });
@@ -275,10 +288,15 @@ public class QuestNodeView extends Pane {
     public void setSelected(boolean selected) {
         this.selected = selected;
         if (selected) {
+            if (background.strokeProperty().isBound()) {
+                background.strokeProperty().unbind();
+            }
             background.setStroke(Color.web("#4a9eff"));
             background.setStrokeWidth(3);
         } else {
-            background.strokeProperty().bind(strokePaint);
+            if (!background.strokeProperty().isBound()) {
+                background.strokeProperty().bind(strokePaint);
+            }
             background.setStrokeWidth(2);
         }
     }
