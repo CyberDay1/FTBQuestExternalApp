@@ -1,5 +1,6 @@
 package dev.ftbq.editor.ui.graph;
 
+import dev.ftbq.editor.domain.Reward;
 import javafx.css.CssMetaData;
 import javafx.css.Styleable;
 import javafx.css.StyleableObjectProperty;
@@ -7,6 +8,7 @@ import javafx.css.StyleableProperty;
 import javafx.css.converter.PaintConverter;
 import javafx.geometry.Pos;
 import javafx.scene.control.Label;
+import javafx.scene.control.Tooltip;
 import javafx.scene.input.MouseButton;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.StackPane;
@@ -20,6 +22,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.function.Consumer;
+import java.util.stream.Collectors;
 
 public class QuestNodeView extends Pane {
     private static final Color DEFAULT_FILL_COLOR = Color.web("#2f4f4f");
@@ -92,6 +95,8 @@ public class QuestNodeView extends Pane {
 
     private final Rectangle background;
     private final Label titleLabel;
+    private final Tooltip rewardTooltip = new Tooltip();
+    private boolean tooltipInstalled;
 
     private final StyleableObjectProperty<Paint> fillPaint =
             new StyleableObjectProperty<>(DEFAULT_FILL_COLOR) {
@@ -277,6 +282,34 @@ public class QuestNodeView extends Pane {
         this.worldX = x;
         this.worldY = y;
         updateScreenPosition();
+    }
+
+    public void setRewardSummary(List<Reward> rewards) {
+        if (rewards == null || rewards.isEmpty()) {
+            rewardTooltip.setText(null);
+            if (tooltipInstalled) {
+                Tooltip.uninstall(this, rewardTooltip);
+                tooltipInstalled = false;
+            }
+            return;
+        }
+        String summary = rewards.stream()
+                .filter(Objects::nonNull)
+                .map(Reward::describe)
+                .collect(Collectors.joining("\n"));
+        if (summary.isBlank()) {
+            rewardTooltip.setText(null);
+            if (tooltipInstalled) {
+                Tooltip.uninstall(this, rewardTooltip);
+                tooltipInstalled = false;
+            }
+            return;
+        }
+        rewardTooltip.setText(summary);
+        if (!tooltipInstalled) {
+            Tooltip.install(this, rewardTooltip);
+            tooltipInstalled = true;
+        }
     }
 
     public void updateScreenPosition() {

@@ -155,16 +155,16 @@ public final class QuestFileJson {
         }
 
         private Quest toDomain() {
-            return new Quest(
-                    id,
-                    title,
-                    description,
-                    icon.toDomain(),
-                    tasks.stream().map(TaskData::toDomain).collect(Collectors.toList()),
-                    rewards.stream().map(RewardData::toDomain).collect(Collectors.toList()),
-                    dependencies.stream().map(DependencyData::toDomain).collect(Collectors.toList()),
-                    visibility
-            );
+            Quest.Builder builder = Quest.builder()
+                    .id(id)
+                    .title(title)
+                    .description(description)
+                    .icon(icon.toDomain())
+                    .tasks(tasks.stream().map(TaskData::toDomain).collect(Collectors.toList()))
+                    .dependencies(dependencies.stream().map(DependencyData::toDomain).collect(Collectors.toList()))
+                    .visibility(visibility);
+            builder.rewards(rewards.stream().map(RewardData::toDomain).collect(Collectors.toList()));
+            return builder.build();
         }
     }
 

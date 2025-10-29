@@ -9,6 +9,7 @@ import dev.ftbq.editor.domain.ChapterGroup;
 import dev.ftbq.editor.domain.Dependency;
 import dev.ftbq.editor.domain.IconRef;
 import dev.ftbq.editor.domain.ItemRef;
+import dev.ftbq.editor.domain.ItemReward;
 import dev.ftbq.editor.domain.ItemTask;
 import dev.ftbq.editor.domain.LocationTask;
 import dev.ftbq.editor.domain.LootCondition;
@@ -18,7 +19,6 @@ import dev.ftbq.editor.domain.LootPool;
 import dev.ftbq.editor.domain.LootTable;
 import dev.ftbq.editor.domain.Quest;
 import dev.ftbq.editor.domain.QuestFile;
-import dev.ftbq.editor.domain.Reward;
 import dev.ftbq.editor.domain.RewardCommand;
 import dev.ftbq.editor.domain.Visibility;
 import org.junit.jupiter.api.Test;
@@ -48,12 +48,11 @@ class QuestFileJsonTest {
                         new AdvancementTask("minecraft:story/root"),
                         new LocationTask("minecraft:overworld", 10.0, 64.0, -5.0, 3.5)
                 ),
-                List.of(
-                        Reward.item(new ItemRef("minecraft:diamond", 1)),
-                        Reward.xpAmount(25),
-                        Reward.command(new RewardCommand("/say hello", true)),
-                        Reward.lootTable("mod:loot/bonus")
-                ),
+                List.of(new ItemReward(new ItemRef("minecraft:diamond", 1))),
+                25,
+                null,
+                "mod:loot/bonus",
+                new RewardCommand("/say hello", true),
                 List.of(new Dependency("quest-0", true)),
                 Visibility.SECRET
         );

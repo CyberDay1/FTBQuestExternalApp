@@ -4,11 +4,12 @@ import dev.ftbq.editor.domain.AdvancementTask;
 import dev.ftbq.editor.domain.Chapter;
 import dev.ftbq.editor.domain.Dependency;
 import dev.ftbq.editor.domain.ItemRef;
+import dev.ftbq.editor.domain.ItemReward;
 import dev.ftbq.editor.domain.ItemTask;
 import dev.ftbq.editor.domain.LocationTask;
 import dev.ftbq.editor.domain.Quest;
 import dev.ftbq.editor.domain.QuestFile;
-import dev.ftbq.editor.domain.Reward;
+import dev.ftbq.editor.domain.RewardCommand;
 import dev.ftbq.editor.domain.Task;
 import dev.ftbq.editor.importer.snbt.model.ImportOptions;
 import dev.ftbq.editor.importer.snbt.service.SnbtQuestImporter;
@@ -65,7 +66,7 @@ public class SnbtQuestMapper {
         appendLine(builder, 5, "icon:\"" + escape(quest.icon().icon()) + "\",");
         appendLine(builder, 5, "visibility:\"" + quest.visibility().name().toLowerCase(Locale.ROOT) + "\",");
         appendLine(builder, 5, "tasks:[" + formatList(tasksToSnbt(quest.tasks())) + "],");
-        appendLine(builder, 5, "rewards:[" + formatList(rewardsToSnbt(quest.rewards())) + "],");
+        appendLine(builder, 5, "rewards:[" + formatList(rewardsToSnbt(quest)) + "],");
         appendLine(builder, 5, "dependencies:[" + formatList(depsToSnbt(quest.dependencies(), ids)) + "]");
         appendLine(builder, 4, "}" + (last ? "" : ","));
     }
@@ -96,25 +97,28 @@ public class SnbtQuestMapper {
         return entries;
     }
 
-    private List<String> rewardsToSnbt(List<Reward> rewards) {
-        var entries = new ArrayList<String>(rewards.size());
-        for (Reward reward : rewards) {
-            entries.add(rewardToSnbt(reward));
+    private List<String> rewardsToSnbt(Quest quest) {
+        var entries = new ArrayList<String>();
+        for (ItemReward itemReward : quest.itemRewards()) {
+            entries.add("{type:\"item\", item:" + itemRefToSnbt(itemReward.itemRef()) + "}");
+        }
+        Integer xpLevels = quest.experienceLevels();
+        if (xpLevels != null) {
+            entries.add("{type:\"xp_levels\", amount:" + xpLevels + "}");
+        }
+        Integer xpAmount = quest.experienceAmount();
+        if (xpAmount != null) {
+            entries.add("{type:\"xp_amount\", amount:" + xpAmount + "}");
+        }
+        String lootTableId = quest.lootTableId();
+        if (lootTableId != null && !lootTableId.isBlank()) {
+            entries.add("{type:\"loot_table\", table:\"" + escape(lootTableId) + "\"}");
+        }
+        RewardCommand command = quest.commandReward();
+        if (command != null) {
+            entries.add("{type:\"command\", command:\"" + escape(command.command()) + "\", run_as_server:" + booleanToByte(command.runAsServer()) + "}");
         }
         return entries;
-    }
-
-    private String rewardToSnbt(Reward reward) {
-        return switch (reward.type()) {
-            case ITEM -> "{type:\"item\", item:" + reward.item().map(this::itemRefToSnbt).orElseThrow() + "}";
-            case LOOT_TABLE -> "{type:\"loot_table\", table:\"" + escape(reward.lootTableId().orElseThrow()) + "\"}";
-            case XP_LEVELS -> "{type:\"xp_levels\", amount:" + reward.experienceLevels().orElseThrow() + "}";
-            case XP_AMOUNT -> "{type:\"xp_amount\", amount:" + reward.experienceAmount().orElseThrow() + "}";
-            case COMMAND -> {
-                var command = reward.command().orElseThrow();
-                yield "{type:\"command\", command:\"" + escape(command.command()) + "\", run_as_server:" + booleanToByte(command.runAsServer()) + "}";
-            }
-        };
     }
 
     private List<String> depsToSnbt(List<Dependency> dependencies, SnbtIdRegistry ids) {
