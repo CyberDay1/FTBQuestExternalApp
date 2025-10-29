@@ -17,6 +17,37 @@ import java.util.Optional;
  */
 public class SnbtLootTableParser {
 
+    private static final String DEFAULT_ICON = "minecraft:book";
+    private static final int DEFAULT_WEIGHT = 100;
+
+    /**
+     * Extracts loot table metadata from the provided SNBT definition.
+     *
+     * @param snbt SNBT loot table text
+     * @return parsed loot table data including icon and items
+     */
+    public LootTableData parse(String snbt) {
+        if (snbt == null || snbt.isBlank()) {
+            return new LootTableData(DEFAULT_ICON, List.of());
+        }
+        Map<String, Object> root;
+        try {
+            root = SnbtParser.parseRootCompound(snbt);
+        } catch (SnbtParseException | IllegalArgumentException ex) {
+            return new LootTableData(DEFAULT_ICON, List.of());
+        }
+
+        String icon = Optional.ofNullable(asString(root.get("icon")))
+                .filter(value -> !value.isBlank())
+                .orElse(DEFAULT_ICON);
+
+        List<LootTableItem> items = parseItemsArray(root.get("items"));
+        if (items.isEmpty()) {
+            items = parseLegacyPools(root);
+        }
+        return new LootTableData(icon, items);
+    }
+
     /**
      * Extracts item entries from the provided SNBT loot table definition.
      *
@@ -24,15 +55,35 @@ public class SnbtLootTableParser {
      * @return list of loot table items including their inferred default counts
      */
     public List<LootTableItem> parseItems(String snbt) {
-        if (snbt == null || snbt.isBlank()) {
+        return parse(snbt).items();
+    }
+
+    private List<LootTableItem> parseItemsArray(Object itemsObj) {
+        if (!(itemsObj instanceof List<?> items)) {
             return List.of();
         }
-        Map<String, Object> root;
-        try {
-            root = SnbtParser.parseRootCompound(snbt);
-        } catch (SnbtParseException | IllegalArgumentException ex) {
-            return List.of();
+        List<LootTableItem> parsed = new ArrayList<>();
+        for (Object itemObj : items) {
+            if (!(itemObj instanceof Map<?, ?> rawItem)) {
+                continue;
+            }
+            Object idValue = rawItem.get("id");
+            if (idValue == null) {
+                idValue = rawItem.get("name");
+            }
+            String itemId = asString(idValue);
+            if (itemId == null || itemId.isBlank()) {
+                continue;
+            }
+            int count = parseNumber(rawItem.get("count"), 1);
+            int weight = parseNumber(rawItem.get("weight"), DEFAULT_WEIGHT);
+            String displayName = formatDisplayName(itemId);
+            parsed.add(new LootTableItem(itemId, displayName, count, weight));
         }
+        return Collections.unmodifiableList(parsed);
+    }
+
+    private List<LootTableItem> parseLegacyPools(Map<String, Object> root) {
         Object poolsObj = root.get("pools");
         if (!(poolsObj instanceof List<?> pools)) {
             return List.of();
@@ -47,13 +98,13 @@ public class SnbtLootTableParser {
                 continue;
             }
             for (Object entryObj : entries) {
-                parseEntry(entryObj).ifPresent(items::add);
+                parseLegacyEntry(entryObj).ifPresent(items::add);
             }
         }
         return Collections.unmodifiableList(items);
     }
 
-    private Optional<LootTableItem> parseEntry(Object entryObj) {
+    private Optional<LootTableItem> parseLegacyEntry(Object entryObj) {
         if (!(entryObj instanceof Map<?, ?> entry)) {
             return Optional.empty();
         }
@@ -66,14 +117,18 @@ public class SnbtLootTableParser {
             return Optional.empty();
         }
         int count = extractCount(entry);
+        int weight = extractWeight(entry);
         String displayName = formatDisplayName(itemId);
-        return Optional.of(new LootTableItem(itemId, displayName, count));
+        return Optional.of(new LootTableItem(itemId, displayName, count, weight));
     }
 
     private int extractCount(Map<?, ?> entry) {
         Object directCount = entry.get("count");
-        if (directCount instanceof Number number) {
-            return Math.max(1, number.intValue());
+        if (directCount != null) {
+            int parsed = parseNumber(directCount, 1);
+            if (parsed > 0) {
+                return parsed;
+            }
         }
         Object functionsObj = entry.get("functions");
         if (functionsObj instanceof List<?> functions) {
@@ -90,7 +145,7 @@ public class SnbtLootTableParser {
                     continue;
                 }
                 Object countObj = functionMap.get("count");
-                int parsed = parseCountValue(countObj);
+                int parsed = parseNumber(countObj, 0);
                 if (parsed > 0) {
                     return parsed;
                 }
@@ -99,21 +154,30 @@ public class SnbtLootTableParser {
         return 1;
     }
 
-    private int parseCountValue(Object countObj) {
-        if (countObj instanceof Number number) {
+    private int extractWeight(Map<?, ?> entry) {
+        Object weight = entry.get("weight");
+        int parsed = parseNumber(weight, DEFAULT_WEIGHT);
+        return parsed > 0 ? parsed : DEFAULT_WEIGHT;
+    }
+
+    private int parseNumber(Object value, int defaultValue) {
+        if (value instanceof Number number) {
             return Math.max(1, number.intValue());
         }
-        if (countObj instanceof Map<?, ?> countMap) {
-            Object max = countMap.get("max");
-            if (max instanceof Number number) {
-                return Math.max(1, number.intValue());
-            }
-            Object min = countMap.get("min");
-            if (min instanceof Number number) {
-                return Math.max(1, number.intValue());
+        if (value instanceof String string) {
+            try {
+                return Math.max(1, Integer.parseInt(string.trim()));
+            } catch (NumberFormatException ignored) {
+                return defaultValue;
             }
         }
-        return 0;
+        if (value instanceof Map<?, ?> map) {
+            Object direct = map.get("value");
+            if (direct != null) {
+                return parseNumber(direct, defaultValue);
+            }
+        }
+        return defaultValue;
     }
 
     private String asString(Object value) {
@@ -153,11 +217,19 @@ public class SnbtLootTableParser {
         return formatted;
     }
 
-    public record LootTableItem(String itemId, String displayName, int defaultCount) {
+    public record LootTableData(String icon, List<LootTableItem> items) {
+        public LootTableData {
+            Objects.requireNonNull(icon, "icon");
+            items = List.copyOf(Objects.requireNonNull(items, "items"));
+        }
+    }
+
+    public record LootTableItem(String itemId, String displayName, int defaultCount, int weight) {
         public LootTableItem {
             Objects.requireNonNull(itemId, "itemId");
             Objects.requireNonNull(displayName, "displayName");
             defaultCount = Math.max(1, defaultCount);
+            weight = Math.max(1, weight);
         }
     }
 }

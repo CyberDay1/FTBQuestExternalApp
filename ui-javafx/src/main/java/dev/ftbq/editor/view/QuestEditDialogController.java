@@ -1,5 +1,6 @@
 package dev.ftbq.editor.view;
 
+import dev.ftbq.editor.assets.CacheManager;
 import dev.ftbq.editor.domain.IconRef;
 import dev.ftbq.editor.domain.ItemRef;
 import dev.ftbq.editor.domain.ItemReward;
@@ -9,12 +10,12 @@ import dev.ftbq.editor.domain.Visibility;
 import dev.ftbq.editor.domain.version.ItemCatalog;
 import dev.ftbq.editor.domain.version.VersionCatalog;
 import dev.ftbq.editor.io.snbt.SnbtLootTableParser;
-import dev.ftbq.editor.io.snbt.SnbtLootTableParser.LootTableItem;
 import dev.ftbq.editor.services.UiServiceLocator;
 import dev.ftbq.editor.store.StoreDao;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
+import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.ButtonBar.ButtonData;
@@ -34,7 +35,12 @@ import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 import javafx.util.StringConverter;
 
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
+
+import java.io.ByteArrayInputStream;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -50,6 +56,13 @@ public final class QuestEditDialogController {
     private static final int MAX_ITEM_REWARDS = 5;
     private static final int MAX_ITEM_COUNT = 999;
     private static final SnbtLootTableParser LOOT_TABLE_PARSER = new SnbtLootTableParser();
+    private static final int DEFAULT_LOOT_WEIGHT = 100;
+    private static final String SNBT_INDENT = "  ";
+
+    private final Map<String, EditableLootTable> lootTables = new LinkedHashMap<>();
+    private final Map<String, Optional<Image>> itemIconCache = new HashMap<>();
+    private EditableLootTable activeLootTable;
+    private boolean updatingLootTableIcon;
 
     public Optional<Quest> editQuest(Quest quest) {
         Objects.requireNonNull(quest, "quest");
@@ -68,43 +81,99 @@ public final class QuestEditDialogController {
         visibilityBox.setValue(quest.visibility());
         Label idValue = new Label(quest.id());
 
-        Map<String, List<LootTableItem>> lootItemsByTable = loadLootTableItems();
-        ObservableList<String> lootTableNames = FXCollections.observableArrayList(lootItemsByTable.keySet());
+        lootTables.clear();
+        lootTables.putAll(loadLootTables());
+        ObservableList<String> lootTableNames = FXCollections.observableArrayList(lootTables.keySet());
         lootTableNames.add(0, "");
         ComboBox<String> lootTableBox = createLootTableComboBox(lootTableNames);
         String questLootTable = quest.lootTableId();
         if (questLootTable != null && !questLootTable.isBlank() && !lootTableNames.contains(questLootTable)) {
             lootTableNames.add(questLootTable);
         }
-        lootTableBox.setValue(questLootTable != null ? questLootTable : "");
 
         ObservableList<ItemOption> itemOptions = FXCollections.observableArrayList();
         Map<String, ItemOption> optionIndex = new LinkedHashMap<>();
         Comparator<ItemOption> optionComparator = Comparator.comparing(ItemOption::displayLabel, String.CASE_INSENSITIVE_ORDER);
-        populateBaseItemOptions(quest, optionIndex, itemOptions, optionComparator, lootItemsByTable);
+        populateBaseItemOptions(quest, optionIndex, itemOptions, optionComparator, lootTables);
 
         StringConverter<ItemOption> itemConverter = createItemConverter(optionIndex, itemOptions, optionComparator);
         List<ItemRewardRow> itemRows = createItemRows(itemOptions, itemConverter);
         applyExistingItemRewards(quest, optionIndex, itemOptions, optionComparator, itemRows);
 
-        ComboBox<LootTableItem> lootItemBox = createLootItemComboBox();
+        ComboBox<EditableLootItem> lootItemBox = createLootItemComboBox();
         Button addLootItemButton = new Button("Add Item to Rewards");
         addLootItemButton.setDisable(true);
         lootItemBox.setDisable(true);
 
+        ComboBox<ItemOption> lootTableIconBox = new ComboBox<>(itemOptions);
+        lootTableIconBox.setEditable(true);
+        lootTableIconBox.setConverter(itemConverter);
+
+        ImageView lootTableIconPreview = new ImageView();
+        lootTableIconPreview.setFitWidth(32);
+        lootTableIconPreview.setFitHeight(32);
+        lootTableIconPreview.setPreserveRatio(true);
+        HBox lootTableIconControls = new HBox(8, lootTableIconBox, lootTableIconPreview);
+
+        VBox lootTableEntriesBox = new VBox(6);
+        lootTableEntriesBox.setFillWidth(true);
+
         lootTableBox.valueProperty().addListener((obs, oldValue, newValue) -> {
-            List<LootTableItem> items = lootItemsByTable.getOrDefault(newValue, List.of());
+            saveActiveLootTableState(lootTableIconBox, optionIndex, itemOptions, optionComparator, lootTableIconPreview);
+            EditableLootTable table = lootTables.get(newValue);
+            activeLootTable = table;
+            List<EditableLootItem> items = table == null ? List.of() : table.items();
             lootItemBox.setItems(FXCollections.observableArrayList(items));
-            boolean hasItems = !items.isEmpty();
+            boolean hasItems = table != null && !table.items().isEmpty();
             lootItemBox.setDisable(!hasItems);
             addLootItemButton.setDisable(!hasItems);
             if (hasItems) {
                 lootItemBox.getSelectionModel().selectFirst();
             }
+            updateLootTableIconControls(table, lootTableIconBox, lootTableIconPreview, optionIndex, itemOptions, optionComparator);
+            populateLootTableEntriesBox(table, lootTableEntriesBox);
         });
 
+        lootTableIconBox.valueProperty().addListener((obs, oldValue, newValue) -> {
+            if (updatingLootTableIcon) {
+                return;
+            }
+            ItemOption selection = newValue;
+            if (selection == null) {
+                String text = lootTableIconBox.getEditor().getText();
+                if (text != null && !text.isBlank()) {
+                    selection = ensureItemOption(text.trim(), null, optionIndex, itemOptions, optionComparator);
+                    if (selection != null) {
+                        updatingLootTableIcon = true;
+                        try {
+                            lootTableIconBox.setValue(selection);
+                        } finally {
+                            updatingLootTableIcon = false;
+                        }
+                    }
+                }
+            }
+            String iconId = selection == null ? "" : selection.itemId();
+            updateActiveLootTableIcon(iconId, lootTableIconPreview);
+        });
+
+        String initialLootTable = questLootTable != null ? questLootTable : "";
+        lootTableBox.setValue(initialLootTable);
+        EditableLootTable initialTable = lootTables.get(initialLootTable);
+        if (initialTable != null) {
+            activeLootTable = initialTable;
+            lootItemBox.setItems(FXCollections.observableArrayList(initialTable.items()));
+            if (!initialTable.items().isEmpty()) {
+                lootItemBox.getSelectionModel().selectFirst();
+                lootItemBox.setDisable(false);
+                addLootItemButton.setDisable(false);
+            }
+            updateLootTableIconControls(initialTable, lootTableIconBox, lootTableIconPreview, optionIndex, itemOptions, optionComparator);
+            populateLootTableEntriesBox(initialTable, lootTableEntriesBox);
+        }
+
         addLootItemButton.setOnAction(event -> {
-            LootTableItem selected = lootItemBox.getValue();
+            EditableLootItem selected = lootItemBox.getValue();
             if (selected == null) {
                 return;
             }
@@ -171,19 +240,25 @@ public final class QuestEditDialogController {
         grid.add(visibilityBox, 1, 4);
         grid.add(new Label("Loot table"), 0, 5);
         grid.add(lootTableBox, 1, 5);
-        grid.add(new Label("Loot items"), 0, 6);
-        grid.add(lootItemControls, 1, 6);
-        grid.add(new Label("Item rewards"), 0, 7);
-        grid.add(itemSection, 1, 7);
-        grid.add(new Label("XP reward"), 0, 8);
-        grid.add(xpSection, 1, 8);
-        grid.add(new Label("Command reward"), 0, 9);
-        grid.add(commandField, 1, 9);
+        grid.add(new Label("Loot table icon"), 0, 6);
+        grid.add(lootTableIconControls, 1, 6);
+        grid.add(new Label("Loot table entries"), 0, 7);
+        grid.add(lootTableEntriesBox, 1, 7);
+        grid.add(new Label("Loot items"), 0, 8);
+        grid.add(lootItemControls, 1, 8);
+        grid.add(new Label("Item rewards"), 0, 9);
+        grid.add(itemSection, 1, 9);
+        grid.add(new Label("XP reward"), 0, 10);
+        grid.add(xpSection, 1, 10);
+        grid.add(new Label("Command reward"), 0, 11);
+        grid.add(commandField, 1, 11);
 
         GridPane.setHgrow(titleField, Priority.ALWAYS);
         GridPane.setHgrow(descriptionArea, Priority.ALWAYS);
         GridPane.setHgrow(iconField, Priority.ALWAYS);
         GridPane.setHgrow(lootTableBox, Priority.ALWAYS);
+        GridPane.setHgrow(lootTableIconControls, Priority.ALWAYS);
+        GridPane.setHgrow(lootTableEntriesBox, Priority.ALWAYS);
         GridPane.setHgrow(itemSection, Priority.ALWAYS);
         GridPane.setHgrow(commandField, Priority.ALWAYS);
 
@@ -198,6 +273,8 @@ public final class QuestEditDialogController {
             if (button != saveButtonType) {
                 return null;
             }
+            saveActiveLootTableState(lootTableIconBox, optionIndex, itemOptions, optionComparator, lootTableIconPreview);
+            persistLootTableChanges();
             String title = titleField.getText() == null ? "" : titleField.getText().trim();
             String description = descriptionArea.getText() == null ? "" : descriptionArea.getText().trim();
             String iconText = iconField.getText() == null ? "" : iconField.getText().trim();
@@ -255,7 +332,7 @@ public final class QuestEditDialogController {
                                          Map<String, ItemOption> optionIndex,
                                          ObservableList<ItemOption> options,
                                          Comparator<ItemOption> comparator,
-                                         Map<String, List<LootTableItem>> lootItems) {
+                                         Map<String, EditableLootTable> lootTables) {
         VersionCatalog versionCatalog;
         try {
             versionCatalog = dev.ftbq.editor.support.UiServiceLocator.getVersionCatalog();
@@ -273,8 +350,14 @@ public final class QuestEditDialogController {
         for (ItemReward reward : quest.itemRewards()) {
             ensureItemOption(reward.itemRef().itemId(), null, optionIndex, options, comparator);
         }
-        lootItems.values().stream().flatMap(List::stream)
-                .forEach(item -> ensureItemOption(item.itemId(), item.displayName(), optionIndex, options, comparator));
+        for (EditableLootTable table : lootTables.values()) {
+            if (table.iconId() != null && !table.iconId().isBlank()) {
+                ensureItemOption(table.iconId(), null, optionIndex, options, comparator);
+            }
+            for (EditableLootItem item : table.items()) {
+                ensureItemOption(item.itemId(), item.displayName(), optionIndex, options, comparator);
+            }
+        }
     }
 
     private List<ItemRewardRow> createItemRows(ObservableList<ItemOption> options,
@@ -299,17 +382,21 @@ public final class QuestEditDialogController {
         }
     }
 
-    private Map<String, List<LootTableItem>> loadLootTableItems() {
+    private Map<String, EditableLootTable> loadLootTables() {
         StoreDao storeDao = UiServiceLocator.storeDao;
         if (storeDao == null) {
             return Map.of();
         }
-        Map<String, List<LootTableItem>> items = new LinkedHashMap<>();
+        Map<String, EditableLootTable> tables = new LinkedHashMap<>();
         for (StoreDao.LootTableEntity entity : storeDao.listLootTables()) {
-            List<LootTableItem> parsed = LOOT_TABLE_PARSER.parseItems(entity.data());
-            items.put(entity.name(), parsed);
+            SnbtLootTableParser.LootTableData data = LOOT_TABLE_PARSER.parse(entity.data());
+            List<EditableLootItem> items = new ArrayList<>();
+            for (SnbtLootTableParser.LootTableItem item : data.items()) {
+                items.add(new EditableLootItem(item.itemId(), item.displayName(), item.defaultCount(), item.weight()));
+            }
+            tables.put(entity.name(), new EditableLootTable(entity.name(), data.icon(), items));
         }
-        return items;
+        return tables;
     }
 
     private ComboBox<String> createLootTableComboBox(ObservableList<String> values) {
@@ -320,19 +407,19 @@ public final class QuestEditDialogController {
         return comboBox;
     }
 
-    private ComboBox<LootTableItem> createLootItemComboBox() {
-        ComboBox<LootTableItem> comboBox = new ComboBox<>();
+    private ComboBox<EditableLootItem> createLootItemComboBox() {
+        ComboBox<EditableLootItem> comboBox = new ComboBox<>();
         comboBox.setConverter(new StringConverter<>() {
             @Override
-            public String toString(LootTableItem item) {
+            public String toString(EditableLootItem item) {
                 if (item == null) {
                     return "";
                 }
-                return item.displayName() + " (" + item.itemId() + ")";
+                return item.displayLabel();
             }
 
             @Override
-            public LootTableItem fromString(String string) {
+            public EditableLootItem fromString(String string) {
                 return null;
             }
         });
@@ -381,6 +468,162 @@ public final class QuestEditDialogController {
         };
     }
 
+    private void saveActiveLootTableState(ComboBox<ItemOption> iconBox,
+                                          Map<String, ItemOption> optionIndex,
+                                          ObservableList<ItemOption> options,
+                                          Comparator<ItemOption> comparator,
+                                          ImageView iconPreview) {
+        if (activeLootTable == null) {
+            return;
+        }
+        ItemOption selection = iconBox.getValue();
+        if (selection == null) {
+            String text = iconBox.getEditor().getText();
+            if (text != null && !text.isBlank()) {
+                selection = ensureItemOption(text.trim(), null, optionIndex, options, comparator);
+            }
+        }
+        String iconId = selection == null ? "" : selection.itemId();
+        updateActiveLootTableIcon(iconId, iconPreview);
+    }
+
+    private void updateLootTableIconControls(EditableLootTable table,
+                                             ComboBox<ItemOption> iconBox,
+                                             ImageView iconPreview,
+                                             Map<String, ItemOption> optionIndex,
+                                             ObservableList<ItemOption> options,
+                                             Comparator<ItemOption> comparator) {
+        updatingLootTableIcon = true;
+        try {
+            if (table == null) {
+                iconBox.setValue(null);
+                iconBox.getEditor().setText("");
+                iconPreview.setImage(null);
+            } else {
+                String iconId = table.iconId();
+                ItemOption option = null;
+                if (iconId != null && !iconId.isBlank()) {
+                    option = ensureItemOption(iconId, null, optionIndex, options, comparator);
+                }
+                iconBox.setValue(option);
+                if (option == null && iconId != null && !iconId.isBlank()) {
+                    iconBox.getEditor().setText(iconId);
+                }
+                iconPreview.setImage(loadItemIcon(iconId).orElse(null));
+            }
+        } finally {
+            updatingLootTableIcon = false;
+        }
+    }
+
+    private void populateLootTableEntriesBox(EditableLootTable table, VBox container) {
+        container.getChildren().clear();
+        if (table == null || table.items().isEmpty()) {
+            return;
+        }
+        for (EditableLootItem item : table.items()) {
+            LootTableEntryRow row = new LootTableEntryRow(item);
+            container.getChildren().add(row.node());
+        }
+    }
+
+    private void updateActiveLootTableIcon(String iconId, ImageView iconPreview) {
+        if (activeLootTable == null) {
+            return;
+        }
+        String normalized = iconId == null ? "" : iconId;
+        activeLootTable.setIconId(normalized);
+        iconPreview.setImage(loadItemIcon(normalized).orElse(null));
+    }
+
+    private void persistLootTableChanges() {
+        StoreDao storeDao = UiServiceLocator.storeDao;
+        if (storeDao == null) {
+            return;
+        }
+        for (EditableLootTable table : lootTables.values()) {
+            if (!table.isDirty()) {
+                continue;
+            }
+            String snbt = buildLootTableSnbt(table);
+            storeDao.upsertLootTable(new StoreDao.LootTableEntity(table.name(), snbt));
+        }
+    }
+
+    private String buildLootTableSnbt(EditableLootTable table) {
+        StringBuilder builder = new StringBuilder();
+        appendLootLine(builder, 0, "{");
+        appendLootLine(builder, 1, "id:\"" + escape(table.name()) + "\",");
+        String iconId = table.iconId() == null || table.iconId().isBlank() ? "minecraft:book" : table.iconId();
+        appendLootLine(builder, 1, "icon:\"" + escape(iconId) + "\",");
+        appendLootItems(builder, table.items());
+        appendLootLine(builder, 0, "}");
+        return builder.toString();
+    }
+
+    private void appendLootItems(StringBuilder builder, List<EditableLootItem> items) {
+        if (items.isEmpty()) {
+            appendLootLine(builder, 1, "items:[]");
+            return;
+        }
+        appendLootLine(builder, 1, "items:[");
+        for (int i = 0; i < items.size(); i++) {
+            EditableLootItem item = items.get(i);
+            String line = "{id:\"" + escape(item.itemId()) + "\", count:" + item.count()
+                    + ", weight:" + item.weight() + "}";
+            appendLootLine(builder, 2, line + (i == items.size() - 1 ? "" : ","));
+        }
+        appendLootLine(builder, 1, "]");
+    }
+
+    private void appendLootLine(StringBuilder builder, int indent, String line) {
+        builder.append(SNBT_INDENT.repeat(indent)).append(line).append('\n');
+    }
+
+    private static String escape(String value) {
+        if (value == null) {
+            return "";
+        }
+        return value.replace("\"", "\\\"");
+    }
+
+    private Optional<Image> loadItemIcon(String itemId) {
+        if (itemId == null || itemId.isBlank()) {
+            return Optional.empty();
+        }
+        return itemIconCache.computeIfAbsent(itemId, this::resolveItemIcon);
+    }
+
+    private Optional<Image> resolveItemIcon(String itemId) {
+        CacheManager cacheManager = UiServiceLocator.cacheManager;
+        if (cacheManager == null) {
+            return Optional.empty();
+        }
+        Optional<Image> direct = toImage(cacheManager.fetchIcon(itemId));
+        if (direct.isPresent()) {
+            return direct;
+        }
+        StoreDao storeDao = UiServiceLocator.storeDao;
+        if (storeDao == null) {
+            return Optional.empty();
+        }
+        return storeDao.findItemById(itemId)
+                .flatMap(entity -> Optional.ofNullable(entity.iconHash()))
+                .flatMap(cacheManager::fetchIcon)
+                .flatMap(this::toImage);
+    }
+
+    private Optional<Image> toImage(Optional<byte[]> data) {
+        if (data.isEmpty()) {
+            return Optional.empty();
+        }
+        try {
+            return Optional.of(new Image(new ByteArrayInputStream(data.get())));
+        } catch (IllegalArgumentException ex) {
+            return Optional.empty();
+        }
+    }
+
     private ItemOption ensureItemOption(String itemId,
                                         String displayName,
                                         Map<String, ItemOption> optionIndex,
@@ -408,6 +651,131 @@ public final class QuestEditDialogController {
         spinner.increment(0);
         Integer value = spinner.getValue();
         return value == null ? 0 : Math.max(1, value);
+    }
+
+    private static final class EditableLootTable {
+        private final String name;
+        private final String originalIconId;
+        private final List<EditableLootItem> items;
+        private String iconId;
+
+        private EditableLootTable(String name, String iconId, List<EditableLootItem> items) {
+            this.name = Objects.requireNonNull(name, "name");
+            this.originalIconId = iconId == null ? "" : iconId;
+            this.iconId = this.originalIconId;
+            this.items = new ArrayList<>(Objects.requireNonNull(items, "items"));
+        }
+
+        private String name() {
+            return name;
+        }
+
+        private String iconId() {
+            return iconId;
+        }
+
+        private void setIconId(String iconId) {
+            this.iconId = iconId == null ? "" : iconId;
+        }
+
+        private List<EditableLootItem> items() {
+            return items;
+        }
+
+        private boolean isDirty() {
+            if (!Objects.equals(iconId, originalIconId)) {
+                return true;
+            }
+            for (EditableLootItem item : items) {
+                if (item.isDirty()) {
+                    return true;
+                }
+            }
+            return false;
+        }
+    }
+
+    private static final class EditableLootItem {
+        private final String itemId;
+        private final String displayName;
+        private final int count;
+        private final int originalWeight;
+        private int weight;
+
+        private EditableLootItem(String itemId, String displayName, int count, int weight) {
+            this.itemId = Objects.requireNonNull(itemId, "itemId");
+            this.displayName = (displayName == null || displayName.isBlank())
+                    ? ItemOption.deriveDisplayName(itemId)
+                    : displayName;
+            this.count = Math.max(1, count);
+            this.weight = Math.max(1, weight);
+            this.originalWeight = this.weight;
+        }
+
+        private String itemId() {
+            return itemId;
+        }
+
+        private String displayName() {
+            return displayName;
+        }
+
+        private String displayLabel() {
+            return displayName + " (" + itemId + ")";
+        }
+
+        private int count() {
+            return count;
+        }
+
+        private int weight() {
+            return weight;
+        }
+
+        private int defaultCount() {
+            return count;
+        }
+
+        private void setWeight(int weight) {
+            this.weight = Math.max(1, weight);
+        }
+
+        private boolean isDirty() {
+            return weight != originalWeight;
+        }
+    }
+
+    private final class LootTableEntryRow {
+        private final EditableLootItem item;
+        private final HBox container;
+        private final Spinner<Integer> weightSpinner;
+        private final ImageView iconView;
+
+        private LootTableEntryRow(EditableLootItem item) {
+            this.item = Objects.requireNonNull(item, "item");
+            this.iconView = new ImageView();
+            iconView.setFitWidth(24);
+            iconView.setFitHeight(24);
+            iconView.setPreserveRatio(true);
+            loadItemIcon(item.itemId()).ifPresent(iconView::setImage);
+
+            Label nameLabel = new Label(item.displayLabel());
+            Label countLabel = new Label("x" + item.count());
+            Label weightLabel = new Label("Weight:");
+            this.weightSpinner = new Spinner<>(new IntegerSpinnerValueFactory(1, Integer.MAX_VALUE, item.weight()));
+            this.weightSpinner.setEditable(true);
+            this.weightSpinner.valueProperty().addListener((obs, oldValue, newValue) -> {
+                int value = newValue == null ? DEFAULT_LOOT_WEIGHT : Math.max(1, newValue);
+                item.setWeight(value);
+            });
+
+            this.container = new HBox(8, iconView, nameLabel, countLabel, weightLabel, weightSpinner);
+            this.container.setAlignment(Pos.CENTER_LEFT);
+        }
+
+        private Node node() {
+            return container;
+        }
     }
 
     private static final class ItemRewardRow {

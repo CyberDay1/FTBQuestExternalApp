@@ -1,6 +1,9 @@
 package dev.ftbq.editor.ui.graph;
 
+import dev.ftbq.editor.assets.CacheManager;
+import dev.ftbq.editor.domain.IconRef;
 import dev.ftbq.editor.domain.Reward;
+import dev.ftbq.editor.services.UiServiceLocator;
 import javafx.css.CssMetaData;
 import javafx.css.Styleable;
 import javafx.css.StyleableObjectProperty;
@@ -16,11 +19,15 @@ import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.Paint;
 import javafx.scene.shape.Rectangle;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
 
+import java.io.ByteArrayInputStream;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
@@ -94,6 +101,7 @@ public class QuestNodeView extends Pane {
     private TriConsumer<String, Double, Double> onMove;
 
     private final Rectangle background;
+    private final ImageView iconView;
     private final Label titleLabel;
     private final Tooltip rewardTooltip = new Tooltip();
     private boolean tooltipInstalled;
@@ -167,6 +175,11 @@ public class QuestNodeView extends Pane {
         background.strokeProperty().bind(strokePaint);
         background.setStrokeWidth(2);
 
+        iconView = new ImageView();
+        iconView.setFitWidth(48);
+        iconView.setFitHeight(48);
+        iconView.setPreserveRatio(true);
+
         titleLabel = new Label(title);
         titleLabel.textFillProperty().bind(labelPaint);
         titleLabel.setMaxWidth(120);
@@ -174,7 +187,7 @@ public class QuestNodeView extends Pane {
         titleLabel.setAlignment(Pos.CENTER);
         titleLabel.getStyleClass().add("quest-title");
 
-        StackPane iconContainer = new StackPane(background);
+        StackPane iconContainer = new StackPane(background, iconView);
         VBox layout = new VBox(4, iconContainer, titleLabel);
         layout.setAlignment(Pos.CENTER);
 
@@ -385,6 +398,28 @@ public class QuestNodeView extends Pane {
 
     public void setLabelPaint(Paint paint) {
         labelPaint.set(paint);
+    }
+
+    public void setQuestIcon(IconRef icon) {
+        if (icon == null) {
+            iconView.setImage(null);
+            return;
+        }
+        CacheManager cacheManager = UiServiceLocator.cacheManager;
+        if (cacheManager == null) {
+            iconView.setImage(null);
+            return;
+        }
+        Optional<byte[]> iconData = cacheManager.fetchIcon(icon.icon());
+        if (iconData.isEmpty()) {
+            iconView.setImage(null);
+            return;
+        }
+        try {
+            iconView.setImage(new Image(new ByteArrayInputStream(iconData.get())));
+        } catch (IllegalArgumentException ex) {
+            iconView.setImage(null);
+        }
     }
 
     @FunctionalInterface

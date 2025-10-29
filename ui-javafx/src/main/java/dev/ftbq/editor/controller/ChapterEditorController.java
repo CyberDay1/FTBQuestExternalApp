@@ -333,6 +333,7 @@ public class ChapterEditorController {
             }
             Point2D world = questPositions.getOrDefault(quest.id(), new Point2D(0, 0));
             QuestNodeView node = new QuestNodeView(quest.id(), quest.title(), world.getX(), world.getY(), canvas);
+            node.setQuestIcon(quest.icon());
             node.setRewardSummary(quest.rewards());
             positionNode(node, world);
             configureNodeInteractions(node, quest);
