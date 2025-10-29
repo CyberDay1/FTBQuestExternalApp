@@ -6,6 +6,7 @@ import dev.ftbq.editor.app.ProjectFileHandler.ProjectData;
 import dev.ftbq.editor.app.VanillaItemDatabase;
 import dev.ftbq.editor.controller.ChapterEditorController;
 import dev.ftbq.editor.controller.ImportSnbtDialog;
+import dev.ftbq.editor.controller.MenuController;
 import dev.ftbq.editor.controller.SettingsController;
 import dev.ftbq.editor.domain.QuestFile;
 import dev.ftbq.editor.importer.snbt.model.QuestImportResult;
@@ -17,6 +18,10 @@ import dev.ftbq.editor.support.UiServiceLocator;
 import dev.ftbq.editor.services.bus.ServiceLocator;
 import dev.ftbq.editor.services.io.SnbtImportExportService;
 import dev.ftbq.editor.services.logging.StructuredLogger;
+import dev.ftbq.editor.service.AutosaveService;
+import dev.ftbq.editor.service.QuestZipGenerator;
+import dev.ftbq.editor.service.UserSettings;
+import dev.ftbq.editor.service.UserSettings.EditorSettings;
 import dev.ftbq.editor.store.StoreDao;
 import dev.ftbq.editor.ui.AiQuestCreationTab;
 import dev.ftbq.editor.validation.ValidationIssue;
@@ -31,10 +36,7 @@ import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.Alert;
 import javafx.scene.control.ButtonType;
-import javafx.scene.control.Menu;
 import javafx.scene.control.MenuBar;
-import javafx.scene.control.MenuItem;
-import javafx.scene.control.SeparatorMenuItem;
 import javafx.scene.control.Tab;
 import javafx.scene.control.TabPane;
 import javafx.scene.control.TextArea;
@@ -44,16 +46,12 @@ import javafx.stage.Stage;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
 
 public class MainApp extends Application implements SettingsController.AutosaveSettings {
     private final StructuredLogger logger = ServiceLocator.loggerFactory().create(MainApp.class);
@@ -63,10 +61,12 @@ public class MainApp extends Application implements SettingsController.AutosaveS
     private final StoreDao storeDao = UiServiceLocator.getStoreDao();
     private final ProjectFileHandler projectFileHandler = new ProjectFileHandler(storeDao);
     private final VanillaItemDatabase vanillaItemDatabase = new VanillaItemDatabase(storeDao);
-    private ScheduledExecutorService autosaveExecutor;
-    private int autosaveIntervalMinutes = 1;
-    private Path autosaveFile;
-    private static final String AUTOSAVE_SETTING_KEY = "autosave.minutes";
+    private final AutosaveService autosaveService = new AutosaveService(
+            this::getCurrentQuestFile,
+            this::currentProjectName,
+            ServiceLocator.loggerFactory().create(AutosaveService.class));
+    private final QuestZipGenerator questZipGenerator = new QuestZipGenerator();
+    private EditorSettings userSettings = EditorSettings.defaults();
     private ChapterGroupBrowserViewModel chapterGroupBrowserViewModel;
     private ChapterEditorViewModel chapterEditorViewModel;
     private QuestFile currentQuestFile;
@@ -78,7 +78,7 @@ public class MainApp extends Application implements SettingsController.AutosaveS
         this.primaryStage = primaryStage;
         logger.info("Starting FTB Quest Editor UI");
         ensureLayoutStore();
-        loadAutosavePreferences();
+        userSettings = UserSettings.load();
         FXMLLoader chapterLoader = new FXMLLoader(getClass().getResource("/dev/ftbq/editor/view/chapter_group_browser.fxml"));
         Parent chapterRoot = chapterLoader.load();
 
@@ -145,7 +145,11 @@ public class MainApp extends Application implements SettingsController.AutosaveS
             logger.error("Failed to load settings UI", e);
         }
 
-        MenuBar menuBar = createMenuBar(primaryStage);
+        FXMLLoader menuLoader = new FXMLLoader(getClass().getResource("/dev/ftbq/editor/view/main_menu.fxml"));
+        MenuController menuController = new MenuController();
+        menuLoader.setController(menuController);
+        MenuBar menuBar = menuLoader.load();
+        menuController.configure(this, autosaveService, questZipGenerator, () -> userSettings);
         BorderPane root = new BorderPane();
         root.setTop(menuBar);
         root.setCenter(tabPane);
@@ -160,7 +164,7 @@ public class MainApp extends Application implements SettingsController.AutosaveS
         primaryStage.setWidth(960);
         primaryStage.setHeight(720);
         recoverAutosaveIfPresent();
-        startAutosaveScheduler();
+        autosaveService.start(userSettings.autosaveIntervalMinutes());
         primaryStage.show();
         logger.info("Primary stage shown", StructuredLogger.field("width", primaryStage.getWidth()), StructuredLogger.field("height", primaryStage.getHeight()));
     }
@@ -175,7 +179,7 @@ public class MainApp extends Application implements SettingsController.AutosaveS
         if (layoutStore != null) {
             layoutStore.flush();
         }
-        stopAutosaveScheduler();
+        autosaveService.stop();
         logger.info("Stopping FTB Quest Editor UI");
         super.stop();
     }
@@ -184,45 +188,22 @@ public class MainApp extends Application implements SettingsController.AutosaveS
         if (workspace == null) {
             String workspaceProperty = System.getProperty("ftbq.editor.workspace", ".");
             workspace = Path.of(workspaceProperty).toAbsolutePath().normalize();
-            autosaveFile = workspace.resolve("autosave.ftbq");
         }
         if (dev.ftbq.editor.services.UiServiceLocator.questLayoutStore == null) {
             dev.ftbq.editor.services.UiServiceLocator.questLayoutStore = new JsonQuestLayoutStore(workspace);
         }
     }
 
-    private MenuBar createMenuBar(Stage owner) {
-        MenuBar menuBar = new MenuBar();
-        Menu fileMenu = new Menu("File");
-        MenuItem importItem = new MenuItem("Import Quests from SNBT...");
-        importItem.setOnAction(event -> showImportDialog(owner));
-        MenuItem loadProjectItem = new MenuItem("Load Project...");
-        loadProjectItem.setOnAction(event -> loadProject(owner));
-        MenuItem saveProjectItem = new MenuItem("Save Project As...");
-        saveProjectItem.setOnAction(event -> saveProjectAs(owner));
-        MenuItem exportItem = new MenuItem("Export Quest Pack...");
-        exportItem.setOnAction(event -> exportQuestPack(owner));
-        fileMenu.getItems().addAll(importItem, loadProjectItem, saveProjectItem, new SeparatorMenuItem(), exportItem);
-        Menu toolsMenu = new Menu("Tools");
-        MenuItem validateItem = new MenuItem("Validate Quest Pack");
-        validateItem.setOnAction(event -> validateCurrentPack());
-        MenuItem saveItemsItem = new MenuItem("Save Imported Items");
-        saveItemsItem.setOnAction(event -> saveImportedItems(owner));
-        toolsMenu.getItems().addAll(validateItem, saveItemsItem);
-        menuBar.getMenus().addAll(fileMenu, toolsMenu);
-        return menuBar;
-    }
-
-    private void showImportDialog(Stage owner) {
-        ImportSnbtDialog dialog = new ImportSnbtDialog(owner, importExportService, getCurrentQuestFile(), workspace);
+    public void showImportDialog() {
+        ImportSnbtDialog dialog = new ImportSnbtDialog(primaryStage, importExportService, getCurrentQuestFile(), workspace);
         dialog.showAndWait().ifPresent(this::applyImportResult);
     }
 
-    private void loadProject(Stage owner) {
+    public void loadProject() {
         FileChooser chooser = new FileChooser();
         chooser.setTitle("Load Project");
         chooser.getExtensionFilters().setAll(new FileChooser.ExtensionFilter("FTBQ Project (*.ftbq)", "*.ftbq"));
-        File file = chooser.showOpenDialog(owner);
+        File file = chooser.showOpenDialog(primaryStage);
         if (file == null) {
             return;
         }
@@ -233,14 +214,14 @@ public class MainApp extends Application implements SettingsController.AutosaveS
             updateViewModelsFromQuestFile();
             UiServiceLocator.rebuildVersionCatalog();
             logger.info("Project loaded", StructuredLogger.field("path", path.toString()));
-            restartAutosaveScheduler();
+            autosaveService.start(userSettings.autosaveIntervalMinutes());
         } catch (Exception ex) {
             logger.error("Failed to load project", ex);
             showError("Failed to load project", ex.getMessage());
         }
     }
 
-    private void saveProjectAs(Stage owner) {
+    public void saveProjectAs() {
         QuestFile questFile = getCurrentQuestFile();
         if (questFile == null) {
             return;
@@ -248,7 +229,7 @@ public class MainApp extends Application implements SettingsController.AutosaveS
         FileChooser chooser = new FileChooser();
         chooser.setTitle("Save Project");
         chooser.getExtensionFilters().setAll(new FileChooser.ExtensionFilter("FTBQ Project (*.ftbq)", "*.ftbq"));
-        File file = chooser.showSaveDialog(owner);
+        File file = chooser.showSaveDialog(primaryStage);
         if (file == null) {
             return;
         }
@@ -262,33 +243,11 @@ public class MainApp extends Application implements SettingsController.AutosaveS
         }
     }
 
-    private void exportQuestPack(Stage owner) {
-        QuestFile questFile = getCurrentQuestFile();
-        if (questFile == null) {
-            return;
-        }
-        FileChooser chooser = new FileChooser();
-        chooser.setTitle("Export Quest Pack");
-        chooser.getExtensionFilters().setAll(new FileChooser.ExtensionFilter("Quest Pack (*.zip)", "*.zip"));
-        File file = chooser.showSaveDialog(owner);
-        if (file == null) {
-            return;
-        }
-        Path path = ensureExtension(file.toPath(), ".zip");
-        try {
-            projectFileHandler.exportQuestPack(path, questFile);
-            logger.info("Quest pack exported", StructuredLogger.field("path", path.toString()));
-        } catch (Exception ex) {
-            logger.error("Failed to export quest pack", ex);
-            showError("Failed to export quest pack", ex.getMessage());
-        }
-    }
-
-    private void saveImportedItems(Stage owner) {
+    public void saveImportedItems() {
         FileChooser chooser = new FileChooser();
         chooser.setTitle("Save Imported Items");
         chooser.getExtensionFilters().setAll(new FileChooser.ExtensionFilter("JSON Files (*.json)", "*.json"));
-        File file = chooser.showSaveDialog(owner);
+        File file = chooser.showSaveDialog(primaryStage);
         if (file == null) {
             return;
         }
@@ -310,7 +269,7 @@ public class MainApp extends Application implements SettingsController.AutosaveS
         }
     }
 
-    private void validateCurrentPack() {
+    public void validateCurrentPack() {
         Alert alert;
         try {
             QuestFile questFile = getCurrentQuestFile();
@@ -367,7 +326,7 @@ public class MainApp extends Application implements SettingsController.AutosaveS
         updateViewModelsFromQuestFile();
         persistQuestFile();
         showImportSummary(result.summary());
-        restartAutosaveScheduler();
+        autosaveService.start(userSettings.autosaveIntervalMinutes());
     }
 
     private void updateViewModelsFromQuestFile() {
@@ -435,7 +394,7 @@ public class MainApp extends Application implements SettingsController.AutosaveS
         alert.showAndWait();
     }
 
-    private void showError(String title, String message) {
+    public void showError(String title, String message) {
         Alert alert = new Alert(Alert.AlertType.ERROR);
         if (primaryStage != null) {
             alert.initOwner(primaryStage);
@@ -446,22 +405,8 @@ public class MainApp extends Application implements SettingsController.AutosaveS
         alert.showAndWait();
     }
 
-    private void loadAutosavePreferences() {
-        storeDao.getSetting(AUTOSAVE_SETTING_KEY).ifPresent(value -> {
-            try {
-                int parsed = Integer.parseInt(value.trim());
-                if (parsed >= 1) {
-                    autosaveIntervalMinutes = parsed;
-                }
-            } catch (NumberFormatException ex) {
-                logger.warn("Invalid autosave interval in settings", ex, StructuredLogger.field("value", value));
-            }
-        });
-    }
-
     private void recoverAutosaveIfPresent() {
-        Path target = autosaveFile;
-        if (target == null || !Files.exists(target)) {
+        if (!autosaveService.hasAutosave()) {
             return;
         }
         Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
@@ -476,69 +421,17 @@ public class MainApp extends Application implements SettingsController.AutosaveS
         }
         Optional<ButtonType> result = alert.showAndWait();
         if (result.isPresent() && result.get() == recover) {
-            try {
-                ProjectData data = projectFileHandler.loadProject(target);
-                setCurrentQuestFile(data.questFile());
+            Optional<QuestFile> restored = autosaveService.readAutosave();
+            if (restored.isPresent()) {
+                setCurrentQuestFile(restored.get());
                 updateViewModelsFromQuestFile();
                 UiServiceLocator.rebuildVersionCatalog();
-                restartAutosaveScheduler();
-                logger.info("Autosave restored", StructuredLogger.field("path", target.toString()));
-            } catch (Exception ex) {
-                logger.error("Autosave recovery failed", ex);
-                showError("Failed to recover autosave", ex.getMessage());
+                logger.info("Autosave restored");
+            } else {
+                showError("Autosave recovery failed", "The autosave file could not be read.");
             }
         }
-        try {
-            Files.deleteIfExists(target);
-        } catch (IOException ex) {
-            logger.warn("Failed to delete autosave file", ex, StructuredLogger.field("path", target.toString()));
-        }
-    }
-
-    private void startAutosaveScheduler() {
-        synchronized (this) {
-            stopAutosaveSchedulerInternal();
-            if (autosaveIntervalMinutes < 1) {
-                autosaveIntervalMinutes = 1;
-            }
-            autosaveExecutor = Executors.newSingleThreadScheduledExecutor(r -> {
-                Thread thread = new Thread(r, "ftbq-autosave");
-                thread.setDaemon(true);
-                return thread;
-            });
-            autosaveExecutor.scheduleAtFixedRate(this::performAutosave, autosaveIntervalMinutes, autosaveIntervalMinutes, TimeUnit.MINUTES);
-        }
-    }
-
-    private void restartAutosaveScheduler() {
-        startAutosaveScheduler();
-    }
-
-    private void stopAutosaveScheduler() {
-        synchronized (this) {
-            stopAutosaveSchedulerInternal();
-        }
-    }
-
-    private void stopAutosaveSchedulerInternal() {
-        if (autosaveExecutor != null) {
-            autosaveExecutor.shutdownNow();
-        }
-        autosaveExecutor = null;
-    }
-
-    private void performAutosave() {
-        QuestFile questFile = getCurrentQuestFile();
-        Path target = autosaveFile;
-        if (questFile == null || target == null) {
-            return;
-        }
-        try {
-            projectFileHandler.saveProject(target, questFile);
-            logger.debug("Autosave completed", StructuredLogger.field("path", target.toString()));
-        } catch (Exception ex) {
-            logger.warn("Autosave failed", ex, StructuredLogger.field("path", target.toString()));
-        }
+        autosaveService.deleteAutosave();
     }
 
     private Path ensureExtension(Path path, String extension) {
@@ -549,7 +442,7 @@ public class MainApp extends Application implements SettingsController.AutosaveS
         return path;
     }
 
-    private synchronized QuestFile getCurrentQuestFile() {
+    public synchronized QuestFile getCurrentQuestFile() {
         return currentQuestFile;
     }
 
@@ -557,21 +450,51 @@ public class MainApp extends Application implements SettingsController.AutosaveS
         this.currentQuestFile = Objects.requireNonNull(questFile, "questFile");
     }
 
-    @Override
-    public synchronized int getIntervalMinutes() {
-        return autosaveIntervalMinutes;
+    public synchronized Path getWorkspace() {
+        return workspace;
+    }
+
+    public Stage getPrimaryStage() {
+        return primaryStage;
+    }
+
+    private synchronized String currentProjectName() {
+        QuestFile questFile = currentQuestFile;
+        if (questFile == null) {
+            return "project";
+        }
+        String id = questFile.id();
+        if (id != null && !id.isBlank()) {
+            return id;
+        }
+        String title = questFile.title();
+        return title == null || title.isBlank() ? "project" : title;
     }
 
     @Override
-    public void updateIntervalMinutes(int minutes) {
-        if (minutes < 1) {
-            throw new IllegalArgumentException("Autosave interval must be at least one minute");
+    public synchronized int getIntervalMinutes() {
+        return userSettings.autosaveIntervalMinutes();
+    }
+
+    @Override
+    public synchronized void updateIntervalMinutes(int minutes) {
+        if (minutes < 0) {
+            throw new IllegalArgumentException("Autosave interval must be zero or greater");
         }
-        synchronized (this) {
-            autosaveIntervalMinutes = minutes;
-        }
-        storeDao.setSetting(AUTOSAVE_SETTING_KEY, Integer.toString(minutes));
-        restartAutosaveScheduler();
+        userSettings = userSettings.withAutosaveInterval(minutes);
+        UserSettings.save(userSettings);
+        autosaveService.updateInterval(minutes);
+    }
+
+    @Override
+    public synchronized boolean isZhTemplateEnabled() {
+        return userSettings.createZhTemplateOnGenerate();
+    }
+
+    @Override
+    public synchronized void updateZhTemplateEnabled(boolean enabled) {
+        userSettings = userSettings.withZhTemplate(enabled);
+        UserSettings.save(userSettings);
     }
 }
 

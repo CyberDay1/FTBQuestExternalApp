@@ -86,7 +86,8 @@ class SnbtQuestMapperTest {
         }
       ]
     }
-  ]
+  ],
+  loot_tables:[]
 }
 """;
 

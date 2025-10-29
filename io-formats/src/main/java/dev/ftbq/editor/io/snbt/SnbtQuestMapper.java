@@ -3,6 +3,7 @@ package dev.ftbq.editor.io.snbt;
 import dev.ftbq.editor.domain.AdvancementTask;
 import dev.ftbq.editor.domain.Chapter;
 import dev.ftbq.editor.domain.Dependency;
+import dev.ftbq.editor.domain.ChapterGroup;
 import dev.ftbq.editor.domain.ItemRef;
 import dev.ftbq.editor.domain.ItemReward;
 import dev.ftbq.editor.domain.ItemTask;
@@ -20,6 +21,9 @@ import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.Objects;
 import java.util.StringJoiner;
 
 /**
@@ -28,6 +32,22 @@ import java.util.StringJoiner;
 public class SnbtQuestMapper {
 
     private static final String INDENT = "  ";
+
+    public Fragments fragmentsFor(QuestFile file) {
+        Objects.requireNonNull(file, "file");
+        SnbtIdRegistry ids = new SnbtIdRegistry(file);
+        String data = toSnbt(file);
+        String chapterGroups = buildChapterGroups(file, ids);
+        Map<Chapter, String> chapterSnippets = new LinkedHashMap<>();
+        for (Chapter chapter : file.chapters()) {
+            chapterSnippets.put(chapter, buildChapterSnippet(chapter, ids));
+        }
+        Map<LootTable, String> rewardSnippets = new LinkedHashMap<>();
+        for (LootTable table : file.lootTables()) {
+            rewardSnippets.put(table, buildLootTableSnippet(table));
+        }
+        return new Fragments(data, chapterGroups, chapterSnippets, rewardSnippets);
+    }
 
     public String toSnbt(QuestFile file) {
         var builder = new StringBuilder();
@@ -43,6 +63,12 @@ public class SnbtQuestMapper {
         appendLine(builder, 1, "],");
         appendLootTables(builder, file.lootTables());
         appendLine(builder, 0, "}");
+        return builder.toString();
+    }
+
+    private String buildChapterSnippet(Chapter chapter, SnbtIdRegistry ids) {
+        var builder = new StringBuilder();
+        appendChapter(builder, chapter, true, ids);
         return builder.toString();
     }
 
@@ -151,6 +177,12 @@ public class SnbtQuestMapper {
         appendLine(builder, 1, "]");
     }
 
+    private String buildLootTableSnippet(LootTable table) {
+        var builder = new StringBuilder();
+        appendLootTable(builder, table);
+        return builder.toString();
+    }
+
     private void appendLootTableItems(StringBuilder builder, LootTable table) {
         List<LootEntry> entries = new ArrayList<>();
         for (LootPool pool : table.pools()) {
@@ -206,5 +238,50 @@ public class SnbtQuestMapper {
 
     private static String escape(String s) {
         return s.replace("\"", "\\\"");
+    }
+
+    private String buildChapterGroups(QuestFile file, SnbtIdRegistry ids) {
+        var builder = new StringBuilder();
+        appendLine(builder, 0, "{");
+        appendLine(builder, 1, "chapter_groups:[");
+        var groups = file.chapterGroups();
+        for (int i = 0; i < groups.size(); i++) {
+            appendChapterGroup(builder, groups.get(i), i == groups.size() - 1, ids);
+        }
+        appendLine(builder, 1, "]");
+        appendLine(builder, 0, "}");
+        return builder.toString();
+    }
+
+    private void appendChapterGroup(StringBuilder builder, ChapterGroup group, boolean last, SnbtIdRegistry ids) {
+        appendLine(builder, 2, "{");
+        appendLine(builder, 3, "id:" + ids.longIdForChapterGroup(group) + ",");
+        appendLine(builder, 3, "title:\"" + escape(group.title()) + "\",");
+        appendLine(builder, 3, "icon:\"" + escape(group.icon().icon()) + "\",");
+        appendLine(builder, 3, "visibility:\"" + group.visibility().name().toLowerCase(Locale.ROOT) + "\",");
+        appendLine(builder, 3, "chapters:[" + formatChapterList(group, ids) + "]");
+        appendLine(builder, 2, "}" + (last ? "" : ","));
+    }
+
+    private String formatChapterList(ChapterGroup group, SnbtIdRegistry ids) {
+        var joiner = new StringJoiner(", ");
+        for (String chapterId : group.chapterIds()) {
+            joiner.add(Long.toString(ids.longIdForChapterId(chapterId)));
+        }
+        return joiner.toString();
+    }
+
+    private void appendLootTable(StringBuilder builder, LootTable table) {
+        appendLine(builder, 0, "{");
+        appendLine(builder, 1, "id:\"" + escape(table.id()) + "\",");
+        appendLine(builder, 1, "icon:\"" + escape(table.iconId().orElse("minecraft:book")) + "\",");
+        appendLootTableItems(builder, table);
+        appendLine(builder, 0, "}");
+    }
+
+    public record Fragments(String data,
+                            String chapterGroups,
+                            Map<Chapter, String> chapters,
+                            Map<LootTable, String> rewardTables) {
     }
 }
