@@ -16,6 +16,9 @@ import javafx.scene.control.TreeCell;
 import javafx.scene.control.TreeItem;
 import javafx.scene.control.TreeView;
 import javafx.scene.input.ContextMenuEvent;
+import javafx.scene.input.ClipboardContent;
+import javafx.scene.input.Dragboard;
+import javafx.scene.input.TransferMode;
 import javafx.util.Callback;
 
 import java.util.ArrayList;
@@ -33,6 +36,8 @@ public class ChapterGroupBrowserController {
     private final TreeItem<TreeNodeData> rootItem = new TreeItem<>(new TreeNodeData("root", NodeType.ROOT, null, null));
 
     private ChapterGroupBrowserViewModel viewModel;
+    private Chapter draggingChapter;
+    private ChapterGroup draggingFromGroup;
 
     private final ListChangeListener<ChapterGroup> groupsListener = change -> {
         while (change.next()) {
@@ -87,6 +92,68 @@ public class ChapterGroupBrowserController {
 
     private Callback<TreeView<TreeNodeData>, TreeCell<TreeNodeData>> createCellFactory() {
         return treeView -> new TreeCell<>() {
+            {
+                setOnDragDetected(event -> {
+                    if (viewModel == null) {
+                        return;
+                    }
+                    TreeNodeData data = getItem();
+                    if (data != null && data.type() == NodeType.CHAPTER && data.chapter() != null) {
+                        draggingChapter = data.chapter();
+                        draggingFromGroup = data.group();
+                        Dragboard dragboard = startDragAndDrop(TransferMode.MOVE);
+                        ClipboardContent content = new ClipboardContent();
+                        content.putString(draggingChapter.getName());
+                        dragboard.setContent(content);
+                        event.consume();
+                    }
+                });
+
+                setOnDragOver(event -> {
+                    if (draggingChapter == null) {
+                        return;
+                    }
+                    TreeNodeData data = getItem();
+                    if (data == null) {
+                        return;
+                    }
+                    if (data.type() == NodeType.GROUP && data.group() != null && data.group() != draggingFromGroup) {
+                        event.acceptTransferModes(TransferMode.MOVE);
+                        event.consume();
+                    } else if (data.type() == NodeType.CHAPTER && data.group() != null && data.group() != draggingFromGroup) {
+                        event.acceptTransferModes(TransferMode.MOVE);
+                        event.consume();
+                    }
+                });
+
+                setOnDragDropped(event -> {
+                    boolean success = false;
+                    if (draggingChapter != null && viewModel != null) {
+                        TreeNodeData data = getItem();
+                        if (data != null) {
+                            if (data.type() == NodeType.GROUP && data.group() != null && data.group() != draggingFromGroup) {
+                                ChapterGroup targetGroup = data.group();
+                                viewModel.moveChapterToGroup(draggingChapter, targetGroup, targetGroup.getChapters().size());
+                                success = true;
+                            } else if (data.type() == NodeType.CHAPTER && data.group() != null && data.group() != draggingFromGroup) {
+                                ChapterGroup targetGroup = data.group();
+                                int targetIndex = targetGroup.getChapters().indexOf(data.chapter());
+                                viewModel.moveChapterToGroup(draggingChapter, targetGroup, targetIndex);
+                                success = true;
+                            }
+                        }
+                    }
+                    event.setDropCompleted(success);
+                    resetDragState();
+                    event.consume();
+                });
+
+                setOnDragDone(event -> {
+                    resetDragState();
+                    event.consume();
+                });
+            }
+
             @Override
             protected void updateItem(TreeNodeData item, boolean empty) {
                 super.updateItem(item, empty);
@@ -99,6 +166,11 @@ public class ChapterGroupBrowserController {
                 }
             }
         };
+    }
+
+    private void resetDragState() {
+        draggingChapter = null;
+        draggingFromGroup = null;
     }
 
     private void handleTreeContextMenuRequest(ContextMenuEvent event) {

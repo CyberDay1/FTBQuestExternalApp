@@ -95,6 +95,33 @@ public class ChapterGroupBrowserViewModel {
         moveChapter(group, chapter, 1);
     }
 
+    public void moveChapterToGroup(Chapter source, ChapterGroup targetGroup, int targetIndex) {
+        Objects.requireNonNull(source, "source");
+        Objects.requireNonNull(targetGroup, "targetGroup");
+        ChapterGroup from = findGroupContaining(source);
+        if (from == null || from == targetGroup) {
+            return;
+        }
+        if (!from.getChapters().remove(source)) {
+            return;
+        }
+        ObservableList<Chapter> targetChapters = targetGroup.getChapters();
+        if (targetIndex < 0 || targetIndex > targetChapters.size()) {
+            targetChapters.add(source);
+        } else {
+            targetChapters.add(targetIndex, source);
+        }
+    }
+
+    private ChapterGroup findGroupContaining(Chapter chapter) {
+        for (ChapterGroup group : chapterGroups) {
+            if (group.getChapters().contains(chapter)) {
+                return group;
+            }
+        }
+        return null;
+    }
+
     public void loadFromQuestFile(QuestFile questFile) {
         Objects.requireNonNull(questFile, "questFile");
         chapterGroups.clear();
