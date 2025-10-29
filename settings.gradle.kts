@@ -1,6 +1,7 @@
 rootProject.name = "ftb-quest-external-app"
 
 include(
+    "app",
     "core-domain",
     "io-formats",
     "ingestion",
