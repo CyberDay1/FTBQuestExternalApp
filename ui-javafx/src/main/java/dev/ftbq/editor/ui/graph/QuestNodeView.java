@@ -5,23 +5,27 @@ import javafx.css.Styleable;
 import javafx.css.StyleableObjectProperty;
 import javafx.css.StyleableProperty;
 import javafx.css.converter.PaintConverter;
+import javafx.geometry.Pos;
+import javafx.scene.control.Label;
 import javafx.scene.input.MouseButton;
-import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.Pane;
+import javafx.scene.layout.StackPane;
+import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.Paint;
-import javafx.scene.shape.Circle;
-import javafx.scene.text.Text;
+import javafx.scene.shape.Rectangle;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
+import java.util.function.Consumer;
 
 public class QuestNodeView extends Pane {
     private static final Color DEFAULT_FILL_COLOR = Color.web("#2f4f4f");
     private static final Color DEFAULT_STROKE_COLOR = Color.web("#b0b0b0");
     private static final Color DEFAULT_LABEL_COLOR = Color.web("#e6e6e6");
+
     private static final CssMetaData<QuestNodeView, Paint> FILL_PAINT_META =
             new CssMetaData<>("-quest-node-fill", PaintConverter.getInstance(), DEFAULT_FILL_COLOR) {
                 @Override
@@ -34,6 +38,7 @@ public class QuestNodeView extends Pane {
                     return node.fillPaint;
                 }
             };
+
     private static final CssMetaData<QuestNodeView, Paint> STROKE_PAINT_META =
             new CssMetaData<>("-quest-node-stroke", PaintConverter.getInstance(), DEFAULT_STROKE_COLOR) {
                 @Override
@@ -46,6 +51,7 @@ public class QuestNodeView extends Pane {
                     return node.strokePaint;
                 }
             };
+
     private static final CssMetaData<QuestNodeView, Paint> LABEL_PAINT_META =
             new CssMetaData<>("-quest-node-label", PaintConverter.getInstance(), DEFAULT_LABEL_COLOR) {
                 @Override
@@ -58,6 +64,7 @@ public class QuestNodeView extends Pane {
                     return node.labelPaint;
                 }
             };
+
     private static final List<CssMetaData<? extends Styleable, ?>> CSS_META_DATA;
 
     static {
@@ -69,115 +76,219 @@ public class QuestNodeView extends Pane {
     }
 
     public final String questId;
+    private final GraphCanvas graphCanvas;
     private double worldX;
     private double worldY;
-    private final GraphCanvas graphCanvas;
-    private double dragDX;
-    private double dragDY;
-    private double pressScreenX;
-    private double pressScreenY;
-    private double pressLocalX;
-    private double pressLocalY;
-    private double pressOffsetX;
-    private double pressOffsetY;
-    private double lastPointerWorldX;
-    private double lastPointerWorldY;
-    private boolean dragging;
-    private static final double DRAG_THRESHOLD = 4.0;
-    private final Circle body = new Circle(18);
-    private final Text label = new Text();
     private boolean selected;
+    private boolean dragging;
 
-    private final StyleableObjectProperty<Paint> fillPaint = new StyleableObjectProperty<>(DEFAULT_FILL_COLOR) {
-        @Override
-        public Object getBean() {
-            return QuestNodeView.this;
-        }
+    // NEW: Double-click detection
+    private long lastClickTime = 0;
+    private static final int DOUBLE_CLICK_DELAY = 500;
 
-        @Override
-        public String getName() {
-            return "questNodeFill";
-        }
+    private Consumer<String> onEdit;
+    private TriConsumer<String, Double, Double> onMove;
 
-        @Override
-        public CssMetaData<QuestNodeView, Paint> getCssMetaData() {
-            return FILL_PAINT_META;
-        }
-    };
-    private final StyleableObjectProperty<Paint> strokePaint = new StyleableObjectProperty<>(DEFAULT_STROKE_COLOR) {
-        @Override
-        public Object getBean() {
-            return QuestNodeView.this;
-        }
+    private final Rectangle background;
+    private final Label titleLabel;
 
-        @Override
-        public String getName() {
-            return "questNodeStroke";
-        }
+    private final StyleableObjectProperty<Paint> fillPaint =
+            new StyleableObjectProperty<>(DEFAULT_FILL_COLOR) {
+                @Override
+                public Object getBean() {
+                    return QuestNodeView.this;
+                }
 
-        @Override
-        public CssMetaData<QuestNodeView, Paint> getCssMetaData() {
-            return STROKE_PAINT_META;
-        }
-    };
-    private final StyleableObjectProperty<Paint> labelPaint = new StyleableObjectProperty<>(DEFAULT_LABEL_COLOR) {
-        @Override
-        public Object getBean() {
-            return QuestNodeView.this;
-        }
+                @Override
+                public String getName() {
+                    return "fillPaint";
+                }
 
-        @Override
-        public String getName() {
-            return "questNodeLabel";
-        }
+                @Override
+                public CssMetaData<QuestNodeView, Paint> getCssMetaData() {
+                    return FILL_PAINT_META;
+                }
+            };
 
-        @Override
-        public CssMetaData<QuestNodeView, Paint> getCssMetaData() {
-            return LABEL_PAINT_META;
-        }
-    };
+    private final StyleableObjectProperty<Paint> strokePaint =
+            new StyleableObjectProperty<>(DEFAULT_STROKE_COLOR) {
+                @Override
+                public Object getBean() {
+                    return QuestNodeView.this;
+                }
 
-    public interface MoveListener {
-        void moved(String questId, double worldX, double worldY);
-    }
+                @Override
+                public String getName() {
+                    return "strokePaint";
+                }
 
-    private MoveListener onMove;
-    private EditListener onEdit;
+                @Override
+                public CssMetaData<QuestNodeView, Paint> getCssMetaData() {
+                    return STROKE_PAINT_META;
+                }
+            };
 
-    public interface EditListener {
-        void edit(String questId);
-    }
+    private final StyleableObjectProperty<Paint> labelPaint =
+            new StyleableObjectProperty<>(DEFAULT_LABEL_COLOR) {
+                @Override
+                public Object getBean() {
+                    return QuestNodeView.this;
+                }
+
+                @Override
+                public String getName() {
+                    return "labelPaint";
+                }
+
+                @Override
+                public CssMetaData<QuestNodeView, Paint> getCssMetaData() {
+                    return LABEL_PAINT_META;
+                }
+            };
 
     public QuestNodeView(String questId, String title, double worldX, double worldY, GraphCanvas graphCanvas) {
-        this.questId = questId;
-        this.graphCanvas = Objects.requireNonNull(graphCanvas, "graphCanvas");
+        this.questId = Objects.requireNonNull(questId, "questId");
         this.worldX = worldX;
         this.worldY = worldY;
-        getStyleClass().addAll("quest-node", "dark-theme");
-        label.getStyleClass().add("quest-node-label");
-        body.setFill(DEFAULT_FILL_COLOR);
-        body.setStroke(DEFAULT_STROKE_COLOR);
-        label.setText(title);
-        label.setFill(DEFAULT_LABEL_COLOR);
-        label.setMouseTransparent(true);
-        label.layoutBoundsProperty().addListener((obs, oldBounds, newBounds) -> {
-            label.setLayoutX(-newBounds.getWidth() / 2);
-            label.setLayoutY(newBounds.getHeight() / 4);
-        });
-        bindStyleProperties();
-        getChildren().addAll(body, label);
-        setPickOnBounds(false);
+        this.graphCanvas = Objects.requireNonNull(graphCanvas, "graphCanvas");
+
+        getStyleClass().add("quest-node");
+
+        background = new Rectangle(64, 64);
+        background.setArcWidth(8);
+        background.setArcHeight(8);
+        background.fillProperty().bind(fillPaint);
+        background.strokeProperty().bind(strokePaint);
+        background.setStrokeWidth(2);
+
+        titleLabel = new Label(title);
+        titleLabel.textFillProperty().bind(labelPaint);
+        titleLabel.setMaxWidth(120);
+        titleLabel.setWrapText(true);
+        titleLabel.setAlignment(Pos.CENTER);
+        titleLabel.getStyleClass().add("quest-title");
+
+        StackPane iconContainer = new StackPane(background);
+        VBox layout = new VBox(4, iconContainer, titleLabel);
+        layout.setAlignment(Pos.CENTER);
+
+        getChildren().add(layout);
+
+        setPickOnBounds(true);
+        setMouseTransparent(false);
+
+        setupEventHandlers();
         updateScreenPosition();
-        enableDrag();
-        enableEdit();
     }
 
-    public void setOnMove(MoveListener listener) {
-        this.onMove = listener;
+    private void setupEventHandlers() {
+        final double[] dragStart = new double[2];
+
+        // ENHANCED: Click handling with double-click detection
+        setOnMouseClicked(event -> {
+            if (event.getButton() == MouseButton.PRIMARY) {
+                long currentTime = System.currentTimeMillis();
+                long timeSinceLastClick = currentTime - lastClickTime;
+
+                if (timeSinceLastClick < DOUBLE_CLICK_DELAY && !dragging) {
+                    // Double-click detected
+                    System.out.println("Double-click detected on quest: " + questId);
+                    if (onEdit != null) {
+                        onEdit.accept(questId);
+                    }
+                    event.consume();
+                    lastClickTime = 0;
+                } else {
+                    // Single click - let it propagate for selection
+                    lastClickTime = currentTime;
+                }
+            }
+        });
+
+        setOnMousePressed(event -> {
+            if (event.getButton() == MouseButton.PRIMARY && !event.isShiftDown()) {
+                dragStart[0] = event.getSceneX();
+                dragStart[1] = event.getSceneY();
+                dragging = false;
+                event.consume();
+            }
+        });
+
+        setOnMouseDragged(event -> {
+            if (event.getButton() == MouseButton.PRIMARY && !event.isShiftDown()) {
+                dragging = true;
+                double[] delta = graphCanvas.screenToWorldDelta(
+                        dragStart[0], dragStart[1],
+                        event.getSceneX(), event.getSceneY()
+                );
+                worldX += delta[0];
+                worldY += delta[1];
+                dragStart[0] = event.getSceneX();
+                dragStart[1] = event.getSceneY();
+                updateScreenPosition();
+                event.consume();
+            }
+        });
+
+        setOnMouseReleased(event -> {
+            if (dragging) {
+                if (graphCanvas.isSnapToGrid()) {
+                    worldX = graphCanvas.snap(worldX);
+                    worldY = graphCanvas.snap(worldY);
+                    updateScreenPosition();
+                }
+                if (onMove != null) {
+                    onMove.accept(questId, worldX, worldY);
+                }
+                dragging = false;
+                event.consume();
+            }
+        });
+
+        setOnMouseEntered(event -> {
+            if (!dragging) {
+                background.setStrokeWidth(3);
+                setStyle("-fx-cursor: hand;");
+            }
+        });
+
+        setOnMouseExited(event -> {
+            if (!dragging) {
+                background.setStrokeWidth(selected ? 3 : 2);
+                setStyle("-fx-cursor: default;");
+            }
+        });
     }
 
-    public void setOnEdit(EditListener listener) {
-        this.onEdit = listener;
+    public void setWorldPosition(double x, double y) {
+        this.worldX = x;
+        this.worldY = y;
+        updateScreenPosition();
+    }
+
+    public void updateScreenPosition() {
+        double[] screen = graphCanvas.worldToScreen(worldX, worldY);
+        setLayoutX(screen[0] - getWidth() / 2);
+        setLayoutY(screen[1] - getHeight() / 2);
+    }
+
+    public void setSelected(boolean selected) {
+        this.selected = selected;
+        if (selected) {
+            background.setStroke(Color.web("#4a9eff"));
+            background.setStrokeWidth(3);
+        } else {
+            background.strokeProperty().bind(strokePaint);
+            background.setStrokeWidth(2);
+        }
+    }
+
+    public void setOnEdit(Consumer<String> callback) {
+        this.onEdit = callback;
+    }
+
+    public void setOnMove(TriConsumer<String, Double, Double> callback) {
+        this.onMove = callback;
     }
 
     public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
@@ -189,174 +300,44 @@ public class QuestNodeView extends Pane {
         return getClassCssMetaData();
     }
 
-    public double getWorldX() {
-        return worldX;
+    public StyleableObjectProperty<Paint> fillPaintProperty() {
+        return fillPaint;
     }
 
-    public double getWorldY() {
-        return worldY;
+    public Paint getFillPaint() {
+        return fillPaint.get();
     }
 
-    public void setWorldPosition(double x, double y) {
-        this.worldX = x;
-        this.worldY = y;
+    public void setFillPaint(Paint paint) {
+        fillPaint.set(paint);
     }
 
-    public void updateScreenPosition() {
-        double[] screen = graphCanvas.worldToScreen(worldX, worldY);
-        relocate(screen[0] - body.getRadius(), screen[1] - body.getRadius());
+    public StyleableObjectProperty<Paint> strokePaintProperty() {
+        return strokePaint;
     }
 
-    public void setSelected(boolean selected) {
-        this.selected = selected;
-        if (selected) {
-            body.setStroke(Color.web("#ffd37f"));
-            body.setStrokeWidth(2.4);
-        } else {
-            body.setStroke(toColor(strokePaint.get(), DEFAULT_STROKE_COLOR));
-            body.setStrokeWidth(1.0);
-        }
+    public Paint getStrokePaint() {
+        return strokePaint.get();
     }
 
-    private void enableDrag() {
-        addEventFilter(MouseEvent.MOUSE_PRESSED, e -> {
-            double pointerX = coordinateWithFallback(e);
-            double pointerY = coordinateWithFallbackY(e);
-            dragDX = pointerX;
-            dragDY = pointerY;
-            pressScreenX = pointerX;
-            pressScreenY = pointerY;
-            pressLocalX = e.getX();
-            pressLocalY = e.getY();
-            double scale = graphCanvas != null ? graphCanvas.getScale() : 1.0;
-            if (scale == 0.0) {
-                scale = 1.0;
-            }
-            pressOffsetX = (pressLocalX - body.getRadius()) / scale;
-            pressOffsetY = (pressLocalY - body.getRadius()) / scale;
-            if (graphCanvas != null) {
-                double[] pointerWorld = pointerWorld(e);
-                lastPointerWorldX = pointerWorld[0];
-                lastPointerWorldY = pointerWorld[1];
-            } else {
-                lastPointerWorldX = worldX;
-                lastPointerWorldY = worldY;
-            }
-            dragging = false;
-        });
-        addEventFilter(MouseEvent.MOUSE_DRAGGED, e -> {
-            if (graphCanvas == null) {
-                return;
-            }
-            double pointerX = coordinateWithFallback(e);
-            double pointerY = coordinateWithFallbackY(e);
-            double[] pointerWorld = pointerWorld(e);
-            if (!dragging) {
-                double dx = pointerX - pressScreenX;
-                double dy = pointerY - pressScreenY;
-                if (Math.hypot(dx, dy) >= DRAG_THRESHOLD) {
-                    dragging = true;
-                } else {
-                    lastPointerWorldX = pointerWorld[0];
-                    lastPointerWorldY = pointerWorld[1];
-                    return;
-                }
-            }
-            double deltaX = pointerWorld[0] - lastPointerWorldX;
-            double deltaY = pointerWorld[1] - lastPointerWorldY;
-            worldX += deltaX;
-            worldY += deltaY;
-            lastPointerWorldX = pointerWorld[0];
-            lastPointerWorldY = pointerWorld[1];
-            dragDX = pointerX;
-            dragDY = pointerY;
-            updateScreenPosition();
-        });
-        addEventFilter(MouseEvent.MOUSE_RELEASED, e -> {
-            if (graphCanvas != null) {
-                double[] pointerWorld = pointerWorld(e);
-                lastPointerWorldX = pointerWorld[0];
-                lastPointerWorldY = pointerWorld[1];
-                worldX = pointerWorld[0] - pressOffsetX;
-                worldY = pointerWorld[1] - pressOffsetY;
-                updateScreenPosition();
-            }
-            if (graphCanvas != null && onMove != null) {
-                onMove.moved(questId, worldX, worldY);
-            }
-            dragging = false;
-        });
+    public void setStrokePaint(Paint paint) {
+        strokePaint.set(paint);
     }
 
-    private void enableEdit() {
-        addEventHandler(MouseEvent.MOUSE_CLICKED, e -> {
-            if (e.getButton() == MouseButton.PRIMARY && e.getClickCount() >= 2 && !dragging) {
-                if (onEdit != null) {
-                    onEdit.edit(questId);
-                    e.consume();
-                }
-            }
-        });
+    public StyleableObjectProperty<Paint> labelPaintProperty() {
+        return labelPaint;
     }
 
-    private double coordinateWithFallback(MouseEvent event) {
-        double scene = event.getSceneX();
-        if (!Double.isNaN(scene)) {
-            return scene;
-        }
-        double screen = event.getScreenX();
-        if (!Double.isNaN(screen)) {
-            return screen;
-        }
-        return event.getX();
+    public Paint getLabelPaint() {
+        return labelPaint.get();
     }
 
-    private double coordinateWithFallbackY(MouseEvent event) {
-        double scene = event.getSceneY();
-        if (!Double.isNaN(scene)) {
-            return scene;
-        }
-        double screen = event.getScreenY();
-        if (!Double.isNaN(screen)) {
-            return screen;
-        }
-        return event.getY();
+    public void setLabelPaint(Paint paint) {
+        labelPaint.set(paint);
     }
 
-    private double[] pointerWorld(MouseEvent event) {
-        if (graphCanvas == null) {
-            return new double[]{worldX, worldY};
-        }
-        double sceneX = event.getSceneX();
-        double sceneY = event.getSceneY();
-        double targetX = Double.isNaN(sceneX) ? event.getScreenX() : sceneX;
-        double targetY = Double.isNaN(sceneY) ? event.getScreenY() : sceneY;
-        return graphCanvas.screenToWorld(targetX, targetY);
+    @FunctionalInterface
+    public interface TriConsumer<T, U, V> {
+        void accept(T t, U u, V v);
     }
-
-    private void bindStyleProperties() {
-        fillPaint.addListener((obs, oldPaint, newPaint) -> body.setFill(toColor(newPaint, DEFAULT_FILL_COLOR)));
-        strokePaint.addListener((obs, oldPaint, newPaint) -> {
-            if (!selected) {
-                body.setStroke(toColor(newPaint, DEFAULT_STROKE_COLOR));
-            }
-        });
-        labelPaint.addListener((obs, oldPaint, newPaint) -> label.setFill(toColor(newPaint, DEFAULT_LABEL_COLOR)));
-        body.setFill(toColor(fillPaint.get(), DEFAULT_FILL_COLOR));
-        if (!selected) {
-            body.setStroke(toColor(strokePaint.get(), DEFAULT_STROKE_COLOR));
-            body.setStrokeWidth(1.0);
-        }
-        label.setFill(toColor(labelPaint.get(), DEFAULT_LABEL_COLOR));
-    }
-
-    private Color toColor(Paint paint, Color fallback) {
-        if (paint instanceof Color color) {
-            return color;
-        }
-        return fallback;
-    }
-
 }
-
-
