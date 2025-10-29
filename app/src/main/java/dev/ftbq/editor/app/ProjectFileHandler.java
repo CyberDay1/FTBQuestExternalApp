@@ -100,7 +100,10 @@ public final class ProjectFileHandler {
                     continue;
                 }
                 switch (name) {
-                    case QUEST_FILE_ENTRY -> questFile = JsonConfig.OBJECT_MAPPER.readValue(zip, QuestFile.class);
+                    case QUEST_FILE_ENTRY -> {
+                        byte[] data = zip.readAllBytes();
+                        questFile = JsonConfig.OBJECT_MAPPER.readValue(data, QuestFile.class);
+                    }
                     case ITEMS_ENTRY -> items = new ArrayList<>(itemDatabase.fromJsonBytes(zip.readAllBytes()));
                     default -> { /* ignore other entries */ }
                 }
