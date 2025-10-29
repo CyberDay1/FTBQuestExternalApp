@@ -1,0 +1,6 @@
+.quest-canvas-root {
+    -fx-snap-to-pixel: true;
+}
+.label, .button, .check-box, .spinner, .text-field, .combo-box {
+    -fx-font-size: 13px;
+}

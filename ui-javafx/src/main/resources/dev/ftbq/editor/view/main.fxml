@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.geometry.Insets?>
+<BorderPane fx:controller="dev.ftbq.editor.controller.ChapterEditorController" xmlns:fx="http://javafx.com/fxml">
+    <top>
+        <ToolBar styleClass="main-toolbar">
+            <Button text="☰" />
+            <Separator orientation="VERTICAL"/>
+            <Label text="FTB Quest Editor" styleClass="title"/>
+            <Pane Hgrow="ALWAYS"/>
+            <Button text="Settings" onAction="#openSettings" />
+        </ToolBar>
+    </top>
+    <center>
+        <StackPane fx:id="canvasHolder" BorderPane.alignment="CENTER" styleClass="canvas-container"/>
+    </center>
+</BorderPane>

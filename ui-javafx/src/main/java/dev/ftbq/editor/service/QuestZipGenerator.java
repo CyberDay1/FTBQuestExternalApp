@@ -122,7 +122,7 @@ public final class QuestZipGenerator {
         if (zhSource != null && Files.exists(zhSource)) {
             copyFile(zhSource, zhTarget);
         } else {
-            String zhContent = langBuilder.buildStub(questFile, settings.createZhTemplateOnGenerate());
+            String zhContent = langBuilder.buildStub(questFile, false);
             writeString(zhTarget, zhContent);
         }
     }

@@ -1,0 +1,25 @@
+.root {
+    -fx-base: #f7f7f9;
+    -fx-background: #ffffff;
+    -fx-control-inner-background: #ffffff;
+    -fx-text-fill: #222222;
+    -fx-accent: #2d7efb;
+}
+.main-toolbar {
+    -fx-background-color: linear-gradient(#f6f7fb, #eceef4);
+    -fx-padding: 6 10 6 10;
+}
+.main-toolbar .label.title {
+    -fx-font-size: 16px;
+    -fx-font-weight: bold;
+}
+.canvas-container {
+    -fx-background-color: #ffffff;
+}
+.settings-root {
+    -fx-background-color: #f5f6fa;
+}
+.settings-title {
+    -fx-font-size: 16px;
+    -fx-font-weight: bold;
+}
