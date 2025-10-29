@@ -27,22 +27,23 @@ public class SnbtQuestMapper {
 
     public String toSnbt(QuestFile file) {
         var builder = new StringBuilder();
+        var ids = new SnbtIdRegistry(file);
         appendLine(builder, 0, "{");
         appendLine(builder, 1, "id:\"" + escape(file.id()) + "\",");
         appendLine(builder, 1, "title:\"" + escape(file.title()) + "\",");
         appendLine(builder, 1, "chapters:[");
         var chapters = file.chapters();
         for (int i = 0; i < chapters.size(); i++) {
-            appendChapter(builder, chapters.get(i), i == chapters.size() - 1);
+            appendChapter(builder, chapters.get(i), i == chapters.size() - 1, ids);
         }
         appendLine(builder, 1, "]");
         appendLine(builder, 0, "}");
         return builder.toString();
     }
 
-    private void appendChapter(StringBuilder builder, Chapter chapter, boolean last) {
+    private void appendChapter(StringBuilder builder, Chapter chapter, boolean last, SnbtIdRegistry ids) {
         appendLine(builder, 2, "{");
-        appendLine(builder, 3, "id:\"" + escape(chapter.id()) + "\",");
+        appendLine(builder, 3, "id:" + ids.longIdForChapter(chapter) + ",");
         appendLine(builder, 3, "title:\"" + escape(chapter.title()) + "\",");
         appendLine(builder, 3, "icon:\"" + escape(chapter.icon().icon()) + "\",");
         appendLine(builder, 3, "background:\"" + escape(chapter.background().texture()) + "\",");
@@ -50,22 +51,22 @@ public class SnbtQuestMapper {
         appendLine(builder, 3, "quests:[");
         var quests = chapter.quests();
         for (int i = 0; i < quests.size(); i++) {
-            appendQuest(builder, quests.get(i), i == quests.size() - 1);
+            appendQuest(builder, quests.get(i), i == quests.size() - 1, ids);
         }
         appendLine(builder, 3, "]");
         appendLine(builder, 2, "}" + (last ? "" : ","));
     }
 
-    private void appendQuest(StringBuilder builder, Quest quest, boolean last) {
+    private void appendQuest(StringBuilder builder, Quest quest, boolean last, SnbtIdRegistry ids) {
         appendLine(builder, 4, "{");
-        appendLine(builder, 5, "id:\"" + escape(quest.id()) + "\",");
+        appendLine(builder, 5, "id:" + ids.longIdForQuest(quest) + ",");
         appendLine(builder, 5, "title:\"" + escape(quest.title()) + "\",");
         appendLine(builder, 5, "description:\"" + escape(quest.description()) + "\",");
         appendLine(builder, 5, "icon:\"" + escape(quest.icon().icon()) + "\",");
         appendLine(builder, 5, "visibility:\"" + quest.visibility().name().toLowerCase(Locale.ROOT) + "\",");
         appendLine(builder, 5, "tasks:[" + formatList(tasksToSnbt(quest.tasks())) + "],");
         appendLine(builder, 5, "rewards:[" + formatList(rewardsToSnbt(quest.rewards())) + "],");
-        appendLine(builder, 5, "dependencies:[" + formatList(depsToSnbt(quest.dependencies())) + "]");
+        appendLine(builder, 5, "dependencies:[" + formatList(depsToSnbt(quest.dependencies(), ids)) + "]");
         appendLine(builder, 4, "}" + (last ? "" : ","));
     }
 
@@ -116,10 +117,10 @@ public class SnbtQuestMapper {
         };
     }
 
-    private List<String> depsToSnbt(List<Dependency> dependencies) {
+    private List<String> depsToSnbt(List<Dependency> dependencies, SnbtIdRegistry ids) {
         var entries = new ArrayList<String>(dependencies.size());
         for (Dependency dependency : dependencies) {
-            entries.add("{quest:\"" + escape(dependency.questId()) + "\", required:" + booleanToByte(dependency.required()) + "}");
+            entries.add("{quest:" + ids.longIdForQuestId(dependency.questId()) + ", required:" + booleanToByte(dependency.required()) + "}");
         }
         return entries;
     }

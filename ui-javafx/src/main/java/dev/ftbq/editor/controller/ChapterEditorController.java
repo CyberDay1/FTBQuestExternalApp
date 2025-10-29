@@ -2,10 +2,12 @@ package dev.ftbq.editor.controller;
 
 import dev.ftbq.editor.domain.Chapter;
 import dev.ftbq.editor.domain.Dependency;
+import dev.ftbq.editor.domain.IconRef;
 import dev.ftbq.editor.domain.Quest;
 import dev.ftbq.editor.domain.Reward;
 import dev.ftbq.editor.domain.Task;
 import dev.ftbq.editor.domain.TaskTypeRegistry;
+import dev.ftbq.editor.domain.Visibility;
 import dev.ftbq.editor.services.UiServiceLocator;
 import dev.ftbq.editor.services.templates.RewardTemplates;
 import dev.ftbq.editor.services.templates.TaskTemplates;
@@ -24,6 +26,7 @@ import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.control.ButtonBar;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.CheckBox;
+import javafx.scene.control.ComboBox;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.Dialog;
 import javafx.scene.control.Label;
@@ -972,15 +975,25 @@ public class ChapterEditorController {
         TextField titleField = new TextField(quest.title());
         TextArea descriptionArea = new TextArea(quest.description());
         descriptionArea.setPrefRowCount(5);
+        TextField iconField = new TextField(quest.icon() != null ? quest.icon().icon() : "minecraft:book");
+        ComboBox<Visibility> visibilityBox = new ComboBox<>(FXCollections.observableArrayList(Visibility.values()));
+        visibilityBox.setValue(quest.visibility());
+        Label idValue = new Label(quest.id());
 
         GridPane grid = new GridPane();
         grid.setHgap(12);
         grid.setVgap(8);
         grid.setPadding(new Insets(10));
-        grid.add(new Label("Title"), 0, 0);
-        grid.add(titleField, 1, 0);
-        grid.add(new Label("Description"), 0, 1);
-        grid.add(descriptionArea, 1, 1);
+        grid.add(new Label("ID"), 0, 0);
+        grid.add(idValue, 1, 0);
+        grid.add(new Label("Title"), 0, 1);
+        grid.add(titleField, 1, 1);
+        grid.add(new Label("Description"), 0, 2);
+        grid.add(descriptionArea, 1, 2);
+        grid.add(new Label("Icon"), 0, 3);
+        grid.add(iconField, 1, 3);
+        grid.add(new Label("Visibility"), 0, 4);
+        grid.add(visibilityBox, 1, 4);
 
         dialog.getDialogPane().setContent(grid);
 
@@ -993,12 +1006,14 @@ public class ChapterEditorController {
             if (button == saveButtonType) {
                 String title = titleField.getText() == null ? "" : titleField.getText().trim();
                 String description = descriptionArea.getText() == null ? "" : descriptionArea.getText().trim();
+                String iconText = iconField.getText() == null ? "" : iconField.getText().trim();
+                Visibility visibility = visibilityBox.getValue() == null ? Visibility.VISIBLE : visibilityBox.getValue();
                 return Quest.builder()
                         .id(quest.id())
                         .title(title)
                         .description(description)
-                        .icon(quest.icon())
-                        .visibility(quest.visibility())
+                        .icon(new IconRef(iconText.isEmpty() ? "minecraft:book" : iconText))
+                        .visibility(visibility)
                         .tasks(quest.tasks())
                         .rewards(quest.rewards())
                         .dependencies(quest.dependencies())

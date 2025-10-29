@@ -68,21 +68,21 @@ class SnbtQuestMapperTest {
   title:\"Pack Title\",
   chapters:[
     {
-      id:\"chapter_1\",
+      id:1,
       title:\"Basics\",
       icon:\"minecraft:book\",
       background:\"minecraft:textures/gui/default.png\",
       visibility:\"secret\",
       quests:[
         {
-          id:\"quest_1\",
+          id:2,
           title:\"Getting Started\",
           description:\"Collect wood\",
           icon:\"minecraft:book\",
           visibility:\"visible\",
           tasks:[{type:\"item\", item:{id:\"minecraft:oak_log\", count:16}, consume:1b}, {type:\"advancement\", advancement:\"minecraft:adventure/root\"}, {type:\"location\", dimension:\"minecraft:overworld\", x:128.0d, y:64.25d, z:-12.5d, radius:5.0d}],
           rewards:[{type:\"item\", item:{id:\"minecraft:apple\", count:3}}, {type:\"xp_amount\", amount:50}, {type:\"command\", command:\"/say Hello\", run_as_server:1b}],
-          dependencies:[{quest:\"intro\", required:1b}, {quest:\"optional\", required:0b}]
+          dependencies:[{quest:3, required:1b}, {quest:4, required:0b}]
         }
       ]
     }
