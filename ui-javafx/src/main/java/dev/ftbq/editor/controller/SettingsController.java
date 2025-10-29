@@ -26,6 +26,8 @@ import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
+import javafx.scene.control.Spinner;
+import javafx.scene.control.SpinnerValueFactory;
 import javafx.stage.FileChooser;
 import javafx.stage.Window;
 
@@ -44,6 +46,10 @@ public class SettingsController {
     private Label statusLabel;
     @FXML
     private CheckBox darkModeCheckBox;
+    @FXML
+    private Spinner<Integer> autosaveSpinner;
+    @FXML
+    private Button applyAutosaveButton;
 
     private VersionCatalog versionCatalog;
     private final CacheManager cacheManager;
@@ -52,6 +58,7 @@ public class SettingsController {
     private final StructuredLogger logger;
     private final ThemeService themeService;
     private boolean updatingThemeSelection;
+    private AutosaveSettings autosaveSettings;
 
     public SettingsController() {
         this(
@@ -96,6 +103,11 @@ public class SettingsController {
         if (addJarButton != null && addJarButton.getAccessibleText() == null) {
             addJarButton.setAccessibleText("Import Minecraft JAR");
         }
+        if (applyAutosaveButton != null && applyAutosaveButton.getAccessibleText() == null) {
+            applyAutosaveButton.setAccessibleText("Apply autosave interval");
+        }
+
+        configureAutosaveSpinner();
 
         if (darkModeCheckBox != null) {
             darkModeCheckBox.setAccessibleText("Toggle dark mode");
@@ -127,6 +139,12 @@ public class SettingsController {
         } else if (activeVersion == null) {
             updateStatus("Select a Minecraft version or import item catalogs.");
         }
+        refreshAutosaveSpinner();
+    }
+
+    public void setAutosaveSettings(AutosaveSettings autosaveSettings) {
+        this.autosaveSettings = Objects.requireNonNull(autosaveSettings, "autosaveSettings");
+        refreshAutosaveSpinner();
     }
 
     @FXML
@@ -273,6 +291,75 @@ public class SettingsController {
             return;
         }
         Platform.runLater(() -> statusLabel.setText(message));
+    }
+
+    @FXML
+    private void onApplyAutosave() {
+        if (autosaveSpinner == null) {
+            return;
+        }
+        if (autosaveSettings == null) {
+            updateStatus("Autosave is not available in this context.");
+            return;
+        }
+        Integer value = autosaveSpinner.getValue();
+        int minutes = value == null ? 1 : Math.max(1, value);
+        try {
+            autosaveSettings.updateIntervalMinutes(minutes);
+            updateStatus("Autosave interval set to " + minutes + " minute" + (minutes == 1 ? "" : "s") + ".");
+        } catch (RuntimeException ex) {
+            updateStatus("Failed to update autosave interval: " + ex.getMessage());
+            logger.warn("Autosave interval update failed", ex);
+        }
+        refreshAutosaveSpinner();
+    }
+
+    private void configureAutosaveSpinner() {
+        if (autosaveSpinner == null) {
+            return;
+        }
+        SpinnerValueFactory.IntegerSpinnerValueFactory factory =
+                new SpinnerValueFactory.IntegerSpinnerValueFactory(1, 120, 1);
+        autosaveSpinner.setValueFactory(factory);
+        autosaveSpinner.setEditable(true);
+        autosaveSpinner.focusedProperty().addListener((obs, oldFocused, newFocused) -> {
+            if (!newFocused) {
+                commitAutosaveEditorValue();
+            }
+        });
+    }
+
+    private void commitAutosaveEditorValue() {
+        if (autosaveSpinner == null || autosaveSpinner.getValueFactory() == null) {
+            return;
+        }
+        try {
+            autosaveSpinner.increment(0);
+        } catch (RuntimeException ignored) {
+            autosaveSpinner.getValueFactory().setValue(1);
+        }
+    }
+
+    private void refreshAutosaveSpinner() {
+        if (autosaveSpinner == null || autosaveSpinner.getValueFactory() == null) {
+            return;
+        }
+        int minutes = 1;
+        if (autosaveSettings != null) {
+            try {
+                minutes = Math.max(1, autosaveSettings.getIntervalMinutes());
+            } catch (RuntimeException ex) {
+                logger.warn("Failed to read autosave interval", ex);
+            }
+        }
+        final int applied = minutes;
+        Platform.runLater(() -> autosaveSpinner.getValueFactory().setValue(applied));
+    }
+
+    public interface AutosaveSettings {
+        int getIntervalMinutes();
+
+        void updateIntervalMinutes(int minutes);
     }
 }
 

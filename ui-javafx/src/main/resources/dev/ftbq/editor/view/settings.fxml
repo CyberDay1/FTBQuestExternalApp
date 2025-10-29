@@ -23,6 +23,13 @@
                 <Button fx:id="clearIconCacheButton" text="Clear Icon Cache" onAction="#onClearIconCache" />
             </children>
         </HBox>
+        <HBox spacing="8" alignment="CENTER_LEFT">
+            <children>
+                <Label text="Autosave Interval (minutes)" />
+                <Spinner fx:id="autosaveSpinner" editable="true" prefWidth="90" />
+                <Button fx:id="applyAutosaveButton" text="Apply" onAction="#onApplyAutosave" />
+            </children>
+        </HBox>
         <CheckBox fx:id="darkModeCheckBox" text="Dark mode" />
         <Label fx:id="statusLabel" wrapText="true" />
     </children>
