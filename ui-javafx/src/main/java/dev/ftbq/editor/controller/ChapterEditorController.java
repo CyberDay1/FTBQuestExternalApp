@@ -38,6 +38,7 @@ import javafx.scene.control.TextField;
 import javafx.scene.control.TextInputDialog;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.MouseButton;
+import javafx.scene.input.MouseEvent;
 import javafx.scene.input.ClipboardContent;
 import javafx.scene.input.Dragboard;
 import javafx.scene.input.KeyEvent;
@@ -377,11 +378,10 @@ public class ChapterEditorController {
     private void configureNodeInteractions(QuestNodeView node, Quest quest) {
         node.setOnMove((id, worldX, worldY) -> handleNodeMove(id, worldX, worldY));
         node.setOnEdit(id -> showQuestEditDialog(quest));
-        node.setOnMouseClicked(event -> {
-            if (event.getButton() == MouseButton.PRIMARY) {
+        node.addEventHandler(MouseEvent.MOUSE_CLICKED, event -> {
+            if (event.getButton() == MouseButton.PRIMARY && event.getClickCount() == 1 && !event.isConsumed()) {
                 selectQuest(node.questId);
                 nodeLayer.requestFocus();
-                event.consume();
             }
         });
         node.setOnContextMenuRequested(event -> {
@@ -475,6 +475,10 @@ public class ChapterEditorController {
     }
 
     private void updateSelectionVisuals() {
+        if (selectedQuestId == null) {
+            nodes.values().forEach(view -> view.setSelected(false));
+            return;
+        }
         nodes.values().forEach(view -> view.setSelected(Objects.equals(view.questId, selectedQuestId)));
     }
 

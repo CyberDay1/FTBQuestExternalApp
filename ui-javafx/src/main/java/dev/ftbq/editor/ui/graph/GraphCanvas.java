@@ -14,12 +14,17 @@ import javafx.scene.paint.Paint;
 import javafx.scene.transform.Affine;
 import javafx.scene.transform.NonInvertibleTransformException;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.function.Consumer;
 
 public class GraphCanvas extends Canvas {
+    private static final Logger LOGGER = LoggerFactory.getLogger(GraphCanvas.class);
+
     // Throttling constants
     private static final long MIN_RENDER_INTERVAL_MS = 16; // ~60 FPS
     private static final long MIN_PAN_INTERVAL_MS = 16; // Throttle pan updates
@@ -355,7 +360,7 @@ public class GraphCanvas extends Canvas {
             }
 
         } catch (Exception e) {
-            System.err.println("Error during canvas render: " + e.getMessage());
+            LOGGER.error("Error during canvas render", e);
 
             try {
                 GraphicsContext gc = getGraphicsContext2D();
@@ -364,6 +369,7 @@ public class GraphCanvas extends Canvas {
                     gc.clearRect(0, 0, getWidth(), getHeight());
                 }
             } catch (Exception recoveryError) {
+                LOGGER.error("Failed to recover canvas after render error", recoveryError);
                 renderingEnabled = false;
             }
         }
