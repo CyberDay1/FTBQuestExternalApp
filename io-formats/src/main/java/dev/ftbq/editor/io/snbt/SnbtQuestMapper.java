@@ -7,6 +7,9 @@ import dev.ftbq.editor.domain.ItemRef;
 import dev.ftbq.editor.domain.ItemReward;
 import dev.ftbq.editor.domain.ItemTask;
 import dev.ftbq.editor.domain.LocationTask;
+import dev.ftbq.editor.domain.LootEntry;
+import dev.ftbq.editor.domain.LootPool;
+import dev.ftbq.editor.domain.LootTable;
 import dev.ftbq.editor.domain.Quest;
 import dev.ftbq.editor.domain.QuestFile;
 import dev.ftbq.editor.domain.RewardCommand;
@@ -37,7 +40,8 @@ public class SnbtQuestMapper {
         for (int i = 0; i < chapters.size(); i++) {
             appendChapter(builder, chapters.get(i), i == chapters.size() - 1, ids);
         }
-        appendLine(builder, 1, "]");
+        appendLine(builder, 1, "],");
+        appendLootTables(builder, file.lootTables());
         appendLine(builder, 0, "}");
         return builder.toString();
     }
@@ -127,6 +131,44 @@ public class SnbtQuestMapper {
             entries.add("{quest:" + ids.longIdForQuestId(dependency.questId()) + ", required:" + booleanToByte(dependency.required()) + "}");
         }
         return entries;
+    }
+
+    private void appendLootTables(StringBuilder builder, List<LootTable> lootTables) {
+        if (lootTables == null || lootTables.isEmpty()) {
+            appendLine(builder, 1, "loot_tables:[]");
+            return;
+        }
+        appendLine(builder, 1, "loot_tables:[");
+        for (int i = 0; i < lootTables.size(); i++) {
+            LootTable table = lootTables.get(i);
+            appendLine(builder, 2, "{");
+            appendLine(builder, 3, "id:\"" + escape(table.id()) + "\",");
+            String iconId = table.iconId().orElse("minecraft:book");
+            appendLine(builder, 3, "icon:\"" + escape(iconId) + "\",");
+            appendLootTableItems(builder, table);
+            appendLine(builder, 2, "}" + (i == lootTables.size() - 1 ? "" : ","));
+        }
+        appendLine(builder, 1, "]");
+    }
+
+    private void appendLootTableItems(StringBuilder builder, LootTable table) {
+        List<LootEntry> entries = new ArrayList<>();
+        for (LootPool pool : table.pools()) {
+            entries.addAll(pool.entries());
+        }
+        if (entries.isEmpty()) {
+            appendLine(builder, 3, "items:[]");
+            return;
+        }
+        appendLine(builder, 3, "items:[");
+        for (int i = 0; i < entries.size(); i++) {
+            LootEntry entry = entries.get(i);
+            int weight = Math.max(1, (int) Math.round(entry.weight()));
+            String itemLine = "{id:\"" + escape(entry.item().itemId()) + "\", count:" + entry.item().count()
+                    + ", weight:" + weight + "}";
+            appendLine(builder, 4, itemLine + (i == entries.size() - 1 ? "" : ","));
+        }
+        appendLine(builder, 3, "]");
     }
 
     public QuestFile fromSnbt(String snbtText) {

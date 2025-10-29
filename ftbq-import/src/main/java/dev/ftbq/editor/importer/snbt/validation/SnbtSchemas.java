@@ -127,12 +127,24 @@ final class SnbtSchemas {
                 List.of(new RequireAnyRule(Set.of("chapter_ids", "chapters"), "Chapter group must list chapters via 'chapter_ids' or 'chapters'."))
         );
 
+        SnbtSchemaNode lootTableItemNode = new ObjectSchemaNode(
+                Map.of(
+                        "id", new StringSchemaNode(),
+                        "count", new NumberSchemaNode(),
+                        "weight", new NumberSchemaNode()
+                ),
+                Set.of("id"),
+                true,
+                List.of()
+        );
+
         SnbtSchemaNode lootTableNode = new ObjectSchemaNode(
                 Map.of(
                         "id", new StringSchemaNode(),
-                        "pools", new ArraySchemaNode(new ObjectSchemaNode(Map.of(), Set.of(), true, List.of()), true)
+                        "icon", iconSchema(),
+                        "items", new ArraySchemaNode(lootTableItemNode, true)
                 ),
-                Set.of("id"),
+                Set.of("id", "icon"),
                 true,
                 List.of()
         );
