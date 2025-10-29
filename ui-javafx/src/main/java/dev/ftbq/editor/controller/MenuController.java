@@ -4,6 +4,7 @@ import dev.ftbq.editor.MainApp;
 import dev.ftbq.editor.domain.QuestFile;
 import dev.ftbq.editor.service.AutosaveService;
 import dev.ftbq.editor.service.QuestZipGenerator;
+import dev.ftbq.editor.service.UserSettings;
 import dev.ftbq.editor.service.UserSettings.EditorSettings;
 import dev.ftbq.editor.services.logging.StructuredLogger;
 import dev.ftbq.editor.services.bus.ServiceLocator;
@@ -78,7 +79,7 @@ public final class MenuController {
             autosaveService.flushNow();
             EditorSettings settings = settingsSupplier.get();
             if (settings == null) {
-                settings = EditorSettings.defaults();
+                settings = UserSettings.get();
             }
             Path generated = questZipGenerator.generate(questFile, mainApp.getWorkspace(), settings);
             boolean expectChapterFiles = questFile.chapters() != null && !questFile.chapters().isEmpty();
