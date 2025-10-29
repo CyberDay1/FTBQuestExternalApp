@@ -17,36 +17,16 @@ import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
-import javafx.scene.control.Button;
+import javafx.scene.control.*;
 import javafx.scene.control.ButtonBar.ButtonData;
-import javafx.scene.control.ButtonType;
-import javafx.scene.control.ComboBox;
-import javafx.scene.control.Dialog;
-import javafx.scene.control.Label;
-import javafx.scene.control.RadioButton;
-import javafx.scene.control.Spinner;
 import javafx.scene.control.SpinnerValueFactory.IntegerSpinnerValueFactory;
-import javafx.scene.control.TextArea;
-import javafx.scene.control.TextField;
-import javafx.scene.control.ToggleGroup;
-import javafx.scene.layout.GridPane;
-import javafx.scene.layout.HBox;
-import javafx.scene.layout.Priority;
-import javafx.scene.layout.VBox;
-import javafx.util.StringConverter;
-
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
+import javafx.scene.layout.*;
+import javafx.util.StringConverter;
 
 import java.io.ByteArrayInputStream;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Comparator;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
+import java.util.*;
 
 /**
  * Presents a dialog for editing quest details, including expanded reward configuration.
@@ -127,17 +107,13 @@ public final class QuestEditDialogController {
             boolean hasItems = table != null && !table.items().isEmpty();
             lootItemBox.setDisable(!hasItems);
             addLootItemButton.setDisable(!hasItems);
-            if (hasItems) {
-                lootItemBox.getSelectionModel().selectFirst();
-            }
+            if (hasItems) lootItemBox.getSelectionModel().selectFirst();
             updateLootTableIconControls(table, lootTableIconBox, lootTableIconPreview, optionIndex, itemOptions, optionComparator);
             populateLootTableEntriesBox(table, lootTableEntriesBox);
         });
 
         lootTableIconBox.valueProperty().addListener((obs, oldValue, newValue) -> {
-            if (updatingLootTableIcon) {
-                return;
-            }
+            if (updatingLootTableIcon) return;
             ItemOption selection = newValue;
             if (selection == null) {
                 String text = lootTableIconBox.getEditor().getText();
@@ -174,9 +150,7 @@ public final class QuestEditDialogController {
 
         addLootItemButton.setOnAction(event -> {
             EditableLootItem selected = lootItemBox.getValue();
-            if (selected == null) {
-                return;
-            }
+            if (selected == null) return;
             ItemOption option = ensureItemOption(selected.itemId(), selected.displayName(), optionIndex, itemOptions, optionComparator);
             ItemRewardRow targetRow = itemRows.stream().filter(ItemRewardRow::isEmpty).findFirst().orElse(itemRows.get(0));
             targetRow.setItem(option, selected.defaultCount());
@@ -220,9 +194,7 @@ public final class QuestEditDialogController {
         );
 
         TextField commandField = new TextField();
-        if (quest.commandReward() != null) {
-            commandField.setText(quest.commandReward().command());
-        }
+        if (quest.commandReward() != null) commandField.setText(quest.commandReward().command());
 
         GridPane grid = new GridPane();
         grid.setHgap(12);
@@ -270,39 +242,28 @@ public final class QuestEditDialogController {
                 saveButton.setDisable(newValue == null || newValue.isBlank()));
 
         dialog.setResultConverter(button -> {
-            if (button != saveButtonType) {
-                return null;
-            }
+            if (button != saveButtonType) return null;
             saveActiveLootTableState(lootTableIconBox, optionIndex, itemOptions, optionComparator, lootTableIconPreview);
             persistLootTableChanges();
-            String title = titleField.getText() == null ? "" : titleField.getText().trim();
-            String description = descriptionArea.getText() == null ? "" : descriptionArea.getText().trim();
-            String iconText = iconField.getText() == null ? "" : iconField.getText().trim();
-            Visibility visibility = visibilityBox.getValue() == null ? Visibility.VISIBLE : visibilityBox.getValue();
+            String title = Optional.ofNullable(titleField.getText()).orElse("").trim();
+            String description = Optional.ofNullable(descriptionArea.getText()).orElse("").trim();
+            String iconText = Optional.ofNullable(iconField.getText()).orElse("").trim();
+            Visibility visibility = Optional.ofNullable(visibilityBox.getValue()).orElse(Visibility.VISIBLE);
 
             List<ItemReward> rewards = new ArrayList<>();
-            for (ItemRewardRow row : itemRows) {
-                row.toReward().ifPresent(rewards::add);
-            }
+            for (ItemRewardRow row : itemRows) row.toReward().ifPresent(rewards::add);
 
             Integer xpAmount = null;
             Integer xpLevels = null;
-            if (xpToggle.getSelectedToggle() == xpAmountButton) {
-                xpAmount = readSpinnerValue(xpAmountSpinner);
-            } else if (xpToggle.getSelectedToggle() == xpLevelsButton) {
-                xpLevels = readSpinnerValue(xpLevelSpinner);
-            }
+            if (xpToggle.getSelectedToggle() == xpAmountButton) xpAmount = readSpinnerValue(xpAmountSpinner);
+            else if (xpToggle.getSelectedToggle() == xpLevelsButton) xpLevels = readSpinnerValue(xpLevelSpinner);
 
             String selectedLootTable = lootTableBox.getValue();
-            if (selectedLootTable != null && selectedLootTable.isBlank()) {
-                selectedLootTable = null;
-            }
+            if (selectedLootTable != null && selectedLootTable.isBlank()) selectedLootTable = null;
 
             RewardCommand command = null;
             String commandText = commandField.getText();
-            if (commandText != null && !commandText.isBlank()) {
-                command = new RewardCommand(commandText.trim(), false);
-            }
+            if (commandText != null && !commandText.isBlank()) command = new RewardCommand(commandText.trim(), false);
 
             Quest.Builder builder = Quest.builder()
                     .id(quest.id())
@@ -316,11 +277,8 @@ public final class QuestEditDialogController {
                     .lootTableId(selectedLootTable)
                     .commandReward(command);
 
-            if (xpAmount != null) {
-                builder.experienceAmount(xpAmount);
-            } else if (xpLevels != null) {
-                builder.experienceLevels(xpLevels);
-            }
+            if (xpAmount != null) builder.experienceAmount(xpAmount);
+            else if (xpLevels != null) builder.experienceLevels(xpLevels);
 
             return builder.build();
         });
@@ -328,7 +286,11 @@ public final class QuestEditDialogController {
         return dialog.showAndWait();
     }
 
-    private void populateBaseItemOptions(Quest quest,
+    // --- remainder of the file unchanged, includes toImage(byte[]), flatMap usage, and all inner classes ---
+}
+
+
+private void populateBaseItemOptions(Quest quest,
                                          Map<String, ItemOption> optionIndex,
                                          ObservableList<ItemOption> options,
                                          Comparator<ItemOption> comparator,
@@ -599,10 +561,12 @@ public final class QuestEditDialogController {
         if (cacheManager == null) {
             return Optional.empty();
         }
-        Optional<Image> direct = toImage(cacheManager.fetchIcon(itemId));
+        // Try direct icon by itemId
+        Optional<Image> direct = cacheManager.fetchIcon(itemId).flatMap(this::toImage);
         if (direct.isPresent()) {
             return direct;
         }
+        // Fallback via stored item -> icon hash -> icon bytes
         StoreDao storeDao = UiServiceLocator.storeDao;
         if (storeDao == null) {
             return Optional.empty();
@@ -613,16 +577,18 @@ public final class QuestEditDialogController {
                 .flatMap(this::toImage);
     }
 
-    private Optional<Image> toImage(Optional<byte[]> data) {
-        if (data.isEmpty()) {
+    // --- FIX: use a byte[] -> Optional<Image> converter and flatMap at call sites ---
+    private Optional<Image> toImage(byte[] data) {
+        if (data == null || data.length == 0) {
             return Optional.empty();
         }
         try {
-            return Optional.of(new Image(new ByteArrayInputStream(data.get())));
+            return Optional.of(new Image(new ByteArrayInputStream(data)));
         } catch (IllegalArgumentException ex) {
             return Optional.empty();
         }
     }
+    // --- END FIX ---
 
     private ItemOption ensureItemOption(String itemId,
                                         String displayName,
