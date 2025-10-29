@@ -9,6 +9,7 @@ import dev.ftbq.editor.domain.ChapterGroup;
 import dev.ftbq.editor.domain.Dependency;
 import dev.ftbq.editor.domain.IconRef;
 import dev.ftbq.editor.domain.ItemRef;
+import dev.ftbq.editor.domain.ItemReward;
 import dev.ftbq.editor.domain.ItemTask;
 import dev.ftbq.editor.domain.LocationTask;
 import dev.ftbq.editor.domain.LootCondition;
@@ -18,7 +19,6 @@ import dev.ftbq.editor.domain.LootPool;
 import dev.ftbq.editor.domain.LootTable;
 import dev.ftbq.editor.domain.Quest;
 import dev.ftbq.editor.domain.QuestFile;
-import dev.ftbq.editor.domain.Reward;
 import dev.ftbq.editor.domain.RewardCommand;
 import dev.ftbq.editor.domain.Visibility;
 import dev.ftbq.editor.io.exporter.Exporter;
@@ -57,12 +57,11 @@ class ExporterImporterTest {
                         new AdvancementTask("minecraft:story/root"),
                         new LocationTask("minecraft:overworld", 5.0, 65.0, -10.0, 2.5)
                 ),
-                List.of(
-                        Reward.item(new ItemRef("minecraft:diamond", 2)),
-                        Reward.xpAmount(15),
-                        Reward.command(new RewardCommand("/say exported", false)),
-                        Reward.lootTable("mod:loot/bonus")
-                ),
+                List.of(new ItemReward(new ItemRef("minecraft:diamond", 2))),
+                15,
+                null,
+                "mod:loot/bonus",
+                new RewardCommand("/say exported", false),
                 List.of(new Dependency("quest-0", true)),
                 Visibility.VISIBLE
         );

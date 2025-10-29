@@ -8,11 +8,11 @@ import dev.ftbq.editor.domain.Chapter;
 import dev.ftbq.editor.domain.Dependency;
 import dev.ftbq.editor.domain.IconRef;
 import dev.ftbq.editor.domain.ItemRef;
+import dev.ftbq.editor.domain.ItemReward;
 import dev.ftbq.editor.domain.ItemTask;
 import dev.ftbq.editor.domain.LocationTask;
 import dev.ftbq.editor.domain.Quest;
 import dev.ftbq.editor.domain.QuestFile;
-import dev.ftbq.editor.domain.Reward;
 import dev.ftbq.editor.domain.RewardCommand;
 import dev.ftbq.editor.domain.Visibility;
 import java.util.List;
@@ -34,11 +34,11 @@ class SnbtQuestMapperTest {
                         new AdvancementTask("minecraft:adventure/root"),
                         new LocationTask("minecraft:overworld", 128.0, 64.25, -12.5, 5.0)
                 ),
-                List.of(
-                        Reward.item(new ItemRef("minecraft:apple", 3)),
-                        Reward.xpAmount(50),
-                        Reward.command(new RewardCommand("/say Hello", true))
-                ),
+                List.of(new ItemReward(new ItemRef("minecraft:apple", 3))),
+                50,
+                null,
+                null,
+                new RewardCommand("/say Hello", true),
                 List.of(new Dependency("intro", true), new Dependency("optional", false)),
                 Visibility.VISIBLE
         );

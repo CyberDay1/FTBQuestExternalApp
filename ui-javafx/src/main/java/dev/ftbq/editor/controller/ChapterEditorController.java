@@ -14,6 +14,7 @@ import dev.ftbq.editor.services.templates.TaskTemplates;
 import dev.ftbq.editor.store.StoreDao;
 import dev.ftbq.editor.ui.graph.GraphCanvas;
 import dev.ftbq.editor.ui.graph.QuestNodeView;
+import dev.ftbq.editor.view.QuestEditDialogController;
 import dev.ftbq.editor.view.graph.layout.QuestLayoutStore;
 import dev.ftbq.editor.viewmodel.ChapterEditorViewModel;
 import javafx.collections.FXCollections;
@@ -332,6 +333,7 @@ public class ChapterEditorController {
             }
             Point2D world = questPositions.getOrDefault(quest.id(), new Point2D(0, 0));
             QuestNodeView node = new QuestNodeView(quest.id(), quest.title(), world.getX(), world.getY(), canvas);
+            node.setRewardSummary(quest.rewards());
             positionNode(node, world);
             configureNodeInteractions(node, quest);
             nodes.put(quest.id(), node);
@@ -965,65 +967,8 @@ public class ChapterEditorController {
         if (quest == null) {
             return;
         }
-        Dialog<Quest> dialog = new Dialog<>();
-        dialog.setTitle("Edit Quest");
-        dialog.setHeaderText("Update quest details");
-
-        ButtonType saveButtonType = new ButtonType("Save", ButtonBar.ButtonData.OK_DONE);
-        dialog.getDialogPane().getButtonTypes().addAll(saveButtonType, ButtonType.CANCEL);
-
-        TextField titleField = new TextField(quest.title());
-        TextArea descriptionArea = new TextArea(quest.description());
-        descriptionArea.setPrefRowCount(5);
-        TextField iconField = new TextField(quest.icon() != null ? quest.icon().icon() : "minecraft:book");
-        ComboBox<Visibility> visibilityBox = new ComboBox<>(FXCollections.observableArrayList(Visibility.values()));
-        visibilityBox.setValue(quest.visibility());
-        Label idValue = new Label(quest.id());
-
-        GridPane grid = new GridPane();
-        grid.setHgap(12);
-        grid.setVgap(8);
-        grid.setPadding(new Insets(10));
-        grid.add(new Label("ID"), 0, 0);
-        grid.add(idValue, 1, 0);
-        grid.add(new Label("Title"), 0, 1);
-        grid.add(titleField, 1, 1);
-        grid.add(new Label("Description"), 0, 2);
-        grid.add(descriptionArea, 1, 2);
-        grid.add(new Label("Icon"), 0, 3);
-        grid.add(iconField, 1, 3);
-        grid.add(new Label("Visibility"), 0, 4);
-        grid.add(visibilityBox, 1, 4);
-
-        dialog.getDialogPane().setContent(grid);
-
-        Node saveButton = dialog.getDialogPane().lookupButton(saveButtonType);
-        saveButton.setDisable(titleField.getText() == null || titleField.getText().isBlank());
-        titleField.textProperty().addListener((obs, oldValue, newValue) ->
-                saveButton.setDisable(newValue == null || newValue.isBlank()));
-
-        dialog.setResultConverter(button -> {
-            if (button == saveButtonType) {
-                String title = titleField.getText() == null ? "" : titleField.getText().trim();
-                String description = descriptionArea.getText() == null ? "" : descriptionArea.getText().trim();
-                String iconText = iconField.getText() == null ? "" : iconField.getText().trim();
-                Visibility visibility = visibilityBox.getValue() == null ? Visibility.VISIBLE : visibilityBox.getValue();
-                return Quest.builder()
-                        .id(quest.id())
-                        .title(title)
-                        .description(description)
-                        .icon(new IconRef(iconText.isEmpty() ? "minecraft:book" : iconText))
-                        .visibility(visibility)
-                        .tasks(quest.tasks())
-                        .rewards(quest.rewards())
-                        .dependencies(quest.dependencies())
-                        .build();
-            }
-            return null;
-        });
-
-        Optional<Quest> result = dialog.showAndWait();
-        result.ifPresent(this::saveEditedQuest);
+        QuestEditDialogController dialogController = new QuestEditDialogController();
+        dialogController.editQuest(quest).ifPresent(this::saveEditedQuest);
     }
 
     private void saveEditedQuest(Quest updatedQuest) {
