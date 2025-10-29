@@ -47,6 +47,8 @@ public class SettingsController {
     @FXML
     private CheckBox darkModeCheckBox;
     @FXML
+    private CheckBox createZhTemplateCheckBox;
+    @FXML
     private Spinner<Integer> autosaveSpinner;
     @FXML
     private Button applyAutosaveButton;
@@ -58,6 +60,7 @@ public class SettingsController {
     private final StructuredLogger logger;
     private final ThemeService themeService;
     private boolean updatingThemeSelection;
+    private boolean updatingZhTemplate;
     private AutosaveSettings autosaveSettings;
 
     public SettingsController() {
@@ -108,6 +111,29 @@ public class SettingsController {
         }
 
         configureAutosaveSpinner();
+
+        if (createZhTemplateCheckBox != null && createZhTemplateCheckBox.getAccessibleText() == null) {
+            createZhTemplateCheckBox.setAccessibleText("Toggle zh_cn template generation");
+        }
+        if (createZhTemplateCheckBox != null) {
+            createZhTemplateCheckBox.selectedProperty().addListener((obs, wasSelected, isSelected) -> {
+                if (updatingZhTemplate || autosaveSettings == null) {
+                    return;
+                }
+                try {
+                    autosaveSettings.updateZhTemplateEnabled(isSelected);
+                    updateStatus(isSelected
+                            ? "zh_cn template will reuse English quest text on export."
+                            : "zh_cn template will include empty values on export.");
+                } catch (RuntimeException ex) {
+                    logger.warn("Failed to update zh_cn template preference", ex);
+                    updateStatus("Failed to update zh_cn template preference: " + ex.getMessage());
+                    updatingZhTemplate = true;
+                    createZhTemplateCheckBox.setSelected(wasSelected);
+                    updatingZhTemplate = false;
+                }
+            });
+        }
 
         if (darkModeCheckBox != null) {
             darkModeCheckBox.setAccessibleText("Toggle dark mode");
@@ -303,10 +329,14 @@ public class SettingsController {
             return;
         }
         Integer value = autosaveSpinner.getValue();
-        int minutes = value == null ? 1 : Math.max(1, value);
+        int minutes = value == null ? 0 : Math.max(0, value);
         try {
             autosaveSettings.updateIntervalMinutes(minutes);
-            updateStatus("Autosave interval set to " + minutes + " minute" + (minutes == 1 ? "" : "s") + ".");
+            if (minutes == 0) {
+                updateStatus("Autosave disabled.");
+            } else {
+                updateStatus("Autosave interval set to " + minutes + " minute" + (minutes == 1 ? "" : "s") + ".");
+            }
         } catch (RuntimeException ex) {
             updateStatus("Failed to update autosave interval: " + ex.getMessage());
             logger.warn("Autosave interval update failed", ex);
@@ -319,7 +349,7 @@ public class SettingsController {
             return;
         }
         SpinnerValueFactory.IntegerSpinnerValueFactory factory =
-                new SpinnerValueFactory.IntegerSpinnerValueFactory(1, 120, 1);
+                new SpinnerValueFactory.IntegerSpinnerValueFactory(0, 120, 1);
         autosaveSpinner.setValueFactory(factory);
         autosaveSpinner.setEditable(true);
         autosaveSpinner.focusedProperty().addListener((obs, oldFocused, newFocused) -> {
@@ -336,7 +366,7 @@ public class SettingsController {
         try {
             autosaveSpinner.increment(0);
         } catch (RuntimeException ignored) {
-            autosaveSpinner.getValueFactory().setValue(1);
+            autosaveSpinner.getValueFactory().setValue(0);
         }
     }
 
@@ -344,22 +374,40 @@ public class SettingsController {
         if (autosaveSpinner == null || autosaveSpinner.getValueFactory() == null) {
             return;
         }
-        int minutes = 1;
+        int minutes = 0;
+        boolean zhTemplate = false;
         if (autosaveSettings != null) {
             try {
-                minutes = Math.max(1, autosaveSettings.getIntervalMinutes());
+                minutes = Math.max(0, autosaveSettings.getIntervalMinutes());
             } catch (RuntimeException ex) {
                 logger.warn("Failed to read autosave interval", ex);
             }
+            try {
+                zhTemplate = autosaveSettings.isZhTemplateEnabled();
+            } catch (RuntimeException ex) {
+                logger.warn("Failed to read zh_cn template preference", ex);
+            }
         }
         final int applied = minutes;
-        Platform.runLater(() -> autosaveSpinner.getValueFactory().setValue(applied));
+        final boolean zhEnabled = zhTemplate;
+        Platform.runLater(() -> {
+            autosaveSpinner.getValueFactory().setValue(applied);
+            if (createZhTemplateCheckBox != null) {
+                updatingZhTemplate = true;
+                createZhTemplateCheckBox.setSelected(zhEnabled);
+                updatingZhTemplate = false;
+            }
+        });
     }
 
     public interface AutosaveSettings {
         int getIntervalMinutes();
 
         void updateIntervalMinutes(int minutes);
+
+        boolean isZhTemplateEnabled();
+
+        void updateZhTemplateEnabled(boolean enabled);
     }
 }
 
