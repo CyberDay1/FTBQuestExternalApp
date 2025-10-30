@@ -1,5 +1,6 @@
 package dev.ftbq.editor;
 
+import dev.ftbq.editor.controller.MenuController;
 import dev.ftbq.editor.domain.QuestFile;
 import dev.ftbq.editor.service.ThemeService;
 import dev.ftbq.editor.service.UserSettings;
@@ -32,8 +33,12 @@ public class MainApp extends Application {
 
     @Override
     public void start(Stage stage) throws Exception {
-        FXMLLoader loader = new FXMLLoader(getClass().getResource("/dev/ftbq/editor/view/main.fxml"));
+        FXMLLoader loader = new FXMLLoader(getClass().getResource("view/main.fxml"));
         Parent root = loader.load();
+        MenuController menuController = loader.getController();
+        if (menuController != null) {
+            menuController.setMainApp(this);
+        }
         Object included = loader.getNamespace().get("chapterGroupBrowserController");
         if (included instanceof ChapterGroupBrowserController controller) {
             chapterGroupBrowserController = controller;
