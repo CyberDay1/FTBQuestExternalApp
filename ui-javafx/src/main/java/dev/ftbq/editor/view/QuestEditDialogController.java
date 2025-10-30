@@ -286,11 +286,7 @@ public final class QuestEditDialogController {
         return dialog.showAndWait();
     }
 
-    // --- remainder of the file unchanged, includes toImage(byte[]), flatMap usage, and all inner classes ---
-}
-
-
-private void populateBaseItemOptions(Quest quest,
+    private void populateBaseItemOptions(Quest quest,
                                          Map<String, ItemOption> optionIndex,
                                          ObservableList<ItemOption> options,
                                          Comparator<ItemOption> comparator,
