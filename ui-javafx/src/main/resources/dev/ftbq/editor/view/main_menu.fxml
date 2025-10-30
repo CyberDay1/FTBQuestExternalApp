@@ -4,24 +4,31 @@
 <?import javafx.scene.control.MenuBar?>
 <?import javafx.scene.control.MenuItem?>
 <?import javafx.scene.control.SeparatorMenuItem?>
+<?import javafx.scene.layout.VBox?>
 
-<MenuBar xmlns="http://javafx.com/javafx/21"
-         xmlns:fx="http://javafx.com/fxml/1">
-    <menus>
-        <Menu text="File">
-            <items>
-                <MenuItem text="Import Quests from SNBT..." onAction="#onImportQuests" />
-                <MenuItem text="Load Project..." onAction="#onLoadProject" />
-                <MenuItem text="Save Project As..." onAction="#onSaveProjectAs" />
-                <SeparatorMenuItem />
-                <MenuItem text="Generate Quest .zip" onAction="#onGenerateQuestZip" />
-            </items>
-        </Menu>
-        <Menu text="Tools">
-            <items>
-                <MenuItem text="Validate Quest Pack" onAction="#onValidateQuestPack" />
-                <MenuItem text="Save Imported Items" onAction="#onSaveImportedItems" />
-            </items>
-        </Menu>
-    </menus>
-</MenuBar>
+<VBox xmlns="http://javafx.com/javafx/21"
+      xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="dev.ftbq.editor.controller.MenuController"
+      spacing="8" alignment="CENTER_LEFT">
+    <children>
+        <MenuBar>
+            <menus>
+                <Menu text="File">
+                    <items>
+                        <MenuItem text="Import Quests from SNBT..." onAction="#onImportQuests" />
+                        <MenuItem text="Load Project..." onAction="#onLoadProject" />
+                        <MenuItem text="Save Project As..." onAction="#onSaveProjectAs" />
+                        <SeparatorMenuItem />
+                        <MenuItem text="Generate Quest .zip" onAction="#onGenerateQuestZip" />
+                    </items>
+                </Menu>
+                <Menu text="Tools">
+                    <items>
+                        <MenuItem text="Validate Quest Pack" onAction="#onValidateQuestPack" />
+                        <MenuItem text="Save Imported Items" onAction="#onSaveImportedItems" />
+                    </items>
+                </Menu>
+            </menus>
+        </MenuBar>
+    </children>
+</VBox>
