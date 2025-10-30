@@ -37,7 +37,18 @@ public class MainApp extends Application {
         Object included = loader.getNamespace().get("chapterGroupBrowserController");
         if (included instanceof ChapterGroupBrowserController controller) {
             chapterGroupBrowserController = controller;
+            if (currentQuestFile == null) {
+                String workspaceName = Optional.ofNullable(workspace.getFileName())
+                        .map(Path::toString)
+                        .filter(name -> !name.isBlank())
+                        .orElse("workspace");
+                currentQuestFile = QuestFile.builder()
+                        .id(workspaceName)
+                        .title("Workspace: " + workspaceName)
+                        .build();
+            }
             chapterGroupBrowserController.setWorkspaceContext(workspace, currentQuestFile);
+            chapterGroupBrowserController.reloadGroups();
         }
 
         Scene scene = new Scene(root, 1200, 800);
@@ -106,6 +117,7 @@ public class MainApp extends Application {
                     .build();
             if (chapterGroupBrowserController != null) {
                 chapterGroupBrowserController.setWorkspaceContext(workspace, currentQuestFile);
+                chapterGroupBrowserController.reloadGroups();
             }
         } else {
             System.out.println("Load project canceled.");
