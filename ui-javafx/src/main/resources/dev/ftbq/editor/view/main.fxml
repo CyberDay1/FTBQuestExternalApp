@@ -2,13 +2,14 @@
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
 <?import javafx.geometry.Insets?>
+
 <BorderPane fx:controller="dev.ftbq.editor.controller.ChapterEditorController" xmlns:fx="http://javafx.com/fxml">
     <top>
         <ToolBar styleClass="main-toolbar">
             <Button text="☰" />
             <Separator orientation="VERTICAL"/>
             <Label text="FTB Quest Editor" styleClass="title"/>
-            <Pane Hgrow="ALWAYS"/>
+            <Pane HBox.hgrow="ALWAYS"/>
             <Button text="Settings" onAction="#openSettings" />
         </ToolBar>
     </top>
