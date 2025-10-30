@@ -13,9 +13,13 @@ import javafx.stage.Modality;
 import javafx.stage.Stage;
 import javafx.stage.Window;
 
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
 public class ChapterEditorController {
     @FXML private StackPane canvasHolder;
     private QuestCanvas questCanvas;
+    private static final Logger LOGGER = Logger.getLogger(ChapterEditorController.class.getName());
 
     @FXML
     public void initialize() {
@@ -39,6 +43,16 @@ public class ChapterEditorController {
     // Exposed for SettingsController to refresh grid toggle if needed
     public void setShowGrid(boolean v) {
         if (questCanvas != null) questCanvas.setShowGrid(v);
+    }
+
+    @FXML
+    private void onAddDependency() {
+        LOGGER.log(Level.FINE, "onAddDependency invoked");
+    }
+
+    @FXML
+    private void onRemoveQuest() {
+        LOGGER.log(Level.FINE, "onRemoveQuest invoked");
     }
 
     @FXML
