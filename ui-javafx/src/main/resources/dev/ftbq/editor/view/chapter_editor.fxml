@@ -6,10 +6,10 @@
 <?import javafx.scene.control.MenuButton?>
 <?import javafx.scene.control.ListView?>
 <?import javafx.scene.control.TextField?>
-<?import javafx.scene.layout.AnchorPane?>
 <?import javafx.scene.layout.BorderPane?>
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.VBox?>
+<?import javafx.scene.layout.StackPane?>
 
 <BorderPane xmlns="http://javafx.com/javafx/20" xmlns:fx="http://javafx.com/fxml/1"
             fx:controller="dev.ftbq.editor.controller.ChapterEditorController">
@@ -36,7 +36,7 @@
         </VBox>
     </left>
     <center>
-        <AnchorPane fx:id="canvasHost" prefWidth="800" prefHeight="600" />
+        <StackPane fx:id="canvasHolder" prefWidth="800" prefHeight="600" styleClass="canvas-container" />
     </center>
     <right>
         <VBox spacing="8" prefWidth="260" BorderPane.alignment="CENTER">

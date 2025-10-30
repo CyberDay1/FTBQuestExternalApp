@@ -23,6 +23,11 @@ public class ChapterEditorController {
 
     @FXML
     public void initialize() {
+        if (canvasHolder == null) {
+            LOGGER.severe("canvasHolder not injected; check FXML id");
+            return;
+        }
+
         questCanvas = new QuestCanvas();
         questCanvas.setManaged(true);
         questCanvas.prefWidthProperty().bind(canvasHolder.widthProperty());
