@@ -1,19 +1,38 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<?import javafx.scene.control.*?>
-<?import javafx.scene.layout.*?>
-<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Tab?>
+<?import javafx.scene.control.TabPane?>
+<?import javafx.scene.layout.BorderPane?>
 
-<BorderPane fx:controller="dev.ftbq.editor.controller.ChapterEditorController" xmlns:fx="http://javafx.com/fxml">
+<BorderPane xmlns:fx="http://javafx.com/fxml">
     <top>
-        <ToolBar styleClass="main-toolbar">
-            <Button text="☰" />
-            <Separator orientation="VERTICAL"/>
-            <Label text="FTB Quest Editor" styleClass="title"/>
-            <Pane HBox.hgrow="ALWAYS"/>
-            <Button text="Settings" onAction="#openSettings" />
-        </ToolBar>
+        <fx:include source="main_menu.fxml"/>
     </top>
     <center>
-        <StackPane fx:id="canvasHolder" BorderPane.alignment="CENTER" styleClass="canvas-container"/>
+        <TabPane fx:id="mainTabs" id="mainTabs">
+            <tabs>
+                <Tab text="Chapter Groups" closable="false">
+                    <content>
+                        <fx:include source="chapter_group_browser.fxml"/>
+                    </content>
+                </Tab>
+                <Tab text="Chapter Editor" closable="false">
+                    <content>
+                        <fx:include source="chapter_editor.fxml"/>
+                    </content>
+                </Tab>
+                <Tab text="Loot Tables" closable="false">
+                    <content>
+                        <fx:include source="loot_table_editor.fxml"/>
+                    </content>
+                </Tab>
+                <Tab id="aiQuestTab" text="AI Quest Creation" closable="false"/>
+                <Tab text="Settings" closable="false">
+                    <content>
+                        <fx:include source="settings.fxml"/>
+                    </content>
+                </Tab>
+            </tabs>
+        </TabPane>
     </center>
 </BorderPane>

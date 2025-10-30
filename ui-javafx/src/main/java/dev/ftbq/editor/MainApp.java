@@ -3,11 +3,14 @@ package dev.ftbq.editor;
 import dev.ftbq.editor.domain.QuestFile;
 import dev.ftbq.editor.service.ThemeService;
 import dev.ftbq.editor.service.UserSettings;
+import dev.ftbq.editor.ui.AiQuestCreationTab;
 import javafx.application.Application;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.Alert;
+import javafx.scene.control.Tab;
+import javafx.scene.control.TabPane;
 import javafx.stage.DirectoryChooser;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
@@ -27,13 +30,42 @@ public class MainApp extends Application {
 
     @Override
     public void start(Stage stage) throws Exception {
-        Parent root = FXMLLoader.load(getClass().getResource("/dev/ftbq/editor/view/main.fxml"));
-        Scene scene = new Scene(root, 960, 720);
+        FXMLLoader loader = new FXMLLoader(getClass().getResource("/dev/ftbq/editor/view/main.fxml"));
+        Parent root = loader.load();
+
+        Scene scene = new Scene(root, 1200, 800);
         ThemeService.apply(scene, UserSettings.get().darkTheme);
+
+        wireAiQuestTab(scene);
+
         this.primaryStage = stage;
         stage.setTitle("FTB Quest Editor");
         stage.setScene(scene);
         stage.show();
+    }
+
+    private void wireAiQuestTab(Scene scene) {
+        TabPane tabPane = (TabPane) scene.lookup("#mainTabs");
+        if (tabPane == null) {
+            return;
+        }
+
+        Tab placeholder = null;
+        for (Tab tab : tabPane.getTabs()) {
+            if ("aiQuestTab".equals(tab.getId())) {
+                placeholder = tab;
+                break;
+            }
+        }
+
+        if (placeholder == null) {
+            return;
+        }
+
+        int index = tabPane.getTabs().indexOf(placeholder);
+        AiQuestCreationTab aiQuestTab = new AiQuestCreationTab();
+        aiQuestTab.setId("aiQuestTab");
+        tabPane.getTabs().set(index, aiQuestTab);
     }
 
     public static void main(String[] args) {
