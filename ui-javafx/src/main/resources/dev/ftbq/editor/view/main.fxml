@@ -20,7 +20,7 @@
             <tabs>
                 <Tab text="Chapter Groups" closable="false">
                     <content>
-                        <fx:include source="chapter_group_browser.fxml"/>
+                        <fx:include fx:id="chapterGroupBrowser" source="chapter_group_browser.fxml"/>
                     </content>
                 </Tab>
                 <Tab text="Chapter Editor" closable="false">

@@ -1,5 +1,7 @@
 package dev.ftbq.editor.view;
 
+import dev.ftbq.editor.domain.QuestFile;
+import dev.ftbq.editor.services.UiServiceLocator;
 import dev.ftbq.editor.viewmodel.ChapterGroupBrowserViewModel;
 import dev.ftbq.editor.viewmodel.ChapterGroupBrowserViewModel.Chapter;
 import dev.ftbq.editor.viewmodel.ChapterGroupBrowserViewModel.ChapterGroup;
@@ -15,18 +17,25 @@ import javafx.scene.control.TextInputDialog;
 import javafx.scene.control.TreeCell;
 import javafx.scene.control.TreeItem;
 import javafx.scene.control.TreeView;
+import javafx.scene.control.Alert;
+import javafx.scene.control.Alert.AlertType;
+import javafx.scene.control.ButtonType;
 import javafx.scene.input.ContextMenuEvent;
 import javafx.scene.input.ClipboardContent;
 import javafx.scene.input.Dragboard;
 import javafx.scene.input.TransferMode;
 import javafx.util.Callback;
 
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
+import java.util.logging.Logger;
 
 public class ChapterGroupBrowserController {
+    private static final Logger LOGGER = Logger.getLogger(ChapterGroupBrowserController.class.getName());
+
     @FXML
     private TextField searchField;
 
@@ -38,6 +47,8 @@ public class ChapterGroupBrowserController {
     private ChapterGroupBrowserViewModel viewModel;
     private Chapter draggingChapter;
     private ChapterGroup draggingFromGroup;
+    private Path workspace;
+    private QuestFile questFile;
 
     private final ListChangeListener<ChapterGroup> groupsListener = change -> {
         while (change.next()) {
@@ -51,6 +62,11 @@ public class ChapterGroupBrowserController {
     public void setViewModel(ChapterGroupBrowserViewModel viewModel) {
         this.viewModel = Objects.requireNonNull(viewModel, "viewModel");
         bindViewModel();
+    }
+
+    public void setWorkspaceContext(Path workspace, QuestFile questFile) {
+        this.workspace = workspace;
+        this.questFile = questFile;
     }
 
     @FXML
@@ -177,6 +193,7 @@ public class ChapterGroupBrowserController {
         if (chapterTree.getSelectionModel().getSelectedItem() == null) {
             ContextMenu contextMenu = new ContextMenu();
             MenuItem addGroupItem = new MenuItem("Add Chapter Group");
+            addGroupItem.setDisable(!isQuestDataReady());
             addGroupItem.setOnAction(evt -> promptAddGroup());
             contextMenu.getItems().add(addGroupItem);
             contextMenu.show(chapterTree, event.getScreenX(), event.getScreenY());
@@ -198,6 +215,7 @@ public class ChapterGroupBrowserController {
         ContextMenu menu = new ContextMenu();
 
         MenuItem addGroup = new MenuItem("Add Chapter Group");
+        addGroup.setDisable(!isQuestDataReady());
         addGroup.setOnAction(evt -> promptAddGroup());
 
         MenuItem addChapter = new MenuItem("Add Chapter");
@@ -234,6 +252,7 @@ public class ChapterGroupBrowserController {
         ContextMenu menu = new ContextMenu();
 
         MenuItem addGroup = new MenuItem("Add Chapter Group");
+        addGroup.setDisable(!isQuestDataReady());
         addGroup.setOnAction(evt -> promptAddGroup());
 
         MenuItem addChapter = new MenuItem("Add Chapter");
@@ -287,6 +306,10 @@ public class ChapterGroupBrowserController {
     }
 
     private void promptAddGroup() {
+        if (!ensureQuestDataReady()) {
+            return;
+        }
+
         TextInputDialog dialog = new TextInputDialog();
         dialog.setTitle("Add Chapter Group");
         dialog.setHeaderText("Create a new chapter group");
@@ -294,6 +317,34 @@ public class ChapterGroupBrowserController {
         dialog.showAndWait()
                 .filter(name -> !name.isBlank())
                 .ifPresent(viewModel::addGroup);
+    }
+
+    private boolean ensureQuestDataReady() {
+        if (UiServiceLocator.storeDao == null) {
+            LOGGER.warning("StoreDao not initialized; cannot add group.");
+            showQuestDataNotLoadedAlert();
+            return false;
+        }
+        if (workspace == null || questFile == null) {
+            LOGGER.warning("Workspace or quest data not initialized; cannot add group.");
+            showQuestDataNotLoadedAlert();
+            return false;
+        }
+        if (viewModel == null) {
+            LOGGER.warning("View model not initialized; cannot add group.");
+            showQuestDataNotLoadedAlert();
+            return false;
+        }
+        return true;
+    }
+
+    private boolean isQuestDataReady() {
+        return UiServiceLocator.storeDao != null && workspace != null && questFile != null && viewModel != null;
+    }
+
+    private void showQuestDataNotLoadedAlert() {
+        Alert alert = new Alert(AlertType.WARNING, "Cannot add chapter group: data not loaded.", ButtonType.OK);
+        alert.showAndWait();
     }
 
     private void promptAddChapter(ChapterGroup group) {

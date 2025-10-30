@@ -4,6 +4,7 @@ import dev.ftbq.editor.domain.QuestFile;
 import dev.ftbq.editor.service.ThemeService;
 import dev.ftbq.editor.service.UserSettings;
 import dev.ftbq.editor.ui.AiQuestCreationTab;
+import dev.ftbq.editor.view.ChapterGroupBrowserController;
 import javafx.application.Application;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
@@ -27,11 +28,17 @@ public class MainApp extends Application {
     private Stage primaryStage;
     private Path workspace = Path.of(System.getProperty("user.dir"));
     private QuestFile currentQuestFile;
+    private ChapterGroupBrowserController chapterGroupBrowserController;
 
     @Override
     public void start(Stage stage) throws Exception {
         FXMLLoader loader = new FXMLLoader(getClass().getResource("/dev/ftbq/editor/view/main.fxml"));
         Parent root = loader.load();
+        Object included = loader.getNamespace().get("chapterGroupBrowserController");
+        if (included instanceof ChapterGroupBrowserController controller) {
+            chapterGroupBrowserController = controller;
+            chapterGroupBrowserController.setWorkspaceContext(workspace, currentQuestFile);
+        }
 
         Scene scene = new Scene(root, 1200, 800);
         ThemeService.apply(scene, UserSettings.get().darkTheme);
@@ -97,6 +104,9 @@ public class MainApp extends Application {
                     .id(Optional.ofNullable(directory.getName()).filter(name -> !name.isBlank()).orElse("placeholder"))
                     .title("Project loaded from " + directory.getName())
                     .build();
+            if (chapterGroupBrowserController != null) {
+                chapterGroupBrowserController.setWorkspaceContext(workspace, currentQuestFile);
+            }
         } else {
             System.out.println("Load project canceled.");
         }
