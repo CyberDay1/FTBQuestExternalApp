@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.Separator?>
+<?import javafx.scene.control.ToolBar?>
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Pane?>
+<?import javafx.scene.layout.StackPane?>
+
+<!-- Reference copy of the original minimal canvas layout -->
+<BorderPane xmlns:fx="http://javafx.com/fxml">
+    <top>
+        <ToolBar styleClass="main-toolbar">
+            <Button text="☰" />
+            <Separator orientation="VERTICAL"/>
+            <Label text="FTB Quest Editor" styleClass="title"/>
+            <Pane HBox.hgrow="ALWAYS"/>
+            <Button text="Settings"/>
+        </ToolBar>
+    </top>
+    <center>
+        <StackPane fx:id="canvasHolder" BorderPane.alignment="CENTER" styleClass="canvas-container"/>
+    </center>
+</BorderPane>
