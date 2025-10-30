@@ -42,7 +42,7 @@ public class ChapterGroupBrowserController {
     @FXML
     private TreeView<TreeNodeData> chapterTree;
 
-    private final TreeItem<TreeNodeData> rootItem = new TreeItem<>(new TreeNodeData("root", NodeType.ROOT, null, null));
+    private TreeItem<TreeNodeData> rootItem = new TreeItem<>(new TreeNodeData("root", NodeType.ROOT, null, null));
 
     private ChapterGroupBrowserViewModel viewModel;
     private Chapter draggingChapter;
@@ -71,10 +71,34 @@ public class ChapterGroupBrowserController {
 
     @FXML
     public void initialize() {
+        if (viewModel == null) {
+            setViewModel(new ChapterGroupBrowserViewModel());
+        }
         chapterTree.setRoot(rootItem);
         chapterTree.setShowRoot(false);
         chapterTree.setCellFactory(createCellFactory());
         chapterTree.setOnContextMenuRequested(this::handleTreeContextMenuRequest);
+    }
+
+    public void reloadGroups() {
+        if (chapterTree == null) {
+            LOGGER.warning("Chapter tree view not initialized; cannot reload chapter groups.");
+            return;
+        }
+        if (UiServiceLocator.storeDao == null) {
+            LOGGER.warning("StoreDao not initialized; cannot reload chapter groups.");
+            return;
+        }
+        if (viewModel == null) {
+            LOGGER.warning("View model not initialized; cannot reload chapter groups.");
+            return;
+        }
+        if (questFile != null) {
+            viewModel.loadFromQuestFile(questFile);
+        }
+        rootItem = buildTree(viewModel.getChapterGroups());
+        chapterTree.setRoot(rootItem);
+        chapterTree.setShowRoot(false);
     }
 
     private void bindViewModel() {
@@ -283,26 +307,42 @@ public class ChapterGroupBrowserController {
     }
 
     private void updateTree() {
-        rootItem.getChildren().clear();
-        String query = viewModel.searchTextProperty().get().trim().toLowerCase(Locale.ENGLISH);
+        if (chapterTree == null || viewModel == null) {
+            return;
+        }
+        rootItem = buildTree(viewModel.getChapterGroups());
+        chapterTree.setRoot(rootItem);
+        chapterTree.setShowRoot(false);
+    }
 
-        for (ChapterGroup group : viewModel.getChapterGroups()) {
+    private TreeItem<TreeNodeData> buildTree(List<ChapterGroup> groups) {
+        TreeItem<TreeNodeData> root = new TreeItem<>(new TreeNodeData("root", NodeType.ROOT, null, null));
+        if (groups == null || viewModel == null) {
+            return root;
+        }
+        String search = viewModel.searchTextProperty().get();
+        String query = search == null ? "" : search.trim().toLowerCase(Locale.ENGLISH);
+
+        for (ChapterGroup group : groups) {
             TreeItem<TreeNodeData> groupItem = new TreeItem<>(new TreeNodeData(group.getName(), NodeType.GROUP, group, null));
-            boolean groupMatches = group.getName().toLowerCase(Locale.ENGLISH).contains(query);
+            boolean groupMatches = !query.isEmpty() && group.getName().toLowerCase(Locale.ENGLISH).contains(query);
             List<TreeItem<TreeNodeData>> chapterItems = new ArrayList<>();
 
             for (Chapter chapter : group.getChapters()) {
-                if (query.isEmpty() || chapter.getName().toLowerCase(Locale.ENGLISH).contains(query) || groupMatches) {
-                    chapterItems.add(new TreeItem<>(new TreeNodeData(chapter.getName(), NodeType.CHAPTER, group, chapter)));
+                String chapterName = chapter.getName() == null ? "" : chapter.getName();
+                boolean chapterMatches = !query.isEmpty() && chapterName.toLowerCase(Locale.ENGLISH).contains(query);
+                if (query.isEmpty() || chapterMatches || groupMatches) {
+                    chapterItems.add(new TreeItem<>(new TreeNodeData(chapterName, NodeType.CHAPTER, group, chapter)));
                 }
             }
 
             if (groupMatches || !chapterItems.isEmpty() || query.isEmpty()) {
                 groupItem.getChildren().addAll(chapterItems);
                 groupItem.setExpanded(true);
-                rootItem.getChildren().add(groupItem);
+                root.getChildren().add(groupItem);
             }
         }
+        return root;
     }
 
     private void promptAddGroup() {
