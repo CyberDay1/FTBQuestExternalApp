@@ -10,11 +10,18 @@ public class MainController {
     @FXML
     private ChapterGroupBrowserController chapterGroupBrowserController;
 
+    @FXML
+    private ChapterEditorController chapterEditorController;
+
     public MenuController getMenuController() {
         return menuController;
     }
 
     public ChapterGroupBrowserController getChapterGroupBrowserController() {
         return chapterGroupBrowserController;
+    }
+
+    public ChapterEditorController getChapterEditorController() {
+        return chapterEditorController;
     }
 }

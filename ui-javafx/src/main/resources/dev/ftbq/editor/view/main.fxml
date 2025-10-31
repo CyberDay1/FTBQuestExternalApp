@@ -27,7 +27,7 @@
                 </Tab>
                 <Tab text="Chapter Editor" closable="false">
                     <content>
-                        <fx:include source="chapter_editor.fxml"/>
+                        <fx:include fx:id="chapterEditor" source="chapter_editor.fxml"/>
                     </content>
                 </Tab>
                 <Tab text="Loot Tables" closable="false">

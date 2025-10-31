@@ -4,6 +4,7 @@ import dev.ftbq.editor.MainApp;
 import dev.ftbq.editor.domain.Quest;
 import dev.ftbq.editor.domain.QuestFile;
 import dev.ftbq.editor.services.UiServiceLocator;
+import dev.ftbq.editor.store.Project;
 import dev.ftbq.editor.viewmodel.ChapterGroupBrowserViewModel;
 import dev.ftbq.editor.viewmodel.ChapterGroupBrowserViewModel.Chapter;
 import dev.ftbq.editor.viewmodel.ChapterGroupBrowserViewModel.ChapterGroup;
@@ -54,6 +55,7 @@ public class ChapterGroupBrowserController {
     private ChapterGroup draggingFromGroup;
     private Path workspace;
     private QuestFile questFile;
+    private Project project;
     private MainApp mainApp;
 
     private final ListChangeListener<ChapterGroup> groupsListener = change -> {
@@ -73,6 +75,12 @@ public class ChapterGroupBrowserController {
     public void setWorkspaceContext(Path workspace, QuestFile questFile) {
         this.workspace = workspace;
         this.questFile = questFile;
+    }
+
+    public void setProject(Project project) {
+        this.project = project;
+        this.questFile = project != null ? project.getQuestFile() : null;
+        reloadGroups();
     }
 
     public void setMainApp(MainApp mainApp) {
