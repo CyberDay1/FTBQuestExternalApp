@@ -1,4 +1,4 @@
-package dev.ftbq.editor.view;
+package dev.ftbq.editor.controller;
 
 import dev.ftbq.editor.MainApp;
 import dev.ftbq.editor.domain.Quest;
@@ -7,8 +7,8 @@ import dev.ftbq.editor.services.UiServiceLocator;
 import dev.ftbq.editor.viewmodel.ChapterGroupBrowserViewModel;
 import dev.ftbq.editor.viewmodel.ChapterGroupBrowserViewModel.Chapter;
 import dev.ftbq.editor.viewmodel.ChapterGroupBrowserViewModel.ChapterGroup;
-import javafx.beans.value.ChangeListener;
 import javafx.beans.binding.Bindings;
+import javafx.beans.value.ChangeListener;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
@@ -77,6 +77,9 @@ public class ChapterGroupBrowserController {
 
     public void setMainApp(MainApp mainApp) {
         this.mainApp = mainApp;
+        if (UiServiceLocator.storeDao != null) {
+            reloadGroups();
+        }
     }
 
     @FXML

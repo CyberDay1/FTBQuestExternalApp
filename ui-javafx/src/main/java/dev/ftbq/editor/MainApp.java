@@ -1,12 +1,13 @@
 package dev.ftbq.editor;
 
+import dev.ftbq.editor.controller.ChapterGroupBrowserController;
+import dev.ftbq.editor.controller.MainController;
 import dev.ftbq.editor.controller.MenuController;
 import dev.ftbq.editor.domain.QuestFile;
 import dev.ftbq.editor.domain.Quest;
 import dev.ftbq.editor.service.ThemeService;
 import dev.ftbq.editor.service.UserSettings;
 import dev.ftbq.editor.ui.AiQuestCreationTab;
-import dev.ftbq.editor.view.ChapterGroupBrowserController;
 import dev.ftbq.editor.view.QuestEditorController;
 import dev.ftbq.editor.services.UiServiceLocator;
 import dev.ftbq.editor.store.StoreDaoImpl;
@@ -41,33 +42,26 @@ public class MainApp extends Application {
     public void start(Stage stage) throws Exception {
         FXMLLoader loader = new FXMLLoader(getClass().getResource("view/main.fxml"));
         Parent root = loader.load();
-        UiServiceLocator.initialize();
-        UiServiceLocator.storeDao = new StoreDaoImpl();
-        if (UiServiceLocator.storeDao instanceof StoreDaoImpl storeDao) {
-            storeDao.loadLastProjectIfAvailable();
+        MainController mainController = loader.getController();
+        MenuController menu = mainController.getMenuController();
+        ChapterGroupBrowserController chapters = mainController.getChapterGroupBrowserController();
+        menu.setMainApp(this);
+        chapters.setMainApp(this);
+        chapterGroupBrowserController = chapters;
+        initStore();
+        if (currentQuestFile == null) {
+            String workspaceName = Optional.ofNullable(workspace.getFileName())
+                    .map(Path::toString)
+                    .filter(name -> !name.isBlank())
+                    .orElse("workspace");
+            currentQuestFile = QuestFile.builder()
+                    .id(workspaceName)
+                    .title("Workspace: " + workspaceName)
+                    .build();
         }
-        MenuController menuController = loader.getController();
-        if (menuController != null) {
-            menuController.setMainApp(this);
-        }
-        Object included = loader.getNamespace().get("chapterGroupBrowserController");
-        if (included instanceof ChapterGroupBrowserController controller) {
-            chapterGroupBrowserController = controller;
-            chapterGroupBrowserController.setMainApp(this);
-            if (currentQuestFile == null) {
-                String workspaceName = Optional.ofNullable(workspace.getFileName())
-                        .map(Path::toString)
-                        .filter(name -> !name.isBlank())
-                        .orElse("workspace");
-                currentQuestFile = QuestFile.builder()
-                        .id(workspaceName)
-                        .title("Workspace: " + workspaceName)
-                        .build();
-            }
-            chapterGroupBrowserController.setWorkspaceContext(workspace, currentQuestFile);
-            UiServiceLocator.questLayoutStore = new JsonQuestLayoutStore(workspace);
-            chapterGroupBrowserController.reloadGroups();
-        }
+        chapterGroupBrowserController.setWorkspaceContext(workspace, currentQuestFile);
+        UiServiceLocator.questLayoutStore = new JsonQuestLayoutStore(workspace);
+        chapterGroupBrowserController.reloadGroups();
 
         Scene scene = new Scene(root, 1200, 800);
         ThemeService.apply(scene, UserSettings.get().darkTheme);
@@ -78,6 +72,12 @@ public class MainApp extends Application {
         stage.setTitle("FTB Quest Editor");
         stage.setScene(scene);
         stage.show();
+    }
+
+    private void initStore() {
+        UiServiceLocator.initialize();
+        UiServiceLocator.storeDao = new StoreDaoImpl();
+        UiServiceLocator.storeDao.loadLastProjectIfAvailable();
     }
 
     private void wireAiQuestTab(Scene scene) {

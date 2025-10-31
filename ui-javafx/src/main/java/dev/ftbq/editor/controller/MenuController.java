@@ -49,49 +49,31 @@ public final class MenuController {
 
     @FXML
     private void onImportQuests() {
-        if (!ensureMainAppInitialized()) {
-            return;
-        }
         mainApp.showImportDialog();
     }
 
     @FXML
     private void onLoadProject() {
-        if (!ensureMainAppInitialized()) {
-            return;
-        }
         mainApp.loadProject();
     }
 
     @FXML
     private void onSaveProjectAs() {
-        if (!ensureMainAppInitialized()) {
-            return;
-        }
         mainApp.saveProjectAs();
     }
 
     @FXML
     private void onValidateQuestPack() {
-        if (!ensureMainAppInitialized()) {
-            return;
-        }
         mainApp.validateCurrentPack();
     }
 
     @FXML
     private void onSaveImportedItems() {
-        if (!ensureMainAppInitialized()) {
-            return;
-        }
         mainApp.saveImportedItems();
     }
 
     @FXML
     private void onGenerateQuestZip() {
-        if (!ensureMainAppInitialized()) {
-            return;
-        }
         QuestFile questFile = mainApp.getCurrentQuestFile();
         if (questFile == null) {
             mainApp.showError("No quest data", "There is no quest file loaded to export.");
@@ -174,19 +156,4 @@ public final class MenuController {
         return path;
     }
 
-    private boolean ensureMainAppInitialized() {
-        if (mainApp == null) {
-            showError("Application not initialized.");
-            return false;
-        }
-        return true;
-    }
-
-    private void showError(String message) {
-        Alert alert = new Alert(Alert.AlertType.ERROR);
-        alert.setTitle("Error");
-        alert.setHeaderText("Error");
-        alert.setContentText(message);
-        alert.showAndWait();
-    }
 }
