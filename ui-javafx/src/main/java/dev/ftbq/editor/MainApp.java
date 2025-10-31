@@ -2,10 +2,15 @@ package dev.ftbq.editor;
 
 import dev.ftbq.editor.controller.MenuController;
 import dev.ftbq.editor.domain.QuestFile;
+import dev.ftbq.editor.domain.Quest;
 import dev.ftbq.editor.service.ThemeService;
 import dev.ftbq.editor.service.UserSettings;
 import dev.ftbq.editor.ui.AiQuestCreationTab;
 import dev.ftbq.editor.view.ChapterGroupBrowserController;
+import dev.ftbq.editor.view.QuestEditorController;
+import dev.ftbq.editor.services.UiServiceLocator;
+import dev.ftbq.editor.store.StoreDaoImpl;
+import dev.ftbq.editor.view.graph.layout.JsonQuestLayoutStore;
 import javafx.application.Application;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
@@ -15,6 +20,7 @@ import javafx.scene.control.Tab;
 import javafx.scene.control.TabPane;
 import javafx.stage.DirectoryChooser;
 import javafx.stage.FileChooser;
+import javafx.stage.Modality;
 import javafx.stage.Stage;
 
 import java.io.File;
@@ -35,6 +41,11 @@ public class MainApp extends Application {
     public void start(Stage stage) throws Exception {
         FXMLLoader loader = new FXMLLoader(getClass().getResource("view/main.fxml"));
         Parent root = loader.load();
+        UiServiceLocator.initialize();
+        UiServiceLocator.storeDao = new StoreDaoImpl();
+        if (UiServiceLocator.storeDao instanceof StoreDaoImpl storeDao) {
+            storeDao.loadLastProjectIfAvailable();
+        }
         MenuController menuController = loader.getController();
         if (menuController != null) {
             menuController.setMainApp(this);
@@ -42,6 +53,7 @@ public class MainApp extends Application {
         Object included = loader.getNamespace().get("chapterGroupBrowserController");
         if (included instanceof ChapterGroupBrowserController controller) {
             chapterGroupBrowserController = controller;
+            chapterGroupBrowserController.setMainApp(this);
             if (currentQuestFile == null) {
                 String workspaceName = Optional.ofNullable(workspace.getFileName())
                         .map(Path::toString)
@@ -53,6 +65,7 @@ public class MainApp extends Application {
                         .build();
             }
             chapterGroupBrowserController.setWorkspaceContext(workspace, currentQuestFile);
+            UiServiceLocator.questLayoutStore = new JsonQuestLayoutStore(workspace);
             chapterGroupBrowserController.reloadGroups();
         }
 
@@ -120,6 +133,7 @@ public class MainApp extends Application {
                     .id(Optional.ofNullable(directory.getName()).filter(name -> !name.isBlank()).orElse("placeholder"))
                     .title("Project loaded from " + directory.getName())
                     .build();
+            UiServiceLocator.questLayoutStore = new JsonQuestLayoutStore(workspace);
             if (chapterGroupBrowserController != null) {
                 chapterGroupBrowserController.setWorkspaceContext(workspace, currentQuestFile);
                 chapterGroupBrowserController.reloadGroups();
@@ -165,6 +179,28 @@ public class MainApp extends Application {
 
     public void saveImportedItems() {
         System.out.println("Saving imported item database...");
+    }
+
+    public void openQuestEditor(Quest quest) {
+        if (quest == null) {
+            return;
+        }
+        try {
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("view/quest_editor.fxml"));
+            Parent root = loader.load();
+            QuestEditorController controller = loader.getController();
+            controller.setQuest(quest);
+            Stage stage = new Stage();
+            stage.setTitle("Quest Editor - " + quest.title());
+            stage.setScene(new Scene(root));
+            stage.initModality(Modality.APPLICATION_MODAL);
+            if (getPrimaryStage() != null) {
+                stage.initOwner(getPrimaryStage());
+            }
+            stage.show();
+        } catch (IOException e) {
+            showError("Failed to open quest editor", e.getMessage());
+        }
     }
 
     public QuestFile getCurrentQuestFile() {

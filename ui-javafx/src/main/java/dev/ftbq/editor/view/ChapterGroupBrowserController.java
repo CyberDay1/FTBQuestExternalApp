@@ -1,5 +1,7 @@
 package dev.ftbq.editor.view;
 
+import dev.ftbq.editor.MainApp;
+import dev.ftbq.editor.domain.Quest;
 import dev.ftbq.editor.domain.QuestFile;
 import dev.ftbq.editor.services.UiServiceLocator;
 import dev.ftbq.editor.viewmodel.ChapterGroupBrowserViewModel;
@@ -28,10 +30,13 @@ import javafx.util.Callback;
 
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
 
 public class ChapterGroupBrowserController {
     private static final Logger LOGGER = Logger.getLogger(ChapterGroupBrowserController.class.getName());
@@ -42,13 +47,14 @@ public class ChapterGroupBrowserController {
     @FXML
     private TreeView<TreeNodeData> chapterTree;
 
-    private TreeItem<TreeNodeData> rootItem = new TreeItem<>(new TreeNodeData("root", NodeType.ROOT, null, null));
+    private TreeItem<TreeNodeData> rootItem = new TreeItem<>(new TreeNodeData("root", NodeType.ROOT, null, null, null));
 
     private ChapterGroupBrowserViewModel viewModel;
     private Chapter draggingChapter;
     private ChapterGroup draggingFromGroup;
     private Path workspace;
     private QuestFile questFile;
+    private MainApp mainApp;
 
     private final ListChangeListener<ChapterGroup> groupsListener = change -> {
         while (change.next()) {
@@ -69,6 +75,10 @@ public class ChapterGroupBrowserController {
         this.questFile = questFile;
     }
 
+    public void setMainApp(MainApp mainApp) {
+        this.mainApp = mainApp;
+    }
+
     @FXML
     public void initialize() {
         if (viewModel == null) {
@@ -78,6 +88,14 @@ public class ChapterGroupBrowserController {
         chapterTree.setShowRoot(false);
         chapterTree.setCellFactory(createCellFactory());
         chapterTree.setOnContextMenuRequested(this::handleTreeContextMenuRequest);
+        chapterTree.setOnMouseClicked(event -> {
+            if (event.getClickCount() == 2) {
+                Quest quest = getSelectedQuest();
+                if (quest != null && mainApp != null) {
+                    mainApp.openQuestEditor(quest);
+                }
+            }
+        });
     }
 
     public void reloadGroups() {
@@ -99,6 +117,21 @@ public class ChapterGroupBrowserController {
         rootItem = buildTree(viewModel.getChapterGroups());
         chapterTree.setRoot(rootItem);
         chapterTree.setShowRoot(false);
+    }
+
+    public Quest getSelectedQuest() {
+        if (chapterTree == null) {
+            return null;
+        }
+        TreeItem<TreeNodeData> selectedItem = chapterTree.getSelectionModel().getSelectedItem();
+        if (selectedItem == null) {
+            return null;
+        }
+        TreeNodeData data = selectedItem.getValue();
+        if (data == null || data.type() != NodeType.QUEST) {
+            return null;
+        }
+        return data.quest();
     }
 
     private void bindViewModel() {
@@ -316,23 +349,36 @@ public class ChapterGroupBrowserController {
     }
 
     private TreeItem<TreeNodeData> buildTree(List<ChapterGroup> groups) {
-        TreeItem<TreeNodeData> root = new TreeItem<>(new TreeNodeData("root", NodeType.ROOT, null, null));
+        TreeItem<TreeNodeData> root = new TreeItem<>(new TreeNodeData("root", NodeType.ROOT, null, null, null));
         if (groups == null || viewModel == null) {
             return root;
         }
         String search = viewModel.searchTextProperty().get();
         String query = search == null ? "" : search.trim().toLowerCase(Locale.ENGLISH);
-
+        LinkedHashMap<String, dev.ftbq.editor.domain.Chapter> domainChapters = buildChapterLookup();
         for (ChapterGroup group : groups) {
-            TreeItem<TreeNodeData> groupItem = new TreeItem<>(new TreeNodeData(group.getName(), NodeType.GROUP, group, null));
-            boolean groupMatches = !query.isEmpty() && group.getName().toLowerCase(Locale.ENGLISH).contains(query);
+            TreeItem<TreeNodeData> groupItem = new TreeItem<>(new TreeNodeData(group.getName(), NodeType.GROUP, group, null, null));
+            boolean groupMatches = matchesQuery(group.getName(), query);
             List<TreeItem<TreeNodeData>> chapterItems = new ArrayList<>();
 
             for (Chapter chapter : group.getChapters()) {
-                String chapterName = chapter.getName() == null ? "" : chapter.getName();
-                boolean chapterMatches = !query.isEmpty() && chapterName.toLowerCase(Locale.ENGLISH).contains(query);
-                if (query.isEmpty() || chapterMatches || groupMatches) {
-                    chapterItems.add(new TreeItem<>(new TreeNodeData(chapterName, NodeType.CHAPTER, group, chapter)));
+                String chapterName = Optional.ofNullable(chapter.getName()).orElse("");
+                boolean chapterMatches = matchesQuery(chapterName, query);
+                TreeItem<TreeNodeData> chapterItem = new TreeItem<>(new TreeNodeData(chapterName, NodeType.CHAPTER, group, chapter, null));
+                dev.ftbq.editor.domain.Chapter domainChapter = domainChapters.get(chapterName);
+                List<TreeItem<TreeNodeData>> questItems = new ArrayList<>();
+                if (domainChapter != null) {
+                    questItems = domainChapter.quests().stream()
+                            .filter(Objects::nonNull)
+                            .filter(quest -> query.isEmpty() || chapterMatches || groupMatches || matchesQuery(quest.title(), query))
+                            .map(quest -> new TreeItem<>(new TreeNodeData(quest.title(), NodeType.QUEST, group, chapter, quest)))
+                            .collect(Collectors.toCollection(ArrayList::new));
+                }
+                boolean includeChapter = query.isEmpty() || chapterMatches || groupMatches || !questItems.isEmpty();
+                if (includeChapter) {
+                    chapterItem.getChildren().addAll(questItems);
+                    chapterItem.setExpanded(true);
+                    chapterItems.add(chapterItem);
                 }
             }
 
@@ -343,6 +389,29 @@ public class ChapterGroupBrowserController {
             }
         }
         return root;
+    }
+
+    private LinkedHashMap<String, dev.ftbq.editor.domain.Chapter> buildChapterLookup() {
+        LinkedHashMap<String, dev.ftbq.editor.domain.Chapter> lookup = new LinkedHashMap<>();
+        if (questFile == null || questFile.chapters() == null) {
+            return lookup;
+        }
+        for (dev.ftbq.editor.domain.Chapter chapter : questFile.chapters()) {
+            if (chapter != null && chapter.title() != null && !chapter.title().isBlank()) {
+                lookup.putIfAbsent(chapter.title(), chapter);
+            }
+        }
+        return lookup;
+    }
+
+    private boolean matchesQuery(String value, String query) {
+        if (query == null || query.isBlank()) {
+            return false;
+        }
+        if (value == null) {
+            return false;
+        }
+        return value.toLowerCase(Locale.ENGLISH).contains(query);
     }
 
     private void promptAddGroup() {
@@ -417,13 +486,14 @@ public class ChapterGroupBrowserController {
                 .ifPresent(name -> viewModel.renameChapter(chapter, name));
     }
 
-    private record TreeNodeData(String name, NodeType type, ChapterGroup group, Chapter chapter) {
+    private record TreeNodeData(String name, NodeType type, ChapterGroup group, Chapter chapter, Quest quest) {
     }
 
     private enum NodeType {
         ROOT,
         GROUP,
-        CHAPTER
+        CHAPTER,
+        QUEST
     }
 }
 
