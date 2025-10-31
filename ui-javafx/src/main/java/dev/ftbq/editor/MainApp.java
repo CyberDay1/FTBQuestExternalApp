@@ -1,5 +1,6 @@
 package dev.ftbq.editor;
 
+import dev.ftbq.editor.controller.ChapterEditorController;
 import dev.ftbq.editor.controller.ChapterGroupBrowserController;
 import dev.ftbq.editor.controller.MainController;
 import dev.ftbq.editor.controller.MenuController;
@@ -10,6 +11,7 @@ import dev.ftbq.editor.service.UserSettings;
 import dev.ftbq.editor.ui.AiQuestCreationTab;
 import dev.ftbq.editor.view.QuestEditorController;
 import dev.ftbq.editor.services.UiServiceLocator;
+import dev.ftbq.editor.store.Project;
 import dev.ftbq.editor.store.StoreDaoImpl;
 import dev.ftbq.editor.view.graph.layout.JsonQuestLayoutStore;
 import javafx.application.Application;
@@ -37,6 +39,7 @@ public class MainApp extends Application {
     private Path workspace = Path.of(System.getProperty("user.dir"));
     private QuestFile currentQuestFile;
     private ChapterGroupBrowserController chapterGroupBrowserController;
+    private ChapterEditorController chapterEditorController;
 
     @Override
     public void start(Stage stage) throws Exception {
@@ -45,9 +48,11 @@ public class MainApp extends Application {
         MainController mainController = loader.getController();
         MenuController menu = mainController.getMenuController();
         ChapterGroupBrowserController chapters = mainController.getChapterGroupBrowserController();
+        ChapterEditorController chapterEditor = mainController.getChapterEditorController();
         menu.setMainApp(this);
         chapters.setMainApp(this);
         chapterGroupBrowserController = chapters;
+        chapterEditorController = chapterEditor;
         initStore();
         if (currentQuestFile == null) {
             String workspaceName = Optional.ofNullable(workspace.getFileName())
@@ -78,6 +83,20 @@ public class MainApp extends Application {
         UiServiceLocator.initialize();
         UiServiceLocator.storeDao = new StoreDaoImpl();
         UiServiceLocator.storeDao.loadLastProjectIfAvailable();
+        Project project = UiServiceLocator.storeDao.getActiveProject();
+        if (project != null) {
+            notifyProjectLoaded(project);
+        }
+    }
+
+    private void notifyProjectLoaded(Project project) {
+        currentQuestFile = project.getQuestFile();
+        if (chapterEditorController != null) {
+            chapterEditorController.setProject(project);
+        }
+        if (chapterGroupBrowserController != null) {
+            chapterGroupBrowserController.setProject(project);
+        }
     }
 
     private void wireAiQuestTab(Scene scene) {

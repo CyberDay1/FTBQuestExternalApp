@@ -159,6 +159,7 @@ public class StoreDao {
     private static final String UPDATE_CHAPTER_ORDER_SQL = "UPDATE chapters SET ord = ? WHERE id = ?";
 
     private final Connection connection;
+    private Project activeProject;
 
     public StoreDao(Connection connection) {
         this.connection = connection;
@@ -166,6 +167,14 @@ public class StoreDao {
 
     public void loadLastProjectIfAvailable() {
         // Default implementation does nothing.
+    }
+
+    public Project getActiveProject() {
+        return activeProject;
+    }
+
+    protected void setActiveProject(Project activeProject) {
+        this.activeProject = activeProject;
     }
 
     public void upsertItem(ItemEntity item) {
