@@ -1,36 +1,61 @@
 package dev.ftbq.editor.controller;
 
 import dev.ftbq.editor.domain.Chapter;
+import dev.ftbq.editor.domain.Dependency;
+import dev.ftbq.editor.domain.ItemReward;
 import dev.ftbq.editor.domain.Quest;
+import dev.ftbq.editor.domain.Task;
 import dev.ftbq.editor.service.ThemeService;
 import dev.ftbq.editor.service.UserSettings;
 import dev.ftbq.editor.store.Project;
 import dev.ftbq.editor.ui.graph.QuestCanvas;
-import dev.ftbq.editor.view.QuestEditorController;
+import javafx.collections.FXCollections;
+import javafx.css.PseudoClass;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
+import javafx.geometry.Insets;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
+import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
+import javafx.scene.control.MenuButton;
+import javafx.scene.control.TextField;
+import javafx.scene.input.MouseButton;
 import javafx.scene.layout.StackPane;
+import javafx.scene.layout.TilePane;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 import javafx.stage.Window;
 
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
 
 public class ChapterEditorController {
     @FXML private StackPane canvasHolder;
     @FXML private ListView<Chapter> chapterListView;
     @FXML private Label chapterTitleLabel;
+    @FXML private TextField chapterSearchField;
+    @FXML private ListView<String> taskList;
+    @FXML private ListView<String> rewardList;
+    @FXML private ListView<String> dependencyList;
+    @FXML private MenuButton addTaskMenu;
+    @FXML private MenuButton addRewardMenu;
     private QuestCanvas questCanvas;
     private static final Logger LOGGER = Logger.getLogger(ChapterEditorController.class.getName());
+    private static final PseudoClass SELECTED_PSEUDO_CLASS = PseudoClass.getPseudoClass("selected");
     private Project project;
+    private final TilePane questGrid = new TilePane(12, 12);
+    private final Map<String, Button> questButtons = new HashMap<>();
+    private Quest selectedQuest;
 
     @FXML
     public void initialize() {
@@ -43,7 +68,13 @@ public class ChapterEditorController {
         questCanvas.setManaged(true);
         questCanvas.prefWidthProperty().bind(canvasHolder.widthProperty());
         questCanvas.prefHeightProperty().bind(canvasHolder.heightProperty());
-        canvasHolder.getChildren().setAll(questCanvas);
+        questGrid.setPadding(new Insets(24));
+        questGrid.setPrefTileWidth(160);
+        questGrid.setPrefTileHeight(96);
+        questGrid.setHgap(12);
+        questGrid.setVgap(12);
+        questGrid.getStyleClass().add("quest-grid");
+        canvasHolder.getChildren().setAll(questCanvas, questGrid);
 
         // apply initial settings
         var es = UserSettings.get();
@@ -58,9 +89,30 @@ public class ChapterEditorController {
                     setText(empty || item == null ? null : item.title());
                 }
             });
-            chapterListView.getSelectionModel().selectedItemProperty().addListener((obs, oldChapter, newChapter) ->
-                    updateChapterTitle(newChapter));
+            chapterListView.getSelectionModel().selectedItemProperty().addListener((obs, oldChapter, newChapter) -> {
+                if (newChapter != null) {
+                    displayChapter(newChapter);
+                } else {
+                    displayChapter(null);
+                }
+            });
         }
+
+        if (chapterSearchField != null) {
+            chapterSearchField.textProperty().addListener((obs, oldValue, newValue) -> refreshChapterList());
+        }
+
+        if (taskList != null) {
+            taskList.setItems(FXCollections.observableArrayList());
+        }
+        if (rewardList != null) {
+            rewardList.setItems(FXCollections.observableArrayList());
+        }
+        if (dependencyList != null) {
+            dependencyList.setItems(FXCollections.observableArrayList());
+        }
+
+        clearQuestDetails();
     }
 
     // Example method to pan programmatically (no zoom exposed)
@@ -77,39 +129,170 @@ public class ChapterEditorController {
         this.project = project;
         if (project != null) {
             refreshChapterList();
-        } else if (chapterListView != null) {
-            chapterListView.getItems().clear();
-            updateChapterTitle(null);
+        } else {
+            if (chapterListView != null) {
+                chapterListView.getItems().clear();
+            }
+            displayChapter(null);
         }
     }
 
     private void refreshChapterList() {
-        if (chapterListView == null || project == null) {
+        if (chapterListView == null) {
             return;
         }
-        chapterListView.getItems().clear();
-        chapterListView.getItems().addAll(project.getChapters());
-        chapterListView.setOnMouseClicked(e -> {
-            if (e.getClickCount() == 2 && chapterListView.getSelectionModel().getSelectedItem() != null) {
-                openQuestEditor(chapterListView.getSelectionModel().getSelectedItem());
+        if (project == null) {
+            chapterListView.getItems().clear();
+            displayChapter(null);
+            return;
+        }
+
+        List<Chapter> chapters = project.getChapters();
+        List<Chapter> filtered = chapters;
+        if (chapterSearchField != null) {
+            String query = chapterSearchField.getText();
+            if (query != null && !query.isBlank()) {
+                String filter = query.toLowerCase(Locale.ROOT);
+                filtered = chapters.stream()
+                        .filter(chapter -> chapter.title().toLowerCase(Locale.ROOT).contains(filter))
+                        .collect(Collectors.toList());
             }
-        });
-        if (!chapterListView.getItems().isEmpty()) {
-            chapterListView.getSelectionModel().selectFirst();
+        }
+
+        chapterListView.getItems().setAll(filtered);
+        if (!filtered.isEmpty()) {
+            Chapter selection = chapterListView.getSelectionModel().getSelectedItem();
+            if (selection == null || !filtered.contains(selection)) {
+                chapterListView.getSelectionModel().selectFirst();
+            } else {
+                displayChapter(selection);
+            }
         } else {
-            updateChapterTitle(null);
+            displayChapter(null);
         }
     }
 
-    private void openQuestEditor(Chapter chapter) {
+    @FXML
+    private void onChapterSelected() {
+        if (chapterListView == null) {
+            return;
+        }
+        Chapter selected = chapterListView.getSelectionModel().getSelectedItem();
+        if (selected != null) {
+            displayChapter(selected);
+        }
+    }
+
+    private void displayChapter(Chapter chapter) {
+        updateChapterTitle(chapter);
+        questButtons.clear();
+        questGrid.getChildren().clear();
+        selectedQuest = null;
+        clearQuestDetails();
+
         if (chapter == null) {
             return;
         }
-        if (chapter.quests().isEmpty()) {
-            LOGGER.log(Level.INFO, "Chapter {0} has no quests to edit", chapter.id());
+
+        List<Quest> quests = chapter.quests();
+        for (Quest quest : quests) {
+            Button questButton = createQuestButton(quest);
+            questButtons.put(quest.id(), questButton);
+            questGrid.getChildren().add(questButton);
+        }
+
+        if (!quests.isEmpty()) {
+            selectQuest(quests.get(0));
+        }
+    }
+
+    private Button createQuestButton(Quest quest) {
+        Button button = new Button(quest.title());
+        button.getStyleClass().add("quest-node-button");
+        button.setWrapText(true);
+        button.setPrefWidth(160);
+        button.setPrefHeight(96);
+        button.setOnMouseClicked(event -> {
+            if (event.getButton() != MouseButton.PRIMARY) {
+                return;
+            }
+            selectQuest(quest);
+            if (event.getClickCount() >= 2) {
+                openQuestEditor(quest);
+            }
+        });
+        return button;
+    }
+
+    private void selectQuest(Quest quest) {
+        if (quest == null) {
+            questButtons.values().forEach(button -> button.pseudoClassStateChanged(SELECTED_PSEUDO_CLASS, false));
+            selectedQuest = null;
+            clearQuestDetails();
             return;
         }
-        Quest quest = chapter.quests().get(0);
+
+        selectedQuest = quest;
+        questButtons.forEach((questId, button) ->
+                button.pseudoClassStateChanged(SELECTED_PSEUDO_CLASS, questId.equals(quest.id())));
+        updateQuestDetails(quest);
+    }
+
+    private void updateQuestDetails(Quest quest) {
+        if (taskList != null) {
+            taskList.getItems().setAll(quest.tasks().stream()
+                    .map(this::describeTask)
+                    .collect(Collectors.toList()));
+        }
+        if (rewardList != null) {
+            rewardList.getItems().setAll(quest.itemRewards().stream()
+                    .map(ItemReward::describe)
+                    .collect(Collectors.toList()));
+        }
+        if (dependencyList != null) {
+            dependencyList.getItems().setAll(quest.dependencies().stream()
+                    .map(this::describeDependency)
+                    .collect(Collectors.toList()));
+        }
+        if (addTaskMenu != null) {
+            addTaskMenu.setDisable(false);
+        }
+        if (addRewardMenu != null) {
+            addRewardMenu.setDisable(false);
+        }
+    }
+
+    private void clearQuestDetails() {
+        if (taskList != null) {
+            taskList.getItems().clear();
+        }
+        if (rewardList != null) {
+            rewardList.getItems().clear();
+        }
+        if (dependencyList != null) {
+            dependencyList.getItems().clear();
+        }
+        if (addTaskMenu != null) {
+            addTaskMenu.setDisable(true);
+        }
+        if (addRewardMenu != null) {
+            addRewardMenu.setDisable(true);
+        }
+    }
+
+    private String describeTask(Task task) {
+        return task != null ? task.describe() : "Unknown task";
+    }
+
+    private String describeDependency(Dependency dependency) {
+        if (dependency == null) {
+            return "Unknown dependency";
+        }
+        String suffix = dependency.required() ? "required" : "optional";
+        return dependency.questId() + " (" + suffix + ")";
+    }
+
+    private void openQuestEditor(Quest quest) {
         try {
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/dev/ftbq/editor/view/quest_editor.fxml"));
             Parent root = loader.load();
@@ -128,7 +311,7 @@ public class ChapterEditorController {
             }
             stage.show();
         } catch (IOException e) {
-            LOGGER.log(Level.WARNING, "Failed to open quest editor for chapter " + chapter.id(), e);
+            LOGGER.log(Level.WARNING, "Failed to open quest editor for quest " + quest.id(), e);
         }
     }
 

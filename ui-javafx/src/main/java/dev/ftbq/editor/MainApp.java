@@ -9,7 +9,7 @@ import dev.ftbq.editor.domain.Quest;
 import dev.ftbq.editor.service.ThemeService;
 import dev.ftbq.editor.service.UserSettings;
 import dev.ftbq.editor.ui.AiQuestCreationTab;
-import dev.ftbq.editor.view.QuestEditorController;
+import dev.ftbq.editor.controller.QuestEditorController;
 import dev.ftbq.editor.services.UiServiceLocator;
 import dev.ftbq.editor.store.Project;
 import dev.ftbq.editor.store.StoreDaoImpl;
@@ -43,6 +43,8 @@ public class MainApp extends Application {
 
     @Override
     public void start(Stage stage) throws Exception {
+        Project initialProject = initStore();
+
         FXMLLoader loader = new FXMLLoader(getClass().getResource("view/main.fxml"));
         Parent root = loader.load();
         MainController mainController = loader.getController();
@@ -53,7 +55,11 @@ public class MainApp extends Application {
         chapters.setMainApp(this);
         chapterGroupBrowserController = chapters;
         chapterEditorController = chapterEditor;
-        initStore();
+
+        if (initialProject != null) {
+            notifyProjectLoaded(initialProject);
+        }
+
         if (currentQuestFile == null) {
             String workspaceName = Optional.ofNullable(workspace.getFileName())
                     .map(Path::toString)
@@ -66,7 +72,10 @@ public class MainApp extends Application {
         }
         chapterGroupBrowserController.setWorkspaceContext(workspace, currentQuestFile);
         UiServiceLocator.questLayoutStore = new JsonQuestLayoutStore(workspace);
-        chapterGroupBrowserController.reloadGroups();
+
+        if (initialProject == null) {
+            chapterGroupBrowserController.reloadGroups();
+        }
 
         Scene scene = new Scene(root, 1200, 800);
         ThemeService.apply(scene, UserSettings.get().darkTheme);
@@ -79,14 +88,11 @@ public class MainApp extends Application {
         stage.show();
     }
 
-    private void initStore() {
+    private Project initStore() {
         UiServiceLocator.initialize();
         UiServiceLocator.storeDao = new StoreDaoImpl();
         UiServiceLocator.storeDao.loadLastProjectIfAvailable();
-        Project project = UiServiceLocator.storeDao.getActiveProject();
-        if (project != null) {
-            notifyProjectLoaded(project);
-        }
+        return UiServiceLocator.storeDao.getActiveProject();
     }
 
     private void notifyProjectLoaded(Project project) {

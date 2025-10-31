@@ -80,12 +80,16 @@ public class ChapterGroupBrowserController {
     public void setProject(Project project) {
         this.project = project;
         this.questFile = project != null ? project.getQuestFile() : null;
-        reloadGroups();
+        if (project != null) {
+            reloadGroups();
+        } else {
+            clearTree();
+        }
     }
 
     public void setMainApp(MainApp mainApp) {
         this.mainApp = mainApp;
-        if (UiServiceLocator.storeDao != null) {
+        if (UiServiceLocator.storeDao != null && project != null) {
             reloadGroups();
         }
     }
@@ -122,10 +126,21 @@ public class ChapterGroupBrowserController {
             LOGGER.warning("View model not initialized; cannot reload chapter groups.");
             return;
         }
-        if (questFile != null) {
-            viewModel.loadFromQuestFile(questFile);
+        if (project == null || questFile == null) {
+            clearTree();
+            return;
         }
+        viewModel.loadFromQuestFile(questFile);
         rootItem = buildTree(viewModel.getChapterGroups());
+        chapterTree.setRoot(rootItem);
+        chapterTree.setShowRoot(false);
+    }
+
+    private void clearTree() {
+        if (chapterTree == null) {
+            return;
+        }
+        rootItem = new TreeItem<>(new TreeNodeData("root", NodeType.ROOT, null, null, null));
         chapterTree.setRoot(rootItem);
         chapterTree.setShowRoot(false);
     }
