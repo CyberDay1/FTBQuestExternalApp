@@ -38,7 +38,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
-public final class StoreDao {
+public class StoreDao {
     private static final String UPSERT_ITEM_SQL = """
             INSERT INTO items (id, display_name, is_vanilla, mod_id, mod_name, tags, texture_path, icon_hash, source_jar, version, kind)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
