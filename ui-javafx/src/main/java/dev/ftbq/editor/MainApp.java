@@ -45,14 +45,42 @@ public class MainApp extends Application {
     public void start(Stage stage) throws Exception {
         Project initialProject = initStore();
 
-        FXMLLoader loader = new FXMLLoader(getClass().getResource("view/main.fxml"));
+        FXMLLoader loader = new FXMLLoader(getClass().getResource("/dev/ftbq/editor/view/main.fxml"));
+        loader.setControllerFactory(type -> {
+            try {
+                Object controller = type.getDeclaredConstructor().newInstance();
+                if (controller instanceof AppAware aware) {
+                    aware.setMainApp(this);
+                }
+                return controller;
+            } catch (Exception e) {
+                throw new RuntimeException("Failed to initialize controller: " + type.getName(), e);
+            }
+        });
+
         Parent root = loader.load();
         MainController mainController = loader.getController();
+        if (mainController == null) {
+            System.err.println("[VERIFY FAIL] MainController not loaded.");
+            throw new IllegalStateException("Main controller failed to load");
+        }
+
         MenuController menu = mainController.getMenuController();
         ChapterGroupBrowserController chapters = mainController.getChapterGroupBrowserController();
         ChapterEditorController chapterEditor = mainController.getChapterEditorController();
-        menu.setMainApp(this);
-        chapters.setMainApp(this);
+
+        if (menu == null) {
+            System.err.println("[VERIFY FAIL] MenuController not injected into MainController.");
+        }
+
+        if (chapters == null) {
+            System.err.println("[VERIFY FAIL] ChapterGroupBrowserController not injected into MainController.");
+        }
+
+        if (chapterEditor == null) {
+            System.err.println("[VERIFY FAIL] ChapterEditorController not injected into MainController.");
+        }
+
         chapterGroupBrowserController = chapters;
         chapterEditorController = chapterEditor;
 
@@ -70,10 +98,14 @@ public class MainApp extends Application {
                     .title("Workspace: " + workspaceName)
                     .build();
         }
-        chapterGroupBrowserController.setWorkspaceContext(workspace, currentQuestFile);
+
+        if (chapterGroupBrowserController != null) {
+            chapterGroupBrowserController.setWorkspaceContext(workspace, currentQuestFile);
+        }
+
         UiServiceLocator.questLayoutStore = new JsonQuestLayoutStore(workspace);
 
-        if (initialProject == null) {
+        if (initialProject == null && chapterGroupBrowserController != null) {
             chapterGroupBrowserController.reloadGroups();
         }
 
@@ -86,6 +118,8 @@ public class MainApp extends Application {
         stage.setTitle("FTB Quest Editor");
         stage.setScene(scene);
         stage.show();
+
+        System.out.println("[VERIFY] UI loaded: " + mainController.getClass().getSimpleName());
     }
 
     private Project initStore() {

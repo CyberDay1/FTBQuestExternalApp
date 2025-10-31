@@ -1,21 +1,27 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
 <?import javafx.scene.control.Tab?>
 <?import javafx.scene.control.TabPane?>
+<?import javafx.scene.control.ToolBar?>
 <?import javafx.scene.layout.BorderPane?>
-<?import javafx.scene.layout.HBox?>
-<?import javafx.scene.layout.Pane?>
+<?import javafx.scene.layout.VBox?>
 
 <BorderPane xmlns="http://javafx.com/javafx/21"
             xmlns:fx="http://javafx.com/fxml/1"
             fx:controller="dev.ftbq.editor.controller.MainController">
     <top>
-        <HBox alignment="CENTER_LEFT">
+        <VBox spacing="4">
             <children>
                 <fx:include fx:id="menu" source="main_menu.fxml"/>
-                <Pane HBox.hgrow="ALWAYS" />
+                <ToolBar>
+                    <items>
+                        <Label text="FTB Quest Editor" />
+                        <Button text="Settings" />
+                    </items>
+                </ToolBar>
             </children>
-        </HBox>
+        </VBox>
     </top>
     <center>
         <TabPane fx:id="mainTabs" id="mainTabs">

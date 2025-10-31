@@ -1,5 +1,6 @@
 package dev.ftbq.editor.controller;
 
+import dev.ftbq.editor.AppAware;
 import dev.ftbq.editor.MainApp;
 import dev.ftbq.editor.domain.Quest;
 import dev.ftbq.editor.domain.QuestFile;
@@ -39,7 +40,7 @@ import java.util.Optional;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
-public class ChapterGroupBrowserController {
+public class ChapterGroupBrowserController implements AppAware {
     private static final Logger LOGGER = Logger.getLogger(ChapterGroupBrowserController.class.getName());
 
     @FXML
@@ -87,6 +88,7 @@ public class ChapterGroupBrowserController {
         }
     }
 
+    @Override
     public void setMainApp(MainApp mainApp) {
         this.mainApp = mainApp;
         if (UiServiceLocator.storeDao != null && project != null) {
@@ -111,6 +113,7 @@ public class ChapterGroupBrowserController {
                 }
             }
         });
+        System.out.println("[VERIFY] ChapterGroupBrowserController initialized.");
     }
 
     public void reloadGroups() {
@@ -120,6 +123,7 @@ public class ChapterGroupBrowserController {
         }
         if (UiServiceLocator.storeDao == null) {
             LOGGER.warning("StoreDao not initialized; cannot reload chapter groups.");
+            System.err.println("[VERIFY FAIL] StoreDao not initialized; skipping reloadGroups().");
             return;
         }
         if (viewModel == null) {
@@ -134,6 +138,7 @@ public class ChapterGroupBrowserController {
         rootItem = buildTree(viewModel.getChapterGroups());
         chapterTree.setRoot(rootItem);
         chapterTree.setShowRoot(false);
+        System.out.println("[VERIFY] Chapter groups reloaded: " + viewModel.getChapterGroups().size());
     }
 
     private void clearTree() {
