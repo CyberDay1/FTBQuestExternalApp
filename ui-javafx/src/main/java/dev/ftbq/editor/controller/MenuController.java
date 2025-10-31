@@ -1,5 +1,6 @@
 package dev.ftbq.editor.controller;
 
+import dev.ftbq.editor.AppAware;
 import dev.ftbq.editor.MainApp;
 import dev.ftbq.editor.domain.QuestFile;
 import dev.ftbq.editor.service.AutosaveService;
@@ -25,7 +26,7 @@ import java.util.zip.ZipFile;
 /**
  * Controller for the main menu actions.
  */
-public final class MenuController {
+public final class MenuController implements AppAware {
 
     private final StructuredLogger logger = ServiceLocator.loggerFactory().create(MenuController.class);
     private MainApp mainApp;
@@ -43,37 +44,65 @@ public final class MenuController {
         this.settingsSupplier = Objects.requireNonNull(settingsSupplier, "settingsSupplier");
     }
 
+    @Override
     public void setMainApp(MainApp mainApp) {
         this.mainApp = mainApp;
     }
 
+    private boolean ensureMainAppInjected(String actionName) {
+        if (mainApp != null) {
+            return true;
+        }
+        System.err.println("[VERIFY FAIL] MainApp not injected in MenuController for " + actionName + ".");
+        return false;
+    }
+
     @FXML
     private void onImportQuests() {
+        if (!ensureMainAppInjected("onImportQuests")) {
+            return;
+        }
         mainApp.showImportDialog();
     }
 
     @FXML
     private void onLoadProject() {
+        if (!ensureMainAppInjected("onLoadProject")) {
+            return;
+        }
         mainApp.loadProject();
     }
 
     @FXML
     private void onSaveProjectAs() {
+        if (!ensureMainAppInjected("onSaveProjectAs")) {
+            return;
+        }
         mainApp.saveProjectAs();
     }
 
     @FXML
     private void onValidateQuestPack() {
+        if (!ensureMainAppInjected("onValidateQuestPack")) {
+            return;
+        }
         mainApp.validateCurrentPack();
     }
 
     @FXML
     private void onSaveImportedItems() {
+        if (!ensureMainAppInjected("onSaveImportedItems")) {
+            return;
+        }
         mainApp.saveImportedItems();
     }
 
     @FXML
     private void onGenerateQuestZip() {
+        if (!ensureMainAppInjected("onGenerateQuestZip")) {
+            return;
+        }
+
         QuestFile questFile = mainApp.getCurrentQuestFile();
         if (questFile == null) {
             mainApp.showError("No quest data", "There is no quest file loaded to export.");

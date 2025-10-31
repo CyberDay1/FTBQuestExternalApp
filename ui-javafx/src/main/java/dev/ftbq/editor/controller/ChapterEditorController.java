@@ -1,5 +1,7 @@
 package dev.ftbq.editor.controller;
 
+import dev.ftbq.editor.AppAware;
+import dev.ftbq.editor.MainApp;
 import dev.ftbq.editor.domain.Chapter;
 import dev.ftbq.editor.domain.Dependency;
 import dev.ftbq.editor.domain.ItemReward;
@@ -47,7 +49,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
-public class ChapterEditorController {
+public class ChapterEditorController implements AppAware {
     private static final Logger LOGGER = Logger.getLogger(ChapterEditorController.class.getName());
     private static final PseudoClass SELECTED_PSEUDO_CLASS = PseudoClass.getPseudoClass("selected");
     private static final int DEFAULT_COLUMNS = 4;
@@ -67,6 +69,12 @@ public class ChapterEditorController {
     private Chapter currentChapter;
     private Quest selectedQuest;
     private final Map<String, Node> questNodes = new HashMap<>();
+    private MainApp mainApp;
+
+    @Override
+    public void setMainApp(MainApp app) {
+        this.mainApp = app;
+    }
 
     @FXML
     public void initialize() {
@@ -106,6 +114,7 @@ public class ChapterEditorController {
         }
 
         clearQuestDetails();
+        System.out.println("[VERIFY] ChapterEditorController initialized.");
     }
 
     public void setProject(Project project) {
