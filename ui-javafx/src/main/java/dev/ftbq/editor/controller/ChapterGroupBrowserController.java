@@ -49,7 +49,7 @@ public class ChapterGroupBrowserController implements AppAware {
     @FXML
     private TreeView<TreeNodeData> chapterTree;
 
-    private TreeItem<TreeNodeData> rootItem = new TreeItem<>(new TreeNodeData("root", NodeType.ROOT, null, null, null));
+    private TreeItem<TreeNodeData> rootItem = new TreeItem<>(new TreeNodeData("root", NodeType.ROOT, null, null, null, null));
 
     private ChapterGroupBrowserViewModel viewModel;
     private Chapter draggingChapter;
@@ -113,6 +113,9 @@ public class ChapterGroupBrowserController implements AppAware {
                 }
             }
         });
+        chapterTree.getSelectionModel().selectedItemProperty().addListener(
+                (obs, oldVal, newVal) -> onTreeSelectionChanged(newVal)
+        );
         System.out.println("[VERIFY] ChapterGroupBrowserController initialized.");
     }
 
@@ -145,7 +148,7 @@ public class ChapterGroupBrowserController implements AppAware {
         if (chapterTree == null) {
             return;
         }
-        rootItem = new TreeItem<>(new TreeNodeData("root", NodeType.ROOT, null, null, null));
+        rootItem = new TreeItem<>(new TreeNodeData("root", NodeType.ROOT, null, null, null, null));
         chapterTree.setRoot(rootItem);
         chapterTree.setShowRoot(false);
     }
@@ -163,6 +166,21 @@ public class ChapterGroupBrowserController implements AppAware {
             return null;
         }
         return data.quest();
+    }
+
+    private void onTreeSelectionChanged(TreeItem<TreeNodeData> item) {
+        if (item == null) {
+            return;
+        }
+        TreeNodeData data = item.getValue();
+        if (data == null || mainApp == null) {
+            return;
+        }
+        if (data.type() == NodeType.CHAPTER && data.chapter() != null) {
+            mainApp.focusChapter(data.chapter().getId());
+        } else if (data.type() == NodeType.QUEST && data.domainChapter() != null) {
+            mainApp.focusChapter(data.domainChapter().id());
+        }
     }
 
     private void bindViewModel() {
@@ -302,10 +320,6 @@ public class ChapterGroupBrowserController implements AppAware {
     private ContextMenu buildGroupContextMenu(TreeItem<TreeNodeData> item, ChapterGroup group) {
         ContextMenu menu = new ContextMenu();
 
-        MenuItem addGroup = new MenuItem("Add Chapter Group");
-        addGroup.setDisable(!isQuestDataReady());
-        addGroup.setOnAction(evt -> promptAddGroup());
-
         MenuItem addChapter = new MenuItem("Add Chapter");
         addChapter.setOnAction(evt -> promptAddChapter(group));
 
@@ -332,16 +346,12 @@ public class ChapterGroupBrowserController implements AppAware {
         ));
         moveDown.setOnAction(evt -> viewModel.moveGroupDown(group));
 
-        menu.getItems().addAll(addGroup, addChapter, renameGroup, removeGroup, moveUp, moveDown);
+        menu.getItems().addAll(addChapter, renameGroup, removeGroup, moveUp, moveDown);
         return menu;
     }
 
     private ContextMenu buildChapterContextMenu(TreeItem<TreeNodeData> item, ChapterGroup group, Chapter chapter) {
         ContextMenu menu = new ContextMenu();
-
-        MenuItem addGroup = new MenuItem("Add Chapter Group");
-        addGroup.setDisable(!isQuestDataReady());
-        addGroup.setOnAction(evt -> promptAddGroup());
 
         MenuItem addChapter = new MenuItem("Add Chapter");
         addChapter.setOnAction(evt -> promptAddChapter(group));
@@ -366,7 +376,7 @@ public class ChapterGroupBrowserController implements AppAware {
         ));
         moveDown.setOnAction(evt -> viewModel.moveChapterDown(group, chapter));
 
-        menu.getItems().addAll(addGroup, addChapter, renameChapter, removeChapter, moveUp, moveDown);
+        menu.getItems().addAll(addChapter, renameChapter, removeChapter, moveUp, moveDown);
         return menu;
     }
 
@@ -380,7 +390,7 @@ public class ChapterGroupBrowserController implements AppAware {
     }
 
     private TreeItem<TreeNodeData> buildTree(List<ChapterGroup> groups) {
-        TreeItem<TreeNodeData> root = new TreeItem<>(new TreeNodeData("root", NodeType.ROOT, null, null, null));
+        TreeItem<TreeNodeData> root = new TreeItem<>(new TreeNodeData("root", NodeType.ROOT, null, null, null, null));
         if (groups == null || viewModel == null) {
             return root;
         }
@@ -388,21 +398,35 @@ public class ChapterGroupBrowserController implements AppAware {
         String query = search == null ? "" : search.trim().toLowerCase(Locale.ENGLISH);
         LinkedHashMap<String, dev.ftbq.editor.domain.Chapter> domainChapters = buildChapterLookup();
         for (ChapterGroup group : groups) {
-            TreeItem<TreeNodeData> groupItem = new TreeItem<>(new TreeNodeData(group.getName(), NodeType.GROUP, group, null, null));
+            TreeItem<TreeNodeData> groupItem = new TreeItem<>(new TreeNodeData(group.getName(), NodeType.GROUP, group, null, null, null));
             boolean groupMatches = matchesQuery(group.getName(), query);
             List<TreeItem<TreeNodeData>> chapterItems = new ArrayList<>();
 
             for (Chapter chapter : group.getChapters()) {
                 String chapterName = Optional.ofNullable(chapter.getName()).orElse("");
                 boolean chapterMatches = matchesQuery(chapterName, query);
-                TreeItem<TreeNodeData> chapterItem = new TreeItem<>(new TreeNodeData(chapterName, NodeType.CHAPTER, group, chapter, null));
-                dev.ftbq.editor.domain.Chapter domainChapter = domainChapters.get(chapterName);
+                dev.ftbq.editor.domain.Chapter domainChapter = domainChapters.get(chapter.getId());
+                TreeItem<TreeNodeData> chapterItem = new TreeItem<>(new TreeNodeData(
+                        chapterName,
+                        NodeType.CHAPTER,
+                        group,
+                        chapter,
+                        domainChapter,
+                        null
+                ));
                 List<TreeItem<TreeNodeData>> questItems = new ArrayList<>();
                 if (domainChapter != null) {
                     questItems = domainChapter.quests().stream()
                             .filter(Objects::nonNull)
                             .filter(quest -> query.isEmpty() || chapterMatches || groupMatches || matchesQuery(quest.title(), query))
-                            .map(quest -> new TreeItem<>(new TreeNodeData(quest.title(), NodeType.QUEST, group, chapter, quest)))
+                            .map(quest -> new TreeItem<>(new TreeNodeData(
+                                    quest.title(),
+                                    NodeType.QUEST,
+                                    group,
+                                    chapter,
+                                    domainChapter,
+                                    quest
+                            )))
                             .collect(Collectors.toCollection(ArrayList::new));
                 }
                 boolean includeChapter = query.isEmpty() || chapterMatches || groupMatches || !questItems.isEmpty();
@@ -428,8 +452,8 @@ public class ChapterGroupBrowserController implements AppAware {
             return lookup;
         }
         for (dev.ftbq.editor.domain.Chapter chapter : questFile.chapters()) {
-            if (chapter != null && chapter.title() != null && !chapter.title().isBlank()) {
-                lookup.putIfAbsent(chapter.title(), chapter);
+            if (chapter != null && chapter.id() != null && !chapter.id().isBlank()) {
+                lookup.putIfAbsent(chapter.id(), chapter);
             }
         }
         return lookup;
@@ -517,7 +541,12 @@ public class ChapterGroupBrowserController implements AppAware {
                 .ifPresent(name -> viewModel.renameChapter(chapter, name));
     }
 
-    private record TreeNodeData(String name, NodeType type, ChapterGroup group, Chapter chapter, Quest quest) {
+    private record TreeNodeData(String name,
+                                NodeType type,
+                                ChapterGroup group,
+                                Chapter chapter,
+                                dev.ftbq.editor.domain.Chapter domainChapter,
+                                Quest quest) {
     }
 
     private enum NodeType {
