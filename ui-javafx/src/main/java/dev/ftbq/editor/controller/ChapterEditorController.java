@@ -29,10 +29,15 @@ import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
 import javafx.scene.control.MenuButton;
 import javafx.scene.control.MenuItem;
+import javafx.scene.control.ScrollPane;
 import javafx.scene.control.TextField;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
-import javafx.scene.layout.GridPane;
+import javafx.scene.input.ContextMenuEvent;
+import javafx.scene.layout.Pane;
+import javafx.scene.layout.VBox;
+import javafx.scene.paint.Color;
+import javafx.scene.shape.Rectangle;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 import javafx.stage.Window;
@@ -53,11 +58,19 @@ public class ChapterEditorController implements AppAware {
     private static final Logger LOGGER = Logger.getLogger(ChapterEditorController.class.getName());
     private static final PseudoClass SELECTED_PSEUDO_CLASS = PseudoClass.getPseudoClass("selected");
     private static final int DEFAULT_COLUMNS = 4;
+    // Grid configuration
+    private static final double GRID_SIZE = 50.0;
+    private static final Color GRID_COLOR = Color.rgb(200, 200, 200, 0.5);
+    private static final Color GRID_MAJOR_COLOR = Color.rgb(150, 150, 150, 0.7);
+    private static final int MAJOR_GRID_INTERVAL = 5;
 
     @FXML private ListView<Chapter> chapterListView;
     @FXML private TextField chapterSearchField;
     @FXML private Label chapterTitle;
-    @FXML private GridPane questGrid;
+    @FXML private ScrollPane questScrollPane;
+    @FXML private Pane gridCanvas;
+    @FXML private Pane questPane;
+    @FXML private VBox questDetailsPanel;
     @FXML private ListView<String> taskList;
     @FXML private ListView<String> rewardList;
     @FXML private ListView<String> dependencyList;
@@ -70,6 +83,8 @@ public class ChapterEditorController implements AppAware {
     private Quest selectedQuest;
     private final Map<String, Node> questNodes = new HashMap<>();
     private MainApp mainApp;
+    private ContextMenu questContextMenu;
+    private Point2D lastClickPosition = new Point2D(0, 0);
 
     @Override
     public void setMainApp(MainApp app) {
@@ -78,6 +93,15 @@ public class ChapterEditorController implements AppAware {
 
     @FXML
     public void initialize() {
+        setupGridCanvas();
+        setupContextMenu();
+        setupQuestPane();
+
+        if (questDetailsPanel != null) {
+            questDetailsPanel.setVisible(false);
+            questDetailsPanel.setManaged(false);
+        }
+
         if (chapterListView != null) {
             chapterListView.setCellFactory(list -> new ListCell<>() {
                 @Override
@@ -109,12 +133,236 @@ public class ChapterEditorController implements AppAware {
             dependencyList.setItems(FXCollections.observableArrayList());
         }
 
-        if (questGrid != null) {
-            questGrid.getStyleClass().add("quest-grid");
-        }
-
         clearQuestDetails();
         System.out.println("[VERIFY] ChapterEditorController initialized.");
+    }
+
+    /**
+     * Setup the grid canvas with gridlines.
+     */
+    private void setupGridCanvas() {
+        if (gridCanvas == null) {
+            return;
+        }
+
+        gridCanvas.widthProperty().addListener((obs, old, newVal) -> drawGrid());
+        gridCanvas.heightProperty().addListener((obs, old, newVal) -> drawGrid());
+        drawGrid();
+    }
+
+    /**
+     * Draw the grid pattern on the canvas.
+     */
+    private void drawGrid() {
+        if (gridCanvas == null) {
+            return;
+        }
+
+        double width = Math.max(gridCanvas.getWidth(), gridCanvas.getMinWidth());
+        double height = Math.max(gridCanvas.getHeight(), gridCanvas.getMinHeight());
+
+        gridCanvas.getChildren().clear();
+
+        for (int i = 0; i <= width / GRID_SIZE; i++) {
+            double x = i * GRID_SIZE;
+            Rectangle line = new Rectangle(x, 0, i % MAJOR_GRID_INTERVAL == 0 ? 2 : 1, height);
+            line.setFill(i % MAJOR_GRID_INTERVAL == 0 ? GRID_MAJOR_COLOR : GRID_COLOR);
+            line.setManaged(false);
+            line.setMouseTransparent(true);
+            gridCanvas.getChildren().add(line);
+        }
+
+        for (int i = 0; i <= height / GRID_SIZE; i++) {
+            double y = i * GRID_SIZE;
+            Rectangle line = new Rectangle(0, y, width, i % MAJOR_GRID_INTERVAL == 0 ? 2 : 1);
+            line.setFill(i % MAJOR_GRID_INTERVAL == 0 ? GRID_MAJOR_COLOR : GRID_COLOR);
+            line.setManaged(false);
+            line.setMouseTransparent(true);
+            gridCanvas.getChildren().add(line);
+        }
+    }
+
+    /**
+     * Setup the context menu for right-click on quest pane.
+     */
+    private void setupContextMenu() {
+        questContextMenu = new ContextMenu();
+
+        MenuItem createQuestItem = new MenuItem("Create Quest");
+        createQuestItem.setOnAction(e -> {
+            Point2D clickPoint = getLastClickPosition();
+            createQuestAt(clickPoint.getX(), clickPoint.getY());
+        });
+
+        MenuItem pasteQuestItem = new MenuItem("Paste Quest");
+        pasteQuestItem.setOnAction(e -> LOGGER.fine("Paste quest action triggered"));
+
+        questContextMenu.getItems().addAll(createQuestItem, pasteQuestItem);
+    }
+
+    /**
+     * Setup quest pane interactions.
+     */
+    private void setupQuestPane() {
+        if (questPane == null) {
+            return;
+        }
+
+        questPane.setOnContextMenuRequested(this::showContextMenu);
+    }
+
+    /**
+     * Handle mouse press on quest pane (for right-click context menu).
+     */
+    @FXML
+    private void onQuestGridMousePressed(MouseEvent event) {
+        lastClickPosition = new Point2D(event.getX(), event.getY());
+
+        if (event.getButton() == MouseButton.SECONDARY) {
+            event.consume();
+        } else if (questContextMenu != null) {
+            questContextMenu.hide();
+        }
+    }
+
+    /**
+     * Handle mouse click on quest pane.
+     */
+    @FXML
+    private void onQuestPaneClicked(MouseEvent event) {
+        if (event.getButton() == MouseButton.PRIMARY && event.getClickCount() == 1) {
+            if (event.getTarget() == questPane) {
+                deselectQuest();
+            }
+        }
+    }
+
+    /**
+     * Show context menu at click position.
+     */
+    private void showContextMenu(ContextMenuEvent event) {
+        if (questContextMenu != null && questPane != null) {
+            questContextMenu.show(questPane, event.getScreenX(), event.getScreenY());
+        }
+        event.consume();
+    }
+
+    /**
+     * Get the last click position (for context menu actions).
+     */
+    private Point2D getLastClickPosition() {
+        return lastClickPosition;
+    }
+
+    /**
+     * Create a new quest at the specified position.
+     */
+    private void createQuestAt(double x, double y) {
+        double snappedX = Math.round(x / GRID_SIZE) * GRID_SIZE;
+        double snappedY = Math.round(y / GRID_SIZE) * GRID_SIZE;
+        Quest quest = createNewQuest(new Point2D(snappedX, snappedY));
+        if (quest != null) {
+            Node node = questNodes.get(quest.id());
+            if (node != null) {
+                node.relocate(snappedX, snappedY);
+            }
+            selectQuest(quest);
+        }
+        if (questContextMenu != null) {
+            questContextMenu.hide();
+        }
+    }
+
+    /**
+     * Create a visual quest node placeholder.
+     */
+    private Rectangle createQuestNode(double x, double y) {
+        Rectangle node = new Rectangle(x, y, GRID_SIZE * 2, GRID_SIZE * 2);
+        node.setFill(Color.rgb(100, 150, 255, 0.8));
+        node.setStroke(Color.rgb(50, 100, 200));
+        node.setStrokeWidth(2);
+        node.setArcWidth(10);
+        node.setArcHeight(10);
+        node.setManaged(false);
+
+        setupQuestNodeDragging(node);
+
+        node.setOnMouseClicked(e -> {
+            if (e.getButton() == MouseButton.PRIMARY) {
+                if (e.getClickCount() == 2) {
+                    LOGGER.fine("Double-clicked quest placeholder");
+                } else {
+                    selectQuest(node);
+                }
+                e.consume();
+            }
+        });
+
+        return node;
+    }
+
+    /**
+     * Setup dragging for quest nodes.
+     */
+    private void setupQuestNodeDragging(Rectangle node) {
+        final double[] dragDelta = new double[2];
+
+        node.setOnMousePressed(e -> {
+            if (e.getButton() == MouseButton.PRIMARY) {
+                dragDelta[0] = node.getX() - e.getX();
+                dragDelta[1] = node.getY() - e.getY();
+            }
+        });
+
+        node.setOnMouseDragged(e -> {
+            if (e.getButton() == MouseButton.PRIMARY) {
+                double newX = e.getX() + dragDelta[0];
+                double newY = e.getY() + dragDelta[1];
+                node.setX(Math.round(newX / GRID_SIZE) * GRID_SIZE);
+                node.setY(Math.round(newY / GRID_SIZE) * GRID_SIZE);
+            }
+        });
+    }
+
+    /**
+     * Select a quest node placeholder and show details panel.
+     */
+    private void selectQuest(Rectangle node) {
+        if (questPane == null) {
+            return;
+        }
+
+        questPane.getChildren().forEach(child -> {
+            if (child instanceof Rectangle rect) {
+                rect.setStroke(Color.rgb(50, 100, 200));
+                rect.setStrokeWidth(2);
+            }
+        });
+
+        node.setStroke(Color.YELLOW);
+        node.setStrokeWidth(3);
+
+        if (questDetailsPanel != null) {
+            questDetailsPanel.setVisible(true);
+            questDetailsPanel.setManaged(true);
+        }
+    }
+
+    /**
+     * Deselect quest and hide details panel.
+     */
+    private void deselectQuest() {
+        questNodes.values().forEach(node -> node.pseudoClassStateChanged(SELECTED_PSEUDO_CLASS, false));
+        if (questPane != null) {
+            questPane.getChildren().forEach(child -> {
+                if (child instanceof Rectangle rect) {
+                    rect.setStroke(Color.rgb(50, 100, 200));
+                    rect.setStrokeWidth(2);
+                }
+            });
+        }
+        selectedQuest = null;
+        clearQuestDetails();
     }
 
     public void setProject(Project project) {
@@ -185,13 +433,12 @@ public class ChapterEditorController implements AppAware {
         }
 
         questNodes.clear();
-        if (questGrid != null) {
-            questGrid.getChildren().clear();
+        if (questPane != null) {
+            questPane.getChildren().clear();
         }
-        selectedQuest = null;
-        clearQuestDetails();
+        deselectQuest();
 
-        if (chapter == null || questGrid == null) {
+        if (chapter == null || questPane == null) {
             return;
         }
 
@@ -199,12 +446,15 @@ public class ChapterEditorController implements AppAware {
         for (int i = 0; i < quests.size(); i++) {
             Quest quest = quests.get(i);
             Node node = QuestNodeFactory.create(quest, this::openQuestEditor);
-            int[] coordinates = resolveQuestCoordinates(chapter, quest, i);
-            questGrid.add(node, coordinates[0], coordinates[1]);
+            Point2D coordinates = resolveQuestCoordinates(chapter, quest, i);
+            node.relocate(coordinates.getX(), coordinates.getY());
+            node.setManaged(false);
+            questPane.getChildren().add(node);
             questNodes.put(quest.id(), node);
             node.addEventHandler(MouseEvent.MOUSE_CLICKED, event -> {
                 if (event.getButton() == MouseButton.PRIMARY) {
                     selectQuest(quest);
+                    event.consume();
                 }
             });
         }
@@ -214,16 +464,16 @@ public class ChapterEditorController implements AppAware {
         }
     }
 
-    private int[] resolveQuestCoordinates(Chapter chapter, Quest quest, int index) {
+    private Point2D resolveQuestCoordinates(Chapter chapter, Quest quest, int index) {
         QuestLayoutStore layoutStore = UiServiceLocator.questLayoutStore;
         if (layoutStore != null) {
             try {
                 Optional<Point2D> pos = layoutStore.getNodePos(chapter.id(), quest.id());
                 if (pos.isPresent()) {
                     Point2D point = pos.get();
-                    int x = Math.max(0, (int) Math.round(point.getX()));
-                    int y = Math.max(0, (int) Math.round(point.getY()));
-                    return new int[]{x, y};
+                    double x = Math.max(0, point.getX());
+                    double y = Math.max(0, point.getY());
+                    return new Point2D(x, y);
                 }
             } catch (Exception ex) {
                 LOGGER.log(Level.FINE, "Unable to resolve quest coordinates for " + quest.id(), ex);
@@ -231,14 +481,14 @@ public class ChapterEditorController implements AppAware {
         }
         int column = index % DEFAULT_COLUMNS;
         int row = index / DEFAULT_COLUMNS;
-        return new int[]{column, row};
+        double x = column * GRID_SIZE * 4;
+        double y = row * GRID_SIZE * 4;
+        return new Point2D(x, y);
     }
 
     private void selectQuest(Quest quest) {
         if (quest == null) {
-            questNodes.values().forEach(node -> node.pseudoClassStateChanged(SELECTED_PSEUDO_CLASS, false));
-            selectedQuest = null;
-            clearQuestDetails();
+            deselectQuest();
             return;
         }
 
@@ -270,6 +520,10 @@ public class ChapterEditorController implements AppAware {
         if (addRewardMenu != null) {
             addRewardMenu.setDisable(false);
         }
+        if (questDetailsPanel != null) {
+            questDetailsPanel.setVisible(true);
+            questDetailsPanel.setManaged(true);
+        }
     }
 
     private void clearQuestDetails() {
@@ -287,6 +541,10 @@ public class ChapterEditorController implements AppAware {
         }
         if (addRewardMenu != null) {
             addRewardMenu.setDisable(true);
+        }
+        if (questDetailsPanel != null) {
+            questDetailsPanel.setVisible(false);
+            questDetailsPanel.setManaged(false);
         }
     }
 
@@ -313,8 +571,8 @@ public class ChapterEditorController implements AppAware {
             stage.setTitle("Quest Editor - " + quest.title());
             stage.setScene(new Scene(root));
             stage.initModality(Modality.APPLICATION_MODAL);
-            Window owner = questGrid != null && questGrid.getScene() != null
-                    ? questGrid.getScene().getWindow()
+            Window owner = questPane != null && questPane.getScene() != null
+                    ? questPane.getScene().getWindow()
                     : null;
             if (owner != null) {
                 stage.initOwner(owner);
@@ -325,20 +583,13 @@ public class ChapterEditorController implements AppAware {
         }
     }
 
-    @FXML
-    private void onQuestGridMousePressed(MouseEvent e) {
-        if (e.getButton() == MouseButton.SECONDARY) {
-            ContextMenu menu = new ContextMenu();
-            MenuItem addQuest = new MenuItem("Add New Quest");
-            addQuest.setOnAction(a -> createNewQuest());
-            menu.getItems().add(addQuest);
-            menu.show(questGrid, e.getScreenX(), e.getScreenY());
-        }
+    private Quest createNewQuest() {
+        return createNewQuest(null);
     }
 
-    private void createNewQuest() {
+    private Quest createNewQuest(Point2D initialPosition) {
         if (currentChapter == null) {
-            return;
+            return null;
         }
 
         Quest newQuest = Quest.builder()
@@ -355,7 +606,23 @@ public class ChapterEditorController implements AppAware {
         currentChapter = updatedChapter;
         updateChapterList(previousChapter, updatedChapter);
         replaceWorkingChapter(previousChapter, updatedChapter);
+
+        if (initialPosition != null) {
+            QuestLayoutStore layoutStore = UiServiceLocator.questLayoutStore;
+            if (layoutStore != null) {
+                try {
+                    String chapterId = updatedChapter.id();
+                    if (chapterId != null && !chapterId.isBlank()) {
+                        layoutStore.putNodePos(chapterId, newQuest.id(), initialPosition.getX(), initialPosition.getY());
+                    }
+                } catch (RuntimeException e) {
+                    LOGGER.log(Level.FINE, "Unable to persist quest position for " + newQuest.id(), e);
+                }
+            }
+        }
+
         displayChapter(updatedChapter);
+        return newQuest;
     }
 
     private void updateChapterList(Chapter previousChapter, Chapter updatedChapter) {
@@ -402,7 +669,7 @@ public class ChapterEditorController implements AppAware {
             Parent root = loader.load();
             SettingsController controller = loader.getController();
 
-            Window owner = questGrid != null && questGrid.getScene() != null ? questGrid.getScene().getWindow() : null;
+            Window owner = questPane != null && questPane.getScene() != null ? questPane.getScene().getWindow() : null;
             Scene mainScene = owner != null ? owner.getScene() : null;
             if (controller != null && mainScene != null) {
                 controller.setScene(mainScene);

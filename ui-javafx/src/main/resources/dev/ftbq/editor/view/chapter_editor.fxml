@@ -5,48 +5,80 @@
 <?import javafx.scene.control.Label?>
 <?import javafx.scene.control.ListView?>
 <?import javafx.scene.control.MenuButton?>
+<?import javafx.scene.control.ScrollPane?>
 <?import javafx.scene.control.TextField?>
 <?import javafx.scene.layout.BorderPane?>
-<?import javafx.scene.layout.GridPane?>
+<?import javafx.scene.layout.Pane?>
+<?import javafx.scene.layout.StackPane?>
 <?import javafx.scene.layout.VBox?>
 
 <BorderPane xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml"
             fx:controller="dev.ftbq.editor.controller.ChapterEditorController">
+
+    <!-- TOP: Chapter Title Bar -->
+    <top>
+        <VBox spacing="8" styleClass="chapter-header" BorderPane.alignment="CENTER">
+            <padding>
+                <Insets top="12" right="24" bottom="12" left="24" />
+            </padding>
+            <Label fx:id="chapterTitle" styleClass="title" style="-fx-font-size: 20px; -fx-font-weight: bold;" />
+        </VBox>
+    </top>
+
+    <!-- LEFT: Chapter List -->
     <left>
-        <VBox spacing="8" prefWidth="240" BorderPane.alignment="CENTER_LEFT">
-            <children>
-                <TextField fx:id="chapterSearchField" promptText="Search chapters" />
-                <ListView fx:id="chapterListView" VBox.vgrow="ALWAYS" onMouseClicked="#onChapterSelected" />
-            </children>
-            <BorderPane.margin>
+        <VBox spacing="8" prefWidth="240" styleClass="chapter-list-panel" BorderPane.alignment="CENTER_LEFT">
+            <padding>
                 <Insets top="12" right="12" bottom="12" left="12" />
-            </BorderPane.margin>
+            </padding>
+            <Label text="Chapters" style="-fx-font-weight: bold;" />
+            <TextField fx:id="chapterSearchField" promptText="Search chapters..." />
+            <ListView fx:id="chapterListView" VBox.vgrow="ALWAYS" onMouseClicked="#onChapterSelected" />
         </VBox>
     </left>
+
+    <!-- CENTER: Quest Canvas with Gridlines -->
     <center>
-        <VBox spacing="12" alignment="TOP_CENTER" BorderPane.alignment="CENTER">
-            <children>
-                <Label fx:id="chapterTitle" styleClass="title" />
-                <GridPane fx:id="questGrid" hgap="12" vgap="12" onMousePressed="#onQuestGridMousePressed" />
-            </children>
-            <padding>
-                <Insets top="24" right="24" bottom="24" left="24" />
-            </padding>
-        </VBox>
+        <StackPane BorderPane.alignment="CENTER" style="-fx-background-color: white;">
+            <ScrollPane fx:id="questScrollPane" fitToWidth="true" fitToHeight="true"
+                       pannable="true" style="-fx-background-color: white;">
+                <StackPane>
+                    <!-- Grid Canvas (background with gridlines) -->
+                    <Pane fx:id="gridCanvas" styleClass="quest-grid-canvas"
+                          minWidth="2000" minHeight="2000"
+                          style="-fx-background-color: #f5f5f5;" />
+
+                    <!-- Quest Pane (foreground with quest nodes) -->
+                    <Pane fx:id="questPane" styleClass="quest-pane"
+                          minWidth="2000" minHeight="2000"
+                          onMousePressed="#onQuestGridMousePressed"
+                          onMouseClicked="#onQuestPaneClicked" />
+                </StackPane>
+            </ScrollPane>
+        </StackPane>
     </center>
+
+    <!-- RIGHT: Quest Details Panel (shown when quest selected) -->
     <right>
-        <VBox spacing="8" prefWidth="260" BorderPane.alignment="CENTER">
-            <children>
-                <Label text="Tasks" />
-                <ListView fx:id="taskList" VBox.vgrow="ALWAYS" />
-                <MenuButton fx:id="addTaskMenu" text="Add Task" />
-                <Label text="Rewards" />
-                <ListView fx:id="rewardList" VBox.vgrow="ALWAYS" />
-                <MenuButton fx:id="addRewardMenu" text="Add Reward" />
-                <Label text="Dependencies" />
-                <ListView fx:id="dependencyList" VBox.vgrow="ALWAYS" />
-                <Button text="Add Dependency" onAction="#onAddDependency" />
-            </children>
+        <VBox fx:id="questDetailsPanel" spacing="8" prefWidth="280"
+              styleClass="quest-details-panel" visible="false" managed="false"
+              BorderPane.alignment="CENTER">
+            <padding>
+                <Insets top="12" right="12" bottom="12" left="12" />
+            </padding>
+            <Label text="Quest Details" style="-fx-font-size: 16px; -fx-font-weight: bold;" />
+
+            <Label text="Tasks" style="-fx-font-weight: bold; -fx-padding: 8 0 4 0;" />
+            <ListView fx:id="taskList" prefHeight="150" VBox.vgrow="SOMETIMES" />
+            <MenuButton fx:id="addTaskMenu" text="Add Task" maxWidth="Infinity" />
+
+            <Label text="Rewards" style="-fx-font-weight: bold; -fx-padding: 8 0 4 0;" />
+            <ListView fx:id="rewardList" prefHeight="150" VBox.vgrow="SOMETIMES" />
+            <MenuButton fx:id="addRewardMenu" text="Add Reward" maxWidth="Infinity" />
+
+            <Label text="Dependencies" style="-fx-font-weight: bold; -fx-padding: 8 0 4 0;" />
+            <ListView fx:id="dependencyList" prefHeight="120" VBox.vgrow="SOMETIMES" />
+            <Button text="Add Dependency" onAction="#onAddDependency" maxWidth="Infinity" />
         </VBox>
     </right>
 </BorderPane>
