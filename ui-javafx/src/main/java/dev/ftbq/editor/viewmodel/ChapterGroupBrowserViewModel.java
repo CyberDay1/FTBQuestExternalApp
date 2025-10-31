@@ -11,7 +11,9 @@ import javafx.collections.ObservableList;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 public class ChapterGroupBrowserViewModel {
@@ -21,9 +23,6 @@ public class ChapterGroupBrowserViewModel {
     private final StringProperty searchText = new SimpleStringProperty("");
 
     public ChapterGroupBrowserViewModel() {
-        ChapterGroup starterGroup = addGroup("Getting Started");
-        addChapter(starterGroup, "Welcome");
-        addChapter(starterGroup, "First Steps");
     }
 
     public ObservableList<ChapterGroup> getChapterGroups() {
@@ -35,7 +34,11 @@ public class ChapterGroupBrowserViewModel {
     }
 
     public ChapterGroup addGroup(String name) {
-        ChapterGroup group = new ChapterGroup(name);
+        return addGroup(UUID.randomUUID().toString(), name);
+    }
+
+    public ChapterGroup addGroup(String id, String name) {
+        ChapterGroup group = new ChapterGroup(id, name);
         chapterGroups.add(group);
         return group;
     }
@@ -71,8 +74,12 @@ public class ChapterGroupBrowserViewModel {
     }
 
     public Chapter addChapter(ChapterGroup group, String name) {
+        return addChapter(group, UUID.randomUUID().toString(), name);
+    }
+
+    public Chapter addChapter(ChapterGroup group, String id, String name) {
         Objects.requireNonNull(group, "Group cannot be null");
-        Chapter chapter = new Chapter(name);
+        Chapter chapter = new Chapter(id, name);
         group.getChapters().add(chapter);
         return chapter;
     }
@@ -122,6 +129,26 @@ public class ChapterGroupBrowserViewModel {
         return null;
     }
 
+    public Optional<Chapter> findChapterById(String chapterId) {
+        if (chapterId == null) {
+            return Optional.empty();
+        }
+        return chapterGroups.stream()
+                .flatMap(group -> group.getChapters().stream())
+                .filter(chapter -> chapterId.equals(chapter.getId()))
+                .findFirst();
+    }
+
+    public Optional<ChapterGroup> findGroupByChapterId(String chapterId) {
+        if (chapterId == null) {
+            return Optional.empty();
+        }
+        return chapterGroups.stream()
+                .filter(group -> group.getChapters().stream()
+                        .anyMatch(chapter -> chapterId.equals(chapter.getId())))
+                .findFirst();
+    }
+
     public void loadFromQuestFile(QuestFile questFile) {
         Objects.requireNonNull(questFile, "questFile");
         chapterGroups.clear();
@@ -130,10 +157,11 @@ public class ChapterGroupBrowserViewModel {
         Set<String> assigned = new LinkedHashSet<>();
         if (!questFile.chapterGroups().isEmpty()) {
             for (dev.ftbq.editor.domain.ChapterGroup groupData : questFile.chapterGroups()) {
-                ChapterGroup group = addGroup(groupData.title());
+                ChapterGroup group = addGroup(groupData.id(), groupData.title());
                 for (String chapterId : groupData.chapterIds()) {
                     dev.ftbq.editor.domain.Chapter domainChapter = chapterMap.get(chapterId);
-                    Chapter chapter = addChapter(group, domainChapter != null ? domainChapter.title() : chapterId);
+                    Chapter chapter = addChapter(group, chapterId,
+                            domainChapter != null ? domainChapter.title() : chapterId);
                     if (domainChapter != null) {
                         chapter.setBackground(domainChapter.background());
                     }
@@ -145,9 +173,9 @@ public class ChapterGroupBrowserViewModel {
                 .filter(chapter -> !assigned.contains(chapter.id()))
                 .toList();
         if (!unassigned.isEmpty()) {
-            ChapterGroup group = addGroup("Ungrouped Chapters");
+            ChapterGroup group = addGroup("ungrouped", "Ungrouped Chapters");
             for (dev.ftbq.editor.domain.Chapter chapter : unassigned) {
-                Chapter viewChapter = addChapter(group, chapter.title());
+                Chapter viewChapter = addChapter(group, chapter.id(), chapter.title());
                 viewChapter.setBackground(chapter.background());
             }
         }
@@ -169,13 +197,19 @@ public class ChapterGroupBrowserViewModel {
     }
 
     public static final class ChapterGroup {
+        private final String id;
         private final StringProperty name = new SimpleStringProperty();
         private final ObservableList<Chapter> chapters = FXCollections.observableArrayList(
                 chapter -> new Observable[]{chapter.nameProperty(), chapter.backgroundProperty()}
         );
 
-        public ChapterGroup(String name) {
+        public ChapterGroup(String id, String name) {
+            this.id = Objects.requireNonNull(id, "id");
             setName(name);
+        }
+
+        public String getId() {
+            return id;
         }
 
         public String getName() {
@@ -196,11 +230,18 @@ public class ChapterGroupBrowserViewModel {
     }
 
     public static final class Chapter {
+        private final String id;
         private final StringProperty name = new SimpleStringProperty();
-        private final javafx.beans.property.ObjectProperty<BackgroundRef> background = new javafx.beans.property.SimpleObjectProperty<>(new BackgroundRef("minecraft:textures/gui/default.png"));
+        private final javafx.beans.property.ObjectProperty<BackgroundRef> background =
+                new javafx.beans.property.SimpleObjectProperty<>(new BackgroundRef("minecraft:textures/gui/default.png"));
 
-        public Chapter(String name) {
+        public Chapter(String id, String name) {
+            this.id = Objects.requireNonNull(id, "id");
             setName(name);
+        }
+
+        public String getId() {
+            return id;
         }
 
         public String getName() {
@@ -228,5 +269,3 @@ public class ChapterGroupBrowserViewModel {
         }
     }
 }
-
-

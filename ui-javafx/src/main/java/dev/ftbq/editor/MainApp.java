@@ -266,6 +266,12 @@ public class MainApp extends Application {
         return currentQuestFile;
     }
 
+    public void focusChapter(String chapterId) {
+        if (chapterEditorController != null) {
+            chapterEditorController.focusChapter(chapterId);
+        }
+    }
+
     public Path getWorkspace() {
         return workspace;
     }

@@ -379,6 +379,34 @@ public class ChapterEditorController implements AppAware {
         }
     }
 
+    public void focusChapter(String chapterId) {
+        if (chapterId == null || workingChapters.isEmpty() || chapterListView == null) {
+            return;
+        }
+        Optional<Chapter> target = workingChapters.stream()
+                .filter(chapter -> chapterId.equals(chapter.id()))
+                .findFirst();
+        if (target.isEmpty()) {
+            return;
+        }
+
+        Chapter chapter = target.get();
+        if (chapterSearchField != null) {
+            String query = chapterSearchField.getText();
+            if (query != null && !query.isBlank() && !chapterListView.getItems().contains(chapter)) {
+                chapterSearchField.setText("");
+            }
+        }
+
+        if (!chapterListView.getItems().contains(chapter)) {
+            refreshChapterList();
+        }
+
+        chapterListView.getSelectionModel().select(chapter);
+        chapterListView.scrollTo(chapter);
+        displayChapter(chapter);
+    }
+
     private void refreshChapterList() {
         if (chapterListView == null) {
             return;
