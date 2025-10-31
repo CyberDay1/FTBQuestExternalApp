@@ -164,6 +164,10 @@ public class StoreDao {
         this.connection = connection;
     }
 
+    public void loadLastProjectIfAvailable() {
+        // Default implementation does nothing.
+    }
+
     public void upsertItem(ItemEntity item) {
         try (PreparedStatement statement = connection.prepareStatement(UPSERT_ITEM_SQL)) {
             statement.setString(1, item.id());

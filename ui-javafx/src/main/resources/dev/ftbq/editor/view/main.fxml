@@ -8,11 +8,11 @@
 
 <BorderPane xmlns="http://javafx.com/javafx/21"
             xmlns:fx="http://javafx.com/fxml/1"
-            fx:controller="dev.ftbq.editor.controller.MenuController">
+            fx:controller="dev.ftbq.editor.controller.MainController">
     <top>
         <HBox alignment="CENTER_LEFT">
             <children>
-                <fx:include source="main_menu.fxml"/>
+                <fx:include fx:id="menu" source="main_menu.fxml"/>
                 <Pane HBox.hgrow="ALWAYS" />
             </children>
         </HBox>
