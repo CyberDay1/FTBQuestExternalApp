@@ -28,7 +28,7 @@
         <VBox spacing="8" prefWidth="240" BorderPane.alignment="CENTER_LEFT">
             <children>
                 <TextField fx:id="chapterSearchField" promptText="Search chapters" />
-                <ListView fx:id="chapterListView" VBox.vgrow="ALWAYS" />
+                <ListView fx:id="chapterListView" VBox.vgrow="ALWAYS" onMouseClicked="#onChapterSelected" />
             </children>
             <BorderPane.margin>
                 <Insets top="12" right="12" bottom="12" left="12" />
