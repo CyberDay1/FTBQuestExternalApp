@@ -3,27 +3,15 @@
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.Button?>
 <?import javafx.scene.control.Label?>
-<?import javafx.scene.control.MenuButton?>
 <?import javafx.scene.control.ListView?>
+<?import javafx.scene.control.MenuButton?>
 <?import javafx.scene.control.TextField?>
 <?import javafx.scene.layout.BorderPane?>
-<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.GridPane?>
 <?import javafx.scene.layout.VBox?>
-<?import javafx.scene.layout.StackPane?>
 
-<BorderPane xmlns="http://javafx.com/javafx/20" xmlns:fx="http://javafx.com/fxml/1"
+<BorderPane xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml"
             fx:controller="dev.ftbq.editor.controller.ChapterEditorController">
-    <top>
-        <HBox alignment="CENTER_LEFT" spacing="12" BorderPane.alignment="CENTER_LEFT">
-            <children>
-                <Label text="Chapter" />
-                <Label fx:id="chapterTitleLabel" text="" />
-            </children>
-            <BorderPane.margin>
-                <Insets top="8" right="8" bottom="8" left="12" />
-            </BorderPane.margin>
-        </HBox>
-    </top>
     <left>
         <VBox spacing="8" prefWidth="240" BorderPane.alignment="CENTER_LEFT">
             <children>
@@ -36,7 +24,15 @@
         </VBox>
     </left>
     <center>
-        <StackPane fx:id="canvasHolder" prefWidth="800" prefHeight="600" styleClass="canvas-container" />
+        <VBox spacing="12" alignment="TOP_CENTER" BorderPane.alignment="CENTER">
+            <children>
+                <Label fx:id="chapterTitle" styleClass="title" />
+                <GridPane fx:id="questGrid" hgap="12" vgap="12" onMousePressed="#onQuestGridMousePressed" />
+            </children>
+            <padding>
+                <Insets top="24" right="24" bottom="24" left="24" />
+            </padding>
+        </VBox>
     </center>
     <right>
         <VBox spacing="8" prefWidth="260" BorderPane.alignment="CENTER">

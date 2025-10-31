@@ -8,79 +8,68 @@ import dev.ftbq.editor.domain.Task;
 import dev.ftbq.editor.service.ThemeService;
 import dev.ftbq.editor.service.UserSettings;
 import dev.ftbq.editor.store.Project;
-import dev.ftbq.editor.ui.graph.QuestCanvas;
+import dev.ftbq.editor.ui.QuestNodeFactory;
+import dev.ftbq.editor.view.graph.layout.QuestLayoutStore;
+import dev.ftbq.editor.services.UiServiceLocator;
 import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
 import javafx.css.PseudoClass;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
-import javafx.geometry.Insets;
+import javafx.geometry.Point2D;
+import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
-import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
+import javafx.scene.control.ContextMenu;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
 import javafx.scene.control.MenuButton;
+import javafx.scene.control.MenuItem;
 import javafx.scene.control.TextField;
 import javafx.scene.input.MouseButton;
-import javafx.scene.layout.StackPane;
-import javafx.scene.layout.TilePane;
+import javafx.scene.input.MouseEvent;
+import javafx.scene.layout.GridPane;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 import javafx.stage.Window;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
+import java.util.UUID;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
 public class ChapterEditorController {
-    @FXML private StackPane canvasHolder;
+    private static final Logger LOGGER = Logger.getLogger(ChapterEditorController.class.getName());
+    private static final PseudoClass SELECTED_PSEUDO_CLASS = PseudoClass.getPseudoClass("selected");
+    private static final int DEFAULT_COLUMNS = 4;
+
     @FXML private ListView<Chapter> chapterListView;
-    @FXML private Label chapterTitleLabel;
     @FXML private TextField chapterSearchField;
+    @FXML private Label chapterTitle;
+    @FXML private GridPane questGrid;
     @FXML private ListView<String> taskList;
     @FXML private ListView<String> rewardList;
     @FXML private ListView<String> dependencyList;
     @FXML private MenuButton addTaskMenu;
     @FXML private MenuButton addRewardMenu;
-    private QuestCanvas questCanvas;
-    private static final Logger LOGGER = Logger.getLogger(ChapterEditorController.class.getName());
-    private static final PseudoClass SELECTED_PSEUDO_CLASS = PseudoClass.getPseudoClass("selected");
+
     private Project project;
-    private final TilePane questGrid = new TilePane(12, 12);
-    private final Map<String, Button> questButtons = new HashMap<>();
+    private final List<Chapter> workingChapters = new ArrayList<>();
+    private Chapter currentChapter;
     private Quest selectedQuest;
+    private final Map<String, Node> questNodes = new HashMap<>();
 
     @FXML
     public void initialize() {
-        if (canvasHolder == null) {
-            LOGGER.severe("canvasHolder not injected; check FXML id");
-            return;
-        }
-
-        questCanvas = new QuestCanvas();
-        questCanvas.setManaged(true);
-        questCanvas.prefWidthProperty().bind(canvasHolder.widthProperty());
-        questCanvas.prefHeightProperty().bind(canvasHolder.heightProperty());
-        questGrid.setPadding(new Insets(24));
-        questGrid.setPrefTileWidth(160);
-        questGrid.setPrefTileHeight(96);
-        questGrid.setHgap(12);
-        questGrid.setVgap(12);
-        questGrid.getStyleClass().add("quest-grid");
-        canvasHolder.getChildren().setAll(questCanvas, questGrid);
-
-        // apply initial settings
-        var es = UserSettings.get();
-        questCanvas.setShowGrid(es.showGrid);
-        questCanvas.setSmoothPanning(es.smoothPanning);
-
         if (chapterListView != null) {
             chapterListView.setCellFactory(list -> new ListCell<>() {
                 @Override
@@ -112,22 +101,18 @@ public class ChapterEditorController {
             dependencyList.setItems(FXCollections.observableArrayList());
         }
 
+        if (questGrid != null) {
+            questGrid.getStyleClass().add("quest-grid");
+        }
+
         clearQuestDetails();
-    }
-
-    // Example method to pan programmatically (no zoom exposed)
-    public void panTo(double x, double y) {
-        if (questCanvas != null) questCanvas.panTo(x, y);
-    }
-
-    // Exposed for SettingsController to refresh grid toggle if needed
-    public void setShowGrid(boolean v) {
-        if (questCanvas != null) questCanvas.setShowGrid(v);
     }
 
     public void setProject(Project project) {
         this.project = project;
+        workingChapters.clear();
         if (project != null) {
+            workingChapters.addAll(project.getChapters());
             refreshChapterList();
         } else {
             if (chapterListView != null) {
@@ -141,13 +126,13 @@ public class ChapterEditorController {
         if (chapterListView == null) {
             return;
         }
-        if (project == null) {
+        if (workingChapters.isEmpty()) {
             chapterListView.getItems().clear();
             displayChapter(null);
             return;
         }
 
-        List<Chapter> chapters = project.getChapters();
+        List<Chapter> chapters = new ArrayList<>(workingChapters);
         List<Chapter> filtered = chapters;
         if (chapterSearchField != null) {
             String query = chapterSearchField.getText();
@@ -159,7 +144,8 @@ public class ChapterEditorController {
             }
         }
 
-        chapterListView.getItems().setAll(filtered);
+        ObservableList<Chapter> items = chapterListView.getItems();
+        items.setAll(filtered);
         if (!filtered.isEmpty()) {
             Chapter selection = chapterListView.getSelectionModel().getSelectedItem();
             if (selection == null || !filtered.contains(selection)) {
@@ -184,21 +170,34 @@ public class ChapterEditorController {
     }
 
     private void displayChapter(Chapter chapter) {
-        updateChapterTitle(chapter);
-        questButtons.clear();
-        questGrid.getChildren().clear();
+        currentChapter = chapter;
+        if (chapterTitle != null) {
+            chapterTitle.setText(chapter != null ? chapter.title() : "");
+        }
+
+        questNodes.clear();
+        if (questGrid != null) {
+            questGrid.getChildren().clear();
+        }
         selectedQuest = null;
         clearQuestDetails();
 
-        if (chapter == null) {
+        if (chapter == null || questGrid == null) {
             return;
         }
 
         List<Quest> quests = chapter.quests();
-        for (Quest quest : quests) {
-            Button questButton = createQuestButton(quest);
-            questButtons.put(quest.id(), questButton);
-            questGrid.getChildren().add(questButton);
+        for (int i = 0; i < quests.size(); i++) {
+            Quest quest = quests.get(i);
+            Node node = QuestNodeFactory.create(quest, this::openQuestEditor);
+            int[] coordinates = resolveQuestCoordinates(chapter, quest, i);
+            questGrid.add(node, coordinates[0], coordinates[1]);
+            questNodes.put(quest.id(), node);
+            node.addEventHandler(MouseEvent.MOUSE_CLICKED, event -> {
+                if (event.getButton() == MouseButton.PRIMARY) {
+                    selectQuest(quest);
+                }
+            });
         }
 
         if (!quests.isEmpty()) {
@@ -206,35 +205,37 @@ public class ChapterEditorController {
         }
     }
 
-    private Button createQuestButton(Quest quest) {
-        Button button = new Button(quest.title());
-        button.getStyleClass().add("quest-node-button");
-        button.setWrapText(true);
-        button.setPrefWidth(160);
-        button.setPrefHeight(96);
-        button.setOnMouseClicked(event -> {
-            if (event.getButton() != MouseButton.PRIMARY) {
-                return;
+    private int[] resolveQuestCoordinates(Chapter chapter, Quest quest, int index) {
+        QuestLayoutStore layoutStore = UiServiceLocator.questLayoutStore;
+        if (layoutStore != null) {
+            try {
+                Optional<Point2D> pos = layoutStore.getNodePos(chapter.id(), quest.id());
+                if (pos.isPresent()) {
+                    Point2D point = pos.get();
+                    int x = Math.max(0, (int) Math.round(point.getX()));
+                    int y = Math.max(0, (int) Math.round(point.getY()));
+                    return new int[]{x, y};
+                }
+            } catch (Exception ex) {
+                LOGGER.log(Level.FINE, "Unable to resolve quest coordinates for " + quest.id(), ex);
             }
-            selectQuest(quest);
-            if (event.getClickCount() >= 2) {
-                openQuestEditor(quest);
-            }
-        });
-        return button;
+        }
+        int column = index % DEFAULT_COLUMNS;
+        int row = index / DEFAULT_COLUMNS;
+        return new int[]{column, row};
     }
 
     private void selectQuest(Quest quest) {
         if (quest == null) {
-            questButtons.values().forEach(button -> button.pseudoClassStateChanged(SELECTED_PSEUDO_CLASS, false));
+            questNodes.values().forEach(node -> node.pseudoClassStateChanged(SELECTED_PSEUDO_CLASS, false));
             selectedQuest = null;
             clearQuestDetails();
             return;
         }
 
         selectedQuest = quest;
-        questButtons.forEach((questId, button) ->
-                button.pseudoClassStateChanged(SELECTED_PSEUDO_CLASS, questId.equals(quest.id())));
+        questNodes.forEach((questId, node) ->
+                node.pseudoClassStateChanged(SELECTED_PSEUDO_CLASS, questId.equals(quest.id())));
         updateQuestDetails(quest);
     }
 
@@ -303,8 +304,8 @@ public class ChapterEditorController {
             stage.setTitle("Quest Editor - " + quest.title());
             stage.setScene(new Scene(root));
             stage.initModality(Modality.APPLICATION_MODAL);
-            Window owner = canvasHolder != null && canvasHolder.getScene() != null
-                    ? canvasHolder.getScene().getWindow()
+            Window owner = questGrid != null && questGrid.getScene() != null
+                    ? questGrid.getScene().getWindow()
                     : null;
             if (owner != null) {
                 stage.initOwner(owner);
@@ -315,10 +316,64 @@ public class ChapterEditorController {
         }
     }
 
-    private void updateChapterTitle(Chapter chapter) {
-        if (chapterTitleLabel != null) {
-            chapterTitleLabel.setText(chapter != null ? chapter.title() : "");
+    @FXML
+    private void onQuestGridMousePressed(MouseEvent e) {
+        if (e.getButton() == MouseButton.SECONDARY) {
+            ContextMenu menu = new ContextMenu();
+            MenuItem addQuest = new MenuItem("Add New Quest");
+            addQuest.setOnAction(a -> createNewQuest());
+            menu.getItems().add(addQuest);
+            menu.show(questGrid, e.getScreenX(), e.getScreenY());
         }
+    }
+
+    private void createNewQuest() {
+        if (currentChapter == null) {
+            return;
+        }
+
+        Quest newQuest = Quest.builder()
+                .id(UUID.randomUUID().toString())
+                .title("New Quest")
+                .description("")
+                .build();
+
+        Chapter previousChapter = currentChapter;
+        List<Quest> updatedQuests = new ArrayList<>(previousChapter.quests());
+        updatedQuests.add(newQuest);
+        Chapter updatedChapter = new Chapter(previousChapter.id(), previousChapter.title(), previousChapter.icon(),
+                previousChapter.background(), updatedQuests, previousChapter.visibility());
+        currentChapter = updatedChapter;
+        updateChapterList(previousChapter, updatedChapter);
+        replaceWorkingChapter(previousChapter, updatedChapter);
+        displayChapter(updatedChapter);
+    }
+
+    private void updateChapterList(Chapter previousChapter, Chapter updatedChapter) {
+        if (chapterListView == null) {
+            return;
+        }
+
+        ObservableList<Chapter> items = chapterListView.getItems();
+        for (int i = 0; i < items.size(); i++) {
+            Chapter item = items.get(i);
+            if (item.id().equals(previousChapter.id())) {
+                items.set(i, updatedChapter);
+                chapterListView.getSelectionModel().select(updatedChapter);
+                return;
+            }
+        }
+    }
+
+    private void replaceWorkingChapter(Chapter previousChapter, Chapter updatedChapter) {
+        for (int i = 0; i < workingChapters.size(); i++) {
+            Chapter item = workingChapters.get(i);
+            if (item.id().equals(previousChapter.id())) {
+                workingChapters.set(i, updatedChapter);
+                return;
+            }
+        }
+        workingChapters.add(updatedChapter);
     }
 
     @FXML
@@ -338,7 +393,8 @@ public class ChapterEditorController {
             Parent root = loader.load();
             SettingsController controller = loader.getController();
 
-            Scene mainScene = canvasHolder.getScene();
+            Window owner = questGrid != null && questGrid.getScene() != null ? questGrid.getScene().getWindow() : null;
+            Scene mainScene = owner != null ? owner.getScene() : null;
             if (controller != null && mainScene != null) {
                 controller.setScene(mainScene);
             }
@@ -346,7 +402,6 @@ public class ChapterEditorController {
             Stage dialog = new Stage();
             dialog.setTitle("Settings");
             dialog.initModality(Modality.APPLICATION_MODAL);
-            Window owner = canvasHolder.getScene() != null ? canvasHolder.getScene().getWindow() : null;
             if (owner != null) {
                 dialog.initOwner(owner);
             }
@@ -357,17 +412,13 @@ public class ChapterEditorController {
             CheckBox showGrid = (CheckBox) root.lookup("#chkShowGrid");
             if (showGrid != null) {
                 showGrid.selectedProperty().addListener((obs, oldVal, newVal) -> {
-                    if (questCanvas != null) {
-                        questCanvas.setShowGrid(Boolean.TRUE.equals(newVal));
-                    }
+                    // retained for settings compatibility
                 });
             }
             CheckBox smooth = (CheckBox) root.lookup("#chkSmoothPanning");
             if (smooth != null) {
                 smooth.selectedProperty().addListener((obs, oldVal, newVal) -> {
-                    if (questCanvas != null) {
-                        questCanvas.setSmoothPanning(Boolean.TRUE.equals(newVal));
-                    }
+                    // retained for settings compatibility
                 });
             }
             CheckBox dark = (CheckBox) root.lookup("#chkDarkTheme");
@@ -379,9 +430,8 @@ public class ChapterEditorController {
             dialog.showAndWait();
 
             var es = UserSettings.get();
-            if (questCanvas != null) {
-                questCanvas.setShowGrid(es.showGrid);
-                questCanvas.setSmoothPanning(es.smoothPanning);
+            if (dialogScene != null) {
+                ThemeService.apply(dialogScene, es.darkTheme);
             }
         } catch (Exception ignored) {
         }
