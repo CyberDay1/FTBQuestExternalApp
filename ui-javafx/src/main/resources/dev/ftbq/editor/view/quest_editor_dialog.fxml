@@ -1,0 +1,139 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<BorderPane xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml"
+            fx:controller="dev.ftbq.editor.controller.QuestEditorDialogController"
+            prefWidth="820" prefHeight="720">
+    <top>
+        <HBox alignment="CENTER_LEFT" spacing="12" styleClass="dialog-header">
+            <padding>
+                <Insets top="16" right="16" bottom="16" left="16" />
+            </padding>
+            <Label text="Quest Editor" styleClass="dialog-title" />
+            <Region HBox.hgrow="ALWAYS" />
+            <Label fx:id="questIdLabel" text="ID: NEW" styleClass="quest-id-label" />
+        </HBox>
+    </top>
+
+    <center>
+        <ScrollPane fitToWidth="true" hbarPolicy="AS_NEEDED" vbarPolicy="AS_NEEDED"
+                    styleClass="dialog-content">
+            <VBox spacing="16">
+                <padding>
+                    <Insets top="20" right="20" bottom="20" left="20" />
+                </padding>
+
+                <TitledPane text="Basic Properties" expanded="true" collapsible="false">
+                    <GridPane hgap="12" vgap="12">
+                        <columnConstraints>
+                            <ColumnConstraints percentWidth="30" />
+                            <ColumnConstraints percentWidth="70" />
+                        </columnConstraints>
+
+                        <Label text="Title:" GridPane.rowIndex="0" GridPane.columnIndex="0" />
+                        <TextField fx:id="titleField" promptText="Quest title"
+                                   GridPane.rowIndex="0" GridPane.columnIndex="1" />
+
+                        <Label text="Description:" GridPane.rowIndex="1" GridPane.columnIndex="0" />
+                        <TextArea fx:id="descriptionArea" GridPane.rowIndex="1" GridPane.columnIndex="1"
+                                  prefRowCount="3" wrapText="true" />
+
+                        <Label text="Icon ID:" GridPane.rowIndex="2" GridPane.columnIndex="0" />
+                        <TextField fx:id="iconField" promptText="minecraft:book"
+                                   GridPane.rowIndex="2" GridPane.columnIndex="1" />
+
+                        <Label text="Icon Path:" GridPane.rowIndex="3" GridPane.columnIndex="0" />
+                        <TextField fx:id="iconPathField" promptText="assets/mod/textures/..."
+                                   GridPane.rowIndex="3" GridPane.columnIndex="1" />
+
+                        <Label text="Visibility:" GridPane.rowIndex="4" GridPane.columnIndex="0" />
+                        <ComboBox fx:id="visibilityComboBox" maxWidth="Infinity"
+                                  GridPane.rowIndex="4" GridPane.columnIndex="1" />
+                    </GridPane>
+                </TitledPane>
+
+                <TitledPane text="Tasks" expanded="true" collapsible="false">
+                    <VBox spacing="8">
+                        <HBox spacing="8" alignment="CENTER_LEFT">
+                            <Label text="Tasks required to complete the quest:" />
+                            <Region HBox.hgrow="ALWAYS" />
+                            <Label fx:id="taskCountLabel" text="0 tasks" styleClass="count-label" />
+                        </HBox>
+                        <ListView fx:id="taskListView" prefHeight="160" VBox.vgrow="ALWAYS" />
+                        <HBox spacing="8">
+                            <MenuButton fx:id="addTaskMenuButton" text="Add Task">
+                                <items>
+                                    <MenuItem text="Item Task" onAction="#onAddItemTask" />
+                                    <MenuItem text="Observation Task" onAction="#onAddObservationTask" />
+                                    <MenuItem text="Checkmark Task" onAction="#onAddCheckmarkTask" />
+                                    <MenuItem text="Advancement Task" onAction="#onAddAdvancementTask" />
+                                    <MenuItem text="Stat Task" onAction="#onAddStatTask" />
+                                </items>
+                            </MenuButton>
+                            <Button text="Edit Task" onAction="#onEditTask" />
+                            <Button text="Remove Task" onAction="#onRemoveTask" />
+                            <Region HBox.hgrow="ALWAYS" />
+                            <Button text="Move Up" onAction="#onMoveTaskUp" />
+                            <Button text="Move Down" onAction="#onMoveTaskDown" />
+                        </HBox>
+                    </VBox>
+                </TitledPane>
+
+                <TitledPane text="Rewards" expanded="true" collapsible="false">
+                    <VBox spacing="8">
+                        <HBox spacing="8" alignment="CENTER_LEFT">
+                            <Label text="Rewards granted when the quest is completed:" />
+                            <Region HBox.hgrow="ALWAYS" />
+                            <Label fx:id="rewardCountLabel" text="0 rewards" styleClass="count-label" />
+                        </HBox>
+                        <ListView fx:id="rewardListView" prefHeight="160" VBox.vgrow="ALWAYS" />
+                        <HBox spacing="8">
+                            <MenuButton fx:id="addRewardMenuButton" text="Add Reward">
+                                <items>
+                                    <MenuItem text="Item Reward" onAction="#onAddItemReward" />
+                                    <MenuItem text="Currency Reward" onAction="#onAddCurrencyReward" />
+                                    <MenuItem text="XP Reward" onAction="#onAddXPReward" />
+                                    <MenuItem text="Command Reward" onAction="#onAddCommandReward" />
+                                    <MenuItem text="Loot Table Reward" onAction="#onAddLootTableReward" />
+                                </items>
+                            </MenuButton>
+                            <Button text="Edit Reward" onAction="#onEditReward" />
+                            <Button text="Remove Reward" onAction="#onRemoveReward" />
+                            <Region HBox.hgrow="ALWAYS" />
+                            <Button text="Move Up" onAction="#onMoveRewardUp" />
+                            <Button text="Move Down" onAction="#onMoveRewardDown" />
+                        </HBox>
+                    </VBox>
+                </TitledPane>
+
+                <TitledPane text="Dependencies" expanded="true" collapsible="false">
+                    <VBox spacing="8">
+                        <HBox spacing="8" alignment="CENTER_LEFT">
+                            <Label text="Quests that must be completed first:" />
+                            <Region HBox.hgrow="ALWAYS" />
+                            <Label fx:id="dependencyCountLabel" text="0 dependencies" styleClass="count-label" />
+                        </HBox>
+                        <ListView fx:id="dependencyListView" prefHeight="140" VBox.vgrow="ALWAYS" />
+                        <HBox spacing="8">
+                            <Button text="Add Dependency" onAction="#onAddDependency" />
+                            <Button text="Remove Dependency" onAction="#onRemoveDependency" />
+                        </HBox>
+                    </VBox>
+                </TitledPane>
+            </VBox>
+        </ScrollPane>
+    </center>
+
+    <bottom>
+        <HBox alignment="CENTER_RIGHT" spacing="12" styleClass="dialog-footer">
+            <padding>
+                <Insets top="16" right="16" bottom="16" left="16" />
+            </padding>
+            <Button text="Cancel" onAction="#onCancel" prefWidth="100" />
+            <Button text="Save Quest" onAction="#onSave" prefWidth="140" defaultButton="true" styleClass="primary-button" />
+        </HBox>
+    </bottom>
+</BorderPane>

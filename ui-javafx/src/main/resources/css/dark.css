@@ -200,6 +200,74 @@
     -fx-text-fill: -selection-fg;
 }
 
+/* Dialogs */
+.dialog-header {
+    -fx-background-color: derive(-bg-elev, -5%);
+    -fx-border-color: derive(-bg, 10%);
+    -fx-border-width: 0 0 1 0;
+}
+
+.dialog-title {
+    -fx-text-fill: -fg;
+    -fx-font-size: 18px;
+    -fx-font-weight: bold;
+}
+
+.quest-id-label {
+    -fx-text-fill: -fg-muted;
+    -fx-font-family: "Consolas", "Monaco", monospace;
+    -fx-font-size: 12px;
+}
+
+.dialog-content {
+    -fx-background-color: -bg;
+}
+
+.dialog-footer {
+    -fx-background-color: derive(-bg-elev, -5%);
+    -fx-border-color: derive(-bg, 10%);
+    -fx-border-width: 1 0 0 0;
+}
+
+.count-label {
+    -fx-text-fill: -fg-muted;
+    -fx-font-size: 12px;
+}
+
+.titled-pane {
+    -fx-background-color: -bg-elev;
+}
+
+.titled-pane > .title {
+    -fx-background-color: derive(-bg-elev, -3%);
+    -fx-text-fill: -fg;
+    -fx-font-weight: bold;
+}
+
+.titled-pane > .content {
+    -fx-background-color: -bg-elev;
+    -fx-padding: 12;
+}
+
+.menu-button {
+    -fx-background-radius: 4px;
+    -fx-border-radius: 4px;
+}
+
+.menu-button .arrow-button {
+    -fx-background-color: transparent;
+}
+
+.primary-button {
+    -fx-background-color: -selection-bg;
+    -fx-text-fill: -selection-fg;
+    -fx-font-weight: bold;
+}
+
+.primary-button:hover {
+    -fx-background-color: derive(-selection-bg, 10%);
+}
+
 /* Menu and context menu */
 .menu-bar,
 .context-menu {
