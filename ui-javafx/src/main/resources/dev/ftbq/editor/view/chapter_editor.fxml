@@ -2,10 +2,12 @@
 
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.Button?>
+<?import javafx.scene.control.ComboBox?>
 <?import javafx.scene.control.Label?>
 <?import javafx.scene.control.ListView?>
 <?import javafx.scene.control.MenuButton?>
 <?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.control.Separator?>
 <?import javafx.scene.control.TextField?>
 <?import javafx.scene.layout.BorderPane?>
 <?import javafx.scene.layout.Pane?>
@@ -27,11 +29,19 @@
 
     <!-- LEFT: Chapter List -->
     <left>
-        <VBox spacing="8" prefWidth="240" styleClass="chapter-list-panel" BorderPane.alignment="CENTER_LEFT">
+        <VBox spacing="8" prefWidth="260" styleClass="chapter-list-panel" BorderPane.alignment="CENTER_LEFT">
             <padding>
                 <Insets top="12" right="12" bottom="12" left="12" />
             </padding>
-            <Label text="Chapters" style="-fx-font-weight: bold;" />
+            <Label text="Chapter Group" style="-fx-font-weight: bold; -fx-font-size: 12px;" />
+            <ComboBox fx:id="chapterGroupComboBox"
+                      maxWidth="Infinity"
+                      promptText="Select group..."
+                      onAction="#onChapterGroupSelected" />
+
+            <Separator style="-fx-padding: 4 0 4 0;" />
+
+            <Label text="Chapters" style="-fx-font-weight: bold; -fx-font-size: 12px;" />
             <TextField fx:id="chapterSearchField" promptText="Search chapters..." />
             <ListView fx:id="chapterListView" VBox.vgrow="ALWAYS" onMouseClicked="#onChapterSelected" />
         </VBox>

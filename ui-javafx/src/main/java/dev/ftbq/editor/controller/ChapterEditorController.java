@@ -3,13 +3,16 @@ package dev.ftbq.editor.controller;
 import dev.ftbq.editor.AppAware;
 import dev.ftbq.editor.MainApp;
 import dev.ftbq.editor.domain.Chapter;
+import dev.ftbq.editor.domain.ChapterGroup;
 import dev.ftbq.editor.domain.Dependency;
 import dev.ftbq.editor.domain.ItemReward;
 import dev.ftbq.editor.domain.Quest;
 import dev.ftbq.editor.domain.Task;
+import dev.ftbq.editor.domain.Visibility;
 import dev.ftbq.editor.service.ThemeService;
 import dev.ftbq.editor.service.UserSettings;
 import dev.ftbq.editor.store.Project;
+import dev.ftbq.editor.domain.QuestFile;
 import dev.ftbq.editor.ui.QuestNodeFactory;
 import dev.ftbq.editor.view.graph.layout.QuestLayoutStore;
 import dev.ftbq.editor.services.UiServiceLocator;
@@ -22,6 +25,7 @@ import javafx.geometry.Point2D;
 import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
+import javafx.scene.control.Alert;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.Label;
@@ -31,6 +35,7 @@ import javafx.scene.control.MenuButton;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.TextField;
+import javafx.scene.control.ComboBox;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.input.ContextMenuEvent;
@@ -45,10 +50,13 @@ import javafx.stage.Window;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -64,6 +72,7 @@ public class ChapterEditorController implements AppAware {
     private static final Color GRID_MAJOR_COLOR = Color.rgb(150, 150, 150, 0.7);
     private static final int MAJOR_GRID_INTERVAL = 5;
 
+    @FXML private ComboBox<ChapterGroup> chapterGroupComboBox;
     @FXML private ListView<Chapter> chapterListView;
     @FXML private TextField chapterSearchField;
     @FXML private Label chapterTitle;
@@ -79,12 +88,15 @@ public class ChapterEditorController implements AppAware {
 
     private Project project;
     private final List<Chapter> workingChapters = new ArrayList<>();
+    private final ObservableList<ChapterGroup> chapterGroups = FXCollections.observableArrayList();
+    private final Map<String, Chapter> chapterById = new HashMap<>();
     private Chapter currentChapter;
     private Quest selectedQuest;
     private final Map<String, Node> questNodes = new HashMap<>();
     private MainApp mainApp;
     private ContextMenu questContextMenu;
     private Point2D lastClickPosition = new Point2D(0, 0);
+    private static final String SYNTHETIC_UNGROUPED_ID = "__ungrouped__";
 
     @Override
     public void setMainApp(MainApp app) {
@@ -96,6 +108,34 @@ public class ChapterEditorController implements AppAware {
         setupGridCanvas();
         setupContextMenu();
         setupQuestPane();
+
+        if (chapterGroupComboBox != null) {
+            chapterGroupComboBox.setItems(chapterGroups);
+            chapterGroupComboBox.setCellFactory(list -> new ListCell<>() {
+                @Override
+                protected void updateItem(ChapterGroup item, boolean empty) {
+                    super.updateItem(item, empty);
+                    setText(empty || item == null ? null : item.title());
+                }
+            });
+            chapterGroupComboBox.setButtonCell(new ListCell<>() {
+                @Override
+                protected void updateItem(ChapterGroup item, boolean empty) {
+                    super.updateItem(item, empty);
+                    setText(empty || item == null ? "Select group..." : item.title());
+                }
+            });
+            chapterGroupComboBox.valueProperty().addListener((obs, oldGroup, newGroup) -> {
+                if (!Objects.equals(oldGroup, newGroup)) {
+                    if (chapterListView != null) {
+                        chapterListView.getSelectionModel().clearSelection();
+                    }
+                    displayChapter(null);
+                    refreshChapterList();
+                }
+            });
+            chapterGroupComboBox.setDisable(true);
+        }
 
         if (questDetailsPanel != null) {
             questDetailsPanel.setVisible(false);
@@ -258,19 +298,89 @@ public class ChapterEditorController implements AppAware {
      * Create a new quest at the specified position.
      */
     private void createQuestAt(double x, double y) {
+        if (currentChapter == null) {
+            Alert alert = new Alert(Alert.AlertType.WARNING);
+            alert.setTitle("No Chapter Selected");
+            alert.setHeaderText("Select a chapter before creating quests");
+            alert.setContentText("Choose a chapter from the list, then try again.");
+            alert.showAndWait();
+            if (questContextMenu != null) {
+                questContextMenu.hide();
+            }
+            return;
+        }
+
         double snappedX = Math.round(x / GRID_SIZE) * GRID_SIZE;
         double snappedY = Math.round(y / GRID_SIZE) * GRID_SIZE;
-        Quest quest = createNewQuest(new Point2D(snappedX, snappedY));
-        if (quest != null) {
-            Node node = questNodes.get(quest.id());
-            if (node != null) {
-                node.relocate(snappedX, snappedY);
+
+        Quest draftQuest = Quest.builder()
+                .id(UUID.randomUUID().toString())
+                .title("New Quest")
+                .description("")
+                .visibility(currentChapter.visibility())
+                .build();
+
+        Optional<Quest> created = showQuestEditorDialog(draftQuest, true);
+        if (created.isPresent()) {
+            Quest savedQuest = created.get();
+            Chapter previousChapter = currentChapter;
+            List<Quest> updatedQuests = new ArrayList<>(previousChapter.quests());
+            updatedQuests.add(savedQuest);
+            Chapter updatedChapter = new Chapter(previousChapter.id(), previousChapter.title(), previousChapter.icon(),
+                    previousChapter.background(), updatedQuests, previousChapter.visibility());
+            currentChapter = updatedChapter;
+            chapterById.put(updatedChapter.id(), updatedChapter);
+            updateChapterList(previousChapter, updatedChapter);
+            replaceWorkingChapter(previousChapter, updatedChapter);
+
+            QuestLayoutStore layoutStore = UiServiceLocator.questLayoutStore;
+            if (layoutStore != null) {
+                try {
+                    layoutStore.putNodePos(updatedChapter.id(), savedQuest.id(), snappedX, snappedY);
+                } catch (RuntimeException e) {
+                    LOGGER.log(Level.FINE, "Unable to persist quest position for " + savedQuest.id(), e);
+                }
             }
-            selectQuest(quest);
+
+            displayChapter(updatedChapter);
+            selectQuest(savedQuest);
         }
+
         if (questContextMenu != null) {
             questContextMenu.hide();
         }
+    }
+
+    private Optional<Quest> showQuestEditorDialog(Quest quest, boolean isNew) {
+        try {
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/dev/ftbq/editor/view/quest_editor_dialog.fxml"));
+            Parent root = loader.load();
+            QuestEditorDialogController controller = loader.getController();
+            controller.setQuest(quest);
+
+            Stage dialogStage = new Stage();
+            dialogStage.setTitle(isNew ? "Create New Quest" : "Edit Quest");
+            Scene scene = new Scene(root);
+            ThemeService.apply(scene, UserSettings.get().darkTheme);
+            dialogStage.setScene(scene);
+            dialogStage.initModality(Modality.APPLICATION_MODAL);
+            if (questPane != null && questPane.getScene() != null) {
+                dialogStage.initOwner(questPane.getScene().getWindow());
+            }
+            dialogStage.showAndWait();
+
+            if (controller.wasSaved()) {
+                return Optional.of(controller.getQuest());
+            }
+        } catch (IOException e) {
+            LOGGER.log(Level.WARNING, "Failed to open quest editor dialog", e);
+            Alert alert = new Alert(Alert.AlertType.ERROR);
+            alert.setTitle("Quest Editor");
+            alert.setHeaderText("Unable to open quest editor");
+            alert.setContentText(e.getMessage());
+            alert.showAndWait();
+        }
+        return Optional.empty();
     }
 
     /**
@@ -368,10 +478,27 @@ public class ChapterEditorController implements AppAware {
     public void setProject(Project project) {
         this.project = project;
         workingChapters.clear();
+        chapterById.clear();
+
+        if (chapterGroupComboBox != null) {
+            chapterGroupComboBox.getSelectionModel().clearSelection();
+        }
+
         if (project != null) {
             workingChapters.addAll(project.getChapters());
+            for (Chapter chapter : workingChapters) {
+                chapterById.put(chapter.id(), chapter);
+            }
+            rebuildChapterGroups();
+            if (chapterGroupComboBox != null && !chapterGroups.isEmpty()) {
+                chapterGroupComboBox.getSelectionModel().selectFirst();
+            }
             refreshChapterList();
         } else {
+            chapterGroups.clear();
+            if (chapterGroupComboBox != null) {
+                chapterGroupComboBox.setDisable(true);
+            }
             if (chapterListView != null) {
                 chapterListView.getItems().clear();
             }
@@ -380,50 +507,113 @@ public class ChapterEditorController implements AppAware {
     }
 
     public void focusChapter(String chapterId) {
-        if (chapterId == null || workingChapters.isEmpty() || chapterListView == null) {
+        if (chapterId == null || chapterListView == null) {
             return;
         }
-        Optional<Chapter> target = workingChapters.stream()
-                .filter(chapter -> chapterId.equals(chapter.id()))
-                .findFirst();
-        if (target.isEmpty()) {
+        Chapter chapter = chapterById.get(chapterId);
+        if (chapter == null) {
             return;
         }
 
-        Chapter chapter = target.get();
+        if (chapterGroupComboBox != null && !chapterGroups.isEmpty()) {
+            ChapterGroup group = findGroupForChapter(chapterId);
+            if (group != null) {
+                chapterGroupComboBox.getSelectionModel().select(group);
+            }
+        }
+
         if (chapterSearchField != null) {
             String query = chapterSearchField.getText();
-            if (query != null && !query.isBlank() && !chapterListView.getItems().contains(chapter)) {
+            if (query != null && !query.isBlank() && !chapter.title().toLowerCase(Locale.ROOT).contains(query.toLowerCase(Locale.ROOT))) {
                 chapterSearchField.setText("");
             }
         }
 
-        if (!chapterListView.getItems().contains(chapter)) {
-            refreshChapterList();
-        }
-
+        refreshChapterList();
         chapterListView.getSelectionModel().select(chapter);
         chapterListView.scrollTo(chapter);
         displayChapter(chapter);
+    }
+
+    private ChapterGroup findGroupForChapter(String chapterId) {
+        for (ChapterGroup group : chapterGroups) {
+            if (group.chapterIds().contains(chapterId)) {
+                return group;
+            }
+        }
+        return null;
+    }
+
+    private void rebuildChapterGroups() {
+        chapterGroups.clear();
+        if (project == null) {
+            if (chapterGroupComboBox != null) {
+                chapterGroupComboBox.setDisable(true);
+            }
+            return;
+        }
+
+        QuestFile questFile = project.getQuestFile();
+        if (questFile != null) {
+            chapterGroups.addAll(questFile.chapterGroups());
+        }
+
+        Set<String> groupedIds = chapterGroups.stream()
+                .flatMap(group -> group.chapterIds().stream())
+                .collect(Collectors.toCollection(LinkedHashSet::new));
+
+        List<Chapter> ungrouped = workingChapters.stream()
+                .filter(chapter -> !groupedIds.contains(chapter.id()))
+                .toList();
+
+        if (!ungrouped.isEmpty()) {
+            ChapterGroup.Builder builder = ChapterGroup.builder()
+                    .id(SYNTHETIC_UNGROUPED_ID)
+                    .title("Ungrouped Chapters")
+                    .visibility(Visibility.VISIBLE)
+                    .chapterIds(ungrouped.stream().map(Chapter::id).toList());
+            chapterGroups.add(builder.build());
+        }
+
+        if (chapterGroupComboBox != null) {
+            chapterGroupComboBox.setDisable(chapterGroups.isEmpty());
+        }
     }
 
     private void refreshChapterList() {
         if (chapterListView == null) {
             return;
         }
-        if (workingChapters.isEmpty()) {
+        List<Chapter> source = new ArrayList<>();
+        if (chapterGroupComboBox != null && !chapterGroups.isEmpty()) {
+            ChapterGroup selectedGroup = chapterGroupComboBox.getValue();
+            if (selectedGroup == null) {
+                chapterListView.getItems().clear();
+                displayChapter(null);
+                return;
+            }
+            for (String chapterId : selectedGroup.chapterIds()) {
+                Chapter chapter = chapterById.get(chapterId);
+                if (chapter != null) {
+                    source.add(chapter);
+                }
+            }
+        } else {
+            source.addAll(workingChapters);
+        }
+
+        if (source.isEmpty()) {
             chapterListView.getItems().clear();
             displayChapter(null);
             return;
         }
 
-        List<Chapter> chapters = new ArrayList<>(workingChapters);
-        List<Chapter> filtered = chapters;
+        List<Chapter> filtered = new ArrayList<>(source);
         if (chapterSearchField != null) {
             String query = chapterSearchField.getText();
             if (query != null && !query.isBlank()) {
                 String filter = query.toLowerCase(Locale.ROOT);
-                filtered = chapters.stream()
+                filtered = source.stream()
                         .filter(chapter -> chapter.title().toLowerCase(Locale.ROOT).contains(filter))
                         .collect(Collectors.toList());
             }
@@ -431,13 +621,18 @@ public class ChapterEditorController implements AppAware {
 
         ObservableList<Chapter> items = chapterListView.getItems();
         items.setAll(filtered);
-        if (!filtered.isEmpty()) {
-            Chapter selection = chapterListView.getSelectionModel().getSelectedItem();
-            if (selection == null || !filtered.contains(selection)) {
-                chapterListView.getSelectionModel().selectFirst();
-            } else {
-                displayChapter(selection);
-            }
+        if (filtered.isEmpty()) {
+            displayChapter(null);
+            return;
+        }
+
+        Chapter selection = chapterListView.getSelectionModel().getSelectedItem();
+        if (selection == null || !filtered.contains(selection)) {
+            chapterListView.getSelectionModel().selectFirst();
+            selection = chapterListView.getSelectionModel().getSelectedItem();
+        }
+        if (selection != null) {
+            displayChapter(selection);
         } else {
             displayChapter(null);
         }
@@ -454,10 +649,15 @@ public class ChapterEditorController implements AppAware {
         }
     }
 
+    @FXML
+    private void onChapterGroupSelected() {
+        refreshChapterList();
+    }
+
     private void displayChapter(Chapter chapter) {
         currentChapter = chapter;
         if (chapterTitle != null) {
-            chapterTitle.setText(chapter != null ? chapter.title() : "");
+            chapterTitle.setText(chapter != null ? chapter.title() : "Select a Chapter");
         }
 
         questNodes.clear();
@@ -589,68 +789,28 @@ public class ChapterEditorController implements AppAware {
     }
 
     private void openQuestEditor(Quest quest) {
-        try {
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("/dev/ftbq/editor/view/quest_editor.fxml"));
-            Parent root = loader.load();
-            QuestEditorController controller = loader.getController();
-            controller.setQuest(quest);
-
-            Stage stage = new Stage();
-            stage.setTitle("Quest Editor - " + quest.title());
-            stage.setScene(new Scene(root));
-            stage.initModality(Modality.APPLICATION_MODAL);
-            Window owner = questPane != null && questPane.getScene() != null
-                    ? questPane.getScene().getWindow()
-                    : null;
-            if (owner != null) {
-                stage.initOwner(owner);
-            }
-            stage.show();
-        } catch (IOException e) {
-            LOGGER.log(Level.WARNING, "Failed to open quest editor for quest " + quest.id(), e);
-        }
-    }
-
-    private Quest createNewQuest() {
-        return createNewQuest(null);
-    }
-
-    private Quest createNewQuest(Point2D initialPosition) {
-        if (currentChapter == null) {
-            return null;
+        if (quest == null) {
+            return;
         }
 
-        Quest newQuest = Quest.builder()
-                .id(UUID.randomUUID().toString())
-                .title("New Quest")
-                .description("")
-                .build();
+        Optional<Quest> edited = showQuestEditorDialog(quest, false);
+        if (edited.isEmpty() || currentChapter == null) {
+            return;
+        }
 
+        Quest updatedQuest = edited.get();
         Chapter previousChapter = currentChapter;
-        List<Quest> updatedQuests = new ArrayList<>(previousChapter.quests());
-        updatedQuests.add(newQuest);
+        List<Quest> updatedQuests = previousChapter.quests().stream()
+                .map(existing -> existing.id().equals(updatedQuest.id()) ? updatedQuest : existing)
+                .collect(Collectors.toCollection(ArrayList::new));
         Chapter updatedChapter = new Chapter(previousChapter.id(), previousChapter.title(), previousChapter.icon(),
                 previousChapter.background(), updatedQuests, previousChapter.visibility());
         currentChapter = updatedChapter;
+        chapterById.put(updatedChapter.id(), updatedChapter);
         updateChapterList(previousChapter, updatedChapter);
         replaceWorkingChapter(previousChapter, updatedChapter);
-
-        if (initialPosition != null) {
-            QuestLayoutStore layoutStore = UiServiceLocator.questLayoutStore;
-            if (layoutStore != null) {
-                try {
-                    String chapterId = updatedChapter.id();
-                    if (chapterId != null && !chapterId.isBlank()) {
-                        layoutStore.putNodePos(chapterId, newQuest.id(), initialPosition.getX(), initialPosition.getY());
-                    }
-                } catch (RuntimeException e) {
-                    LOGGER.log(Level.FINE, "Unable to persist quest position for " + newQuest.id(), e);
-                }
-            }
-        }
-
         displayChapter(updatedChapter);
-        return newQuest;
+        selectQuest(updatedQuest);
     }
 
     private void updateChapterList(Chapter previousChapter, Chapter updatedChapter) {
@@ -664,6 +824,7 @@ public class ChapterEditorController implements AppAware {
             if (item.id().equals(previousChapter.id())) {
                 items.set(i, updatedChapter);
                 chapterListView.getSelectionModel().select(updatedChapter);
+                chapterById.put(updatedChapter.id(), updatedChapter);
                 return;
             }
         }
@@ -674,10 +835,12 @@ public class ChapterEditorController implements AppAware {
             Chapter item = workingChapters.get(i);
             if (item.id().equals(previousChapter.id())) {
                 workingChapters.set(i, updatedChapter);
+                chapterById.put(updatedChapter.id(), updatedChapter);
                 return;
             }
         }
         workingChapters.add(updatedChapter);
+        chapterById.put(updatedChapter.id(), updatedChapter);
     }
 
     @FXML
