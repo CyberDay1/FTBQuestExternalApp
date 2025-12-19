@@ -9,7 +9,7 @@ import dev.ftbq.editor.domain.Quest;
 import dev.ftbq.editor.ThemeService;
 import dev.ftbq.editor.service.UserSettings;
 import dev.ftbq.editor.ui.AiQuestCreationTab;
-import dev.ftbq.editor.controller.QuestEditorController;
+import dev.ftbq.editor.controller.QuestEditorDialogController;
 import dev.ftbq.editor.services.UiServiceLocator;
 import dev.ftbq.editor.store.Project;
 import dev.ftbq.editor.store.StoreDaoImpl;
@@ -248,18 +248,20 @@ public class MainApp extends Application {
             return;
         }
         try {
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("view/quest_editor.fxml"));
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("view/quest_editor_dialog.fxml"));
             Parent root = loader.load();
-            QuestEditorController controller = loader.getController();
+            QuestEditorDialogController controller = loader.getController();
             controller.setQuest(quest);
             Stage stage = new Stage();
             stage.setTitle("Quest Editor - " + quest.title());
-            stage.setScene(new Scene(root));
+            Scene scene = new Scene(root);
+            ThemeService.apply(scene, UserSettings.get().darkTheme);
+            stage.setScene(scene);
             stage.initModality(Modality.APPLICATION_MODAL);
             if (getPrimaryStage() != null) {
                 stage.initOwner(getPrimaryStage());
             }
-            stage.show();
+            stage.showAndWait();
         } catch (IOException e) {
             showError("Failed to open quest editor", e.getMessage());
         }
