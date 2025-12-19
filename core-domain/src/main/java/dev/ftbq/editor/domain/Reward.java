@@ -5,7 +5,8 @@ import java.util.Optional;
 /**
  * Represents a quest reward.
  */
-public sealed interface Reward permits ItemReward, LootTableReward, XpLevelReward, XpReward, CommandReward {
+public sealed interface Reward permits ItemReward, LootTableReward, XpLevelReward, XpReward, CommandReward,
+        ChoiceReward, RandomReward, AdvancementReward, StageReward, ToastReward, CustomReward, AllTableReward {
 
     RewardType type();
 
@@ -36,6 +37,13 @@ public sealed interface Reward permits ItemReward, LootTableReward, XpLevelRewar
             case XP_LEVELS -> experienceLevels().map(levels -> levels + " levels").orElse("XP levels");
             case XP_AMOUNT -> experienceAmount().map(amount -> amount + " xp").orElse("XP amount");
             case COMMAND -> command().map(RewardCommand::command).orElse("Command reward");
+            case CHOICE -> "Choice reward";
+            case RANDOM -> "Random reward";
+            case ADVANCEMENT -> "Advancement reward";
+            case STAGE -> "GameStage reward";
+            case TOAST -> "Toast notification";
+            case CUSTOM -> "Custom reward";
+            case ALL_TABLE -> "All from table";
         };
     }
 

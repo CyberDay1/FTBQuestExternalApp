@@ -78,11 +78,25 @@ public final class SnbtQuestPackReader {
             assets.add(background);
             Visibility visibility = visibilityValue(entry.get("visibility"));
             List<ImportedQuest> quests = parseQuests(entry.get("quests"), warnings, assets);
+            List<Map<String, Object>> images = parseImages(entry.get("images"), assets);
+            List<Map<String, Object>> questLinks = parseQuestLinks(entry.get("quest_links"));
             Map<String, Object> properties = remainingProperties(entry,
-                    List.of("id", "title", "description", "group", "group_id", "icon", "background", "visibility", "quests"));
-            chapters.add(new ImportedChapter(id, title, description, groupId, icon, background, visibility, quests, properties));
+                    List.of("id", "title", "description", "group", "group_id", "icon", "background", "visibility", "quests", "images", "quest_links"));
+            chapters.add(new ImportedChapter(id, title, description, groupId, icon, background, visibility, quests, images, questLinks, properties));
         }
         return chapters;
+    }
+
+    private List<Map<String, Object>> parseImages(Object raw, Set<String> assets) {
+        List<Map<String, Object>> entries = asListOfCompounds(raw);
+        for (Map<String, Object> entry : entries) {
+            stringValue(entry, "image").ifPresent(assets::add);
+        }
+        return entries;
+    }
+
+    private List<Map<String, Object>> parseQuestLinks(Object raw) {
+        return asListOfCompounds(raw);
     }
 
     private List<ImportedQuest> parseQuests(Object raw,

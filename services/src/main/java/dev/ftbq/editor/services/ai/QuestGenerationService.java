@@ -2,6 +2,9 @@ package dev.ftbq.editor.services.ai;
 
 import dev.ftbq.editor.services.generator.ModIntent;
 import dev.ftbq.editor.services.generator.QuestDesignSpec;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.util.Objects;
 
 /**
@@ -9,40 +12,115 @@ import java.util.Objects;
  */
 public final class QuestGenerationService {
 
+    private static final Logger LOGGER = LoggerFactory.getLogger(QuestGenerationService.class);
+
     private final OpenAIClient openAIClient;
+    private final OllamaClient ollamaClient;
+    private AiProvider activeProvider;
 
     public QuestGenerationService() {
-        this(new OpenAIClient());
+        this(createOpenAIClientSafe(), new OllamaClient());
     }
 
-    public QuestGenerationService(OpenAIClient openAIClient) {
-        this.openAIClient = Objects.requireNonNull(openAIClient, "openAIClient");
+    private static OpenAIClient createOpenAIClientSafe() {
+        try {
+            return new OpenAIClient();
+        } catch (Exception e) {
+            LOGGER.debug("OpenAI client not available: {}", e.getMessage());
+            return null;
+        }
     }
 
-    /**
-     * Generates a quest chapter draft in SNBT form based on the provided design specification and mod intent.
-     *
-     * @param designSpec desired chapter parameters
-     * @param modIntent mod integration requirements
-     * @return SNBT text describing the generated chapter
-     */
+    public QuestGenerationService(OpenAIClient openAIClient, OllamaClient ollamaClient) {
+        this.openAIClient = openAIClient;
+        this.ollamaClient = Objects.requireNonNull(ollamaClient, "ollamaClient");
+        this.activeProvider = AiProvider.OLLAMA;
+    }
+
+    public void setActiveProvider(AiProvider provider) {
+        this.activeProvider = Objects.requireNonNull(provider, "provider");
+        LOGGER.info("AI provider set to: {}", provider.getDisplayName());
+    }
+
+    public AiProvider getActiveProvider() {
+        return activeProvider;
+    }
+
+    public boolean isOllamaAvailable() {
+        return ollamaClient.isAvailable();
+    }
+
+    public boolean isOpenAiConfigured() {
+        try {
+            dev.ftbq.editor.services.config.OpenAIConfig.getApiKey();
+            return true;
+        } catch (IllegalStateException e) {
+            return false;
+        }
+    }
+
+    public String getOllamaStatus() {
+        String host = ollamaClient.getActiveHost();
+        if (host != null) {
+            return "Connected to " + host + " (model: " + ollamaClient.getModel() + ")";
+        }
+        return "Not available";
+    }
+
     public String generateChapterDraft(QuestDesignSpec designSpec, ModIntent modIntent) {
         Objects.requireNonNull(designSpec, "designSpec");
         Objects.requireNonNull(modIntent, "modIntent");
 
-        String prompt = buildPrompt(designSpec, modIntent);
-        String aiOutput = openAIClient.generateQuestChapter(prompt);
+        String userPrompt = buildPrompt(designSpec, modIntent);
+        String aiOutput;
+
+        if (activeProvider == AiProvider.OLLAMA) {
+            LOGGER.info("Generating chapter using Ollama");
+            aiOutput = ollamaClient.generate(FtbQuestPrompts.SYSTEM_PROMPT, userPrompt);
+        } else {
+            LOGGER.info("Generating chapter using OpenAI");
+            if (openAIClient == null) {
+                throw new IllegalStateException("OpenAI client not configured");
+            }
+            aiOutput = openAIClient.generateQuestChapter(userPrompt);
+        }
+
         return extractSnbt(aiOutput);
     }
 
-    /**
-     * Generates a quest chapter draft in SNBT form.
-     *
-     * @param designSpec desired chapter parameters
-     * @param modIntent mod integration requirements
-     * @return SNBT text describing the generated chapter
-     * @deprecated use {@link #generateChapterDraft(QuestDesignSpec, ModIntent)} instead.
-     */
+    public String generateWithCustomPrompt(String theme, int questCount, String additionalInstructions) {
+        String userPrompt = FtbQuestPrompts.buildUserPrompt(theme, questCount, additionalInstructions);
+        String aiOutput;
+
+        if (activeProvider == AiProvider.OLLAMA) {
+            aiOutput = ollamaClient.generate(FtbQuestPrompts.SYSTEM_PROMPT, userPrompt);
+        } else {
+            if (openAIClient == null) {
+                throw new IllegalStateException("OpenAI client not configured");
+            }
+            aiOutput = openAIClient.generateQuestChapter(FtbQuestPrompts.SYSTEM_PROMPT + "\n\n" + userPrompt);
+        }
+
+        return extractSnbt(aiOutput);
+    }
+
+    public String generateModFocusedChapter(String modId, String theme, int questCount,
+                                             String modItems, String additionalInstructions) {
+        String userPrompt = FtbQuestPrompts.buildModFocusedPrompt(modId, theme, questCount, modItems, additionalInstructions);
+        String aiOutput;
+
+        if (activeProvider == AiProvider.OLLAMA) {
+            aiOutput = ollamaClient.generate(FtbQuestPrompts.SYSTEM_PROMPT, userPrompt);
+        } else {
+            if (openAIClient == null) {
+                throw new IllegalStateException("OpenAI client not configured");
+            }
+            aiOutput = openAIClient.generateQuestChapter(FtbQuestPrompts.SYSTEM_PROMPT + "\n\n" + userPrompt);
+        }
+
+        return extractSnbt(aiOutput);
+    }
+
     @Deprecated(forRemoval = true)
     public String generateQuestChapter(QuestDesignSpec designSpec, ModIntent modIntent) {
         return generateChapterDraft(designSpec, modIntent);

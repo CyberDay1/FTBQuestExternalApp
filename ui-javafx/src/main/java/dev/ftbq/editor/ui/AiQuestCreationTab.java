@@ -5,6 +5,7 @@ import dev.ftbq.editor.domain.LootTable;
 import dev.ftbq.editor.domain.QuestFile;
 import dev.ftbq.editor.io.snbt.AiQuestBridge;
 import dev.ftbq.editor.ingest.JarScanner;
+import dev.ftbq.editor.services.ai.AiProvider;
 import dev.ftbq.editor.services.ai.QuestGenerationService;
 import dev.ftbq.editor.services.generator.ModIntent;
 import dev.ftbq.editor.services.generator.QuestDesignSpec;
@@ -12,7 +13,7 @@ import dev.ftbq.editor.services.generator.QuestLimits;
 import dev.ftbq.editor.services.generator.RewardConfiguration;
 import dev.ftbq.editor.services.mods.ModRegistryService;
 import dev.ftbq.editor.services.mods.RegisteredMod;
-import dev.ftbq.editor.support.UiServiceLocator;
+import dev.ftbq.editor.services.UiServiceLocator;
 import dev.ftbq.editor.ui.model.ModSelectionModel;
 import dev.ftbq.editor.ui.model.RewardSelectionModel;
 import javafx.application.Platform;
@@ -88,6 +89,8 @@ public final class AiQuestCreationTab extends Tab {
     private Label modWarningLabel;
     private TextArea snbtPreview;
     private Button saveDraftButton;
+    private ComboBox<AiProvider> providerCombo;
+    private Label providerStatusLabel;
 
     public AiQuestCreationTab() {
         this(new QuestGenerationService(),
@@ -138,6 +141,38 @@ public final class AiQuestCreationTab extends Tab {
         Label heading = new Label("Configure generation");
         form.getChildren().add(heading);
 
+        Label providerLabel = new Label("AI Provider");
+        providerCombo = new ComboBox<>();
+        providerCombo.getItems().setAll(AiProvider.values());
+        providerCombo.setValue(questGenerationService.getActiveProvider());
+        providerCombo.setMaxWidth(Double.MAX_VALUE);
+        providerCombo.setConverter(new StringConverter<>() {
+            @Override
+            public String toString(AiProvider provider) {
+                return provider == null ? "" : provider.getDisplayName();
+            }
+
+            @Override
+            public AiProvider fromString(String string) {
+                return providerCombo.getItems().stream()
+                        .filter(p -> Objects.equals(p.getDisplayName(), string))
+                        .findFirst()
+                        .orElse(null);
+            }
+        });
+        providerCombo.valueProperty().addListener((obs, oldVal, newVal) -> {
+            if (newVal != null) {
+                questGenerationService.setActiveProvider(newVal);
+                updateProviderStatus();
+            }
+        });
+
+        providerStatusLabel = new Label();
+        providerStatusLabel.getStyleClass().add("muted-text");
+        updateProviderStatus();
+
+        form.getChildren().addAll(providerLabel, providerCombo, providerStatusLabel, new Separator());
+
         Label modsLabel = new Label("Mods");
         form.getChildren().add(modsLabel);
 
@@ -151,7 +186,7 @@ public final class AiQuestCreationTab extends Tab {
         modWarningLabel = new Label();
         modWarningLabel.setManaged(false);
         modWarningLabel.setVisible(false);
-        modWarningLabel.setStyle("-fx-text-fill: -accent;");
+        modWarningLabel.getStyleClass().add("accent-text");
 
         form.getChildren().addAll(modSelectionMenu, modWarningLabel);
 
@@ -160,7 +195,7 @@ public final class AiQuestCreationTab extends Tab {
         promptArea.setPromptText("Describe the chapter tone, milestones, or mod interactions you want.");
         promptArea.setWrapText(true);
         promptArea.setPrefRowCount(6);
-        promptArea.setStyle("-fx-control-inner-background: -bg-elev; -fx-font-family: 'Segoe UI', 'Sans-Serif';");
+        promptArea.getStyleClass().add("prompt-area");
         form.getChildren().addAll(promptLabel, promptArea);
 
         Label questCountLabel = new Label("Quest count");
@@ -232,7 +267,7 @@ public final class AiQuestCreationTab extends Tab {
         snbtPreview = new TextArea();
         snbtPreview.setEditable(false);
         snbtPreview.setWrapText(false);
-        snbtPreview.setStyle("-fx-font-family: 'JetBrains Mono', 'Consolas', 'Courier New', monospace; -fx-font-size: 12px; -fx-control-inner-background: -bg-elev; -fx-text-fill: -fg;");
+        snbtPreview.getStyleClass().add("code-preview");
         snbtPreview.setPromptText("Generated SNBT will appear here.");
         VBox.setVgrow(snbtPreview, Priority.ALWAYS);
 
@@ -250,6 +285,30 @@ public final class AiQuestCreationTab extends Tab {
         applyRewardMode(rewardModeCombo.getValue());
         refreshModSelectionMenu();
         refreshLootTableMenu();
+    }
+
+    private void updateProviderStatus() {
+        if (providerStatusLabel == null) {
+            return;
+        }
+        AiProvider provider = questGenerationService.getActiveProvider();
+        if (provider == AiProvider.OLLAMA) {
+            String status = questGenerationService.getOllamaStatus();
+            providerStatusLabel.setText(status);
+            if (questGenerationService.isOllamaAvailable()) {
+                providerStatusLabel.setStyle("-fx-font-size: 11px; -fx-text-fill: #4CAF50;");
+            } else {
+                providerStatusLabel.setStyle("-fx-font-size: 11px; -fx-text-fill: #FF9800;");
+            }
+        } else {
+            if (questGenerationService.isOpenAiConfigured()) {
+                providerStatusLabel.setText("API key configured");
+                providerStatusLabel.setStyle("-fx-font-size: 11px; -fx-text-fill: #4CAF50;");
+            } else {
+                providerStatusLabel.setText("Set OPENAI_API_KEY environment variable");
+                providerStatusLabel.setStyle("-fx-font-size: 11px; -fx-text-fill: #FF9800;");
+            }
+        }
     }
 
     public void setDesignSpecSupplier(Supplier<QuestDesignSpec> designSpecSupplier) {

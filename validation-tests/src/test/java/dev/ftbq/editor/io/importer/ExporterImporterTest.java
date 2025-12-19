@@ -63,7 +63,11 @@ class ExporterImporterTest {
                 "mod:loot/bonus",
                 new RewardCommand("/say exported", false),
                 List.of(new Dependency("quest-0", true)),
-                Visibility.VISIBLE
+                Visibility.VISIBLE,
+                null,
+                null,
+                null,
+                null
         );
 
         Chapter chapter = new Chapter(

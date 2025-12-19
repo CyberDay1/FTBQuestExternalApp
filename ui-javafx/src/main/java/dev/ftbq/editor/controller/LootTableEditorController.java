@@ -4,7 +4,7 @@ import dev.ftbq.editor.ThemeService;
 import dev.ftbq.editor.assets.CacheManager;
 import dev.ftbq.editor.domain.ItemRef;
 import dev.ftbq.editor.domain.LootPool;
-import dev.ftbq.editor.support.UiServiceLocator;
+import dev.ftbq.editor.services.UiServiceLocator;
 import dev.ftbq.editor.viewmodel.LootTableEditorViewModel;
 import dev.ftbq.editor.viewmodel.LootTableEditorViewModel.LootEntryRow;
 import javafx.application.Platform;

@@ -1,6 +1,6 @@
 package dev.ftbq.editor.controller;
 
-import dev.ftbq.editor.service.ThemeService;
+import dev.ftbq.editor.ThemeService;
 import dev.ftbq.editor.service.UserSettings;
 import javafx.fxml.FXML;
 import javafx.scene.Scene;

@@ -18,9 +18,19 @@ public final class RewardTypeRegistry {
     static {
         register("item", ItemReward.class);
         register("xp_levels", XpLevelReward.class);
+        register("xp_level", XpLevelReward.class);
+        register("xp", XpReward.class);
         register("xp_amount", XpReward.class);
         register("loot_table", LootTableReward.class);
         register("command", CommandReward.class);
+        register("choice", ChoiceReward.class);
+        register("random", RandomReward.class);
+        register("advancement", AdvancementReward.class);
+        register("gamestage", StageReward.class);
+        register("stage", StageReward.class);
+        register("toast", ToastReward.class);
+        register("custom", CustomReward.class);
+        register("all_table", AllTableReward.class);
     }
 
     private RewardTypeRegistry() {

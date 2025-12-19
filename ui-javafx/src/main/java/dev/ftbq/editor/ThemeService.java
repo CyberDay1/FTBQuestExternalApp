@@ -58,6 +58,20 @@ public final class ThemeService {
         return Holder.INSTANCE;
     }
 
+    public static void apply(Scene scene, boolean dark) {
+        if (scene == null) return;
+        scene.getStylesheets().clear();
+        URL canvasUrl = ThemeService.class.getResource("/dev/ftbq/editor/css/quest-canvas.css");
+        if (canvasUrl != null) {
+            scene.getStylesheets().add(canvasUrl.toExternalForm());
+        }
+        String themePath = dark ? "/dev/ftbq/editor/css/theme-dark.css" : "/dev/ftbq/editor/css/theme-light.css";
+        URL themeUrl = ThemeService.class.getResource(themePath);
+        if (themeUrl != null) {
+            scene.getStylesheets().add(themeUrl.toExternalForm());
+        }
+    }
+
     public Theme getTheme() {
         return currentTheme.get();
     }

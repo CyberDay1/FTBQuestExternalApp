@@ -8,21 +8,26 @@
 <?import javafx.scene.control.ScrollPane?>
 <?import javafx.scene.control.TextField?>
 <?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.Pane?>
+<?import javafx.scene.layout.Region?>
 <?import javafx.scene.layout.StackPane?>
 <?import javafx.scene.layout.VBox?>
 
 <BorderPane xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml"
             fx:controller="dev.ftbq.editor.controller.ChapterEditorController">
 
-    <!-- TOP: Chapter Title Bar -->
+    <!-- TOP: Chapter Title Bar with Actions -->
     <top>
-        <VBox spacing="8" styleClass="chapter-header" BorderPane.alignment="CENTER">
+        <HBox spacing="12" alignment="CENTER_LEFT" styleClass="chapter-header" BorderPane.alignment="CENTER">
             <padding>
                 <Insets top="12" right="24" bottom="12" left="24" />
             </padding>
             <Label fx:id="chapterTitle" styleClass="title" style="-fx-font-size: 20px; -fx-font-weight: bold;" />
-        </VBox>
+            <Region HBox.hgrow="ALWAYS"/>
+            <Button text="+ New Quest" onAction="#onCreateQuest" style="-fx-font-weight: bold;"/>
+            <Button text="+ New Chapter" onAction="#onCreateChapter"/>
+        </HBox>
     </top>
 
     <!-- LEFT: Chapter List -->

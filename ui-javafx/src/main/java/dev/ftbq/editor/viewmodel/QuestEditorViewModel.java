@@ -11,7 +11,7 @@ import dev.ftbq.editor.services.bus.EventBus;
 import dev.ftbq.editor.services.bus.UndoManager;
 import dev.ftbq.editor.services.events.QuestChanged;
 import dev.ftbq.editor.store.StoreDao;
-import dev.ftbq.editor.support.UiServiceLocator;
+import dev.ftbq.editor.services.UiServiceLocator;
 import dev.ftbq.editor.viewmodel.commands.QuestFieldChangeCommand;
 import dev.ftbq.editor.viewmodel.commands.QuestFieldChangeCommand.Field;
 import dev.ftbq.editor.viewmodel.commands.QuestListChangeCommand;

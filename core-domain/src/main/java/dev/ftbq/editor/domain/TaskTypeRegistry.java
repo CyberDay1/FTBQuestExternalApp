@@ -19,6 +19,17 @@ public final class TaskTypeRegistry {
         register("item", ItemTask.class);
         register("advancement", AdvancementTask.class);
         register("location", LocationTask.class);
+        register("checkmark", CheckmarkTask.class);
+        register("kill", KillTask.class);
+        register("observation", ObservationTask.class);
+        register("gamestage", StageTask.class);
+        register("dimension", DimensionTask.class);
+        register("biome", BiomeTask.class);
+        register("structure", StructureTask.class);
+        register("xp", XpTask.class);
+        register("stat", StatTask.class);
+        register("fluid", FluidTask.class);
+        register("custom", CustomTask.class);
     }
 
     private TaskTypeRegistry() {

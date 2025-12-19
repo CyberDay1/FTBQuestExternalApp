@@ -4,7 +4,11 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import dev.ftbq.editor.domain.AdvancementReward;
 import dev.ftbq.editor.domain.AdvancementTask;
+import dev.ftbq.editor.domain.AllTableReward;
+import dev.ftbq.editor.domain.ChoiceReward;
+import dev.ftbq.editor.domain.CustomReward;
 import dev.ftbq.editor.domain.Dependency;
 import dev.ftbq.editor.domain.CommandReward;
 import dev.ftbq.editor.domain.ItemRef;
@@ -12,10 +16,13 @@ import dev.ftbq.editor.domain.ItemReward;
 import dev.ftbq.editor.domain.ItemTask;
 import dev.ftbq.editor.domain.LocationTask;
 import dev.ftbq.editor.domain.LootTableReward;
+import dev.ftbq.editor.domain.RandomReward;
 import dev.ftbq.editor.domain.Reward;
 import dev.ftbq.editor.domain.RewardCommand;
 import dev.ftbq.editor.domain.RewardType;
+import dev.ftbq.editor.domain.StageReward;
 import dev.ftbq.editor.domain.Task;
+import dev.ftbq.editor.domain.ToastReward;
 import dev.ftbq.editor.domain.XpLevelReward;
 import dev.ftbq.editor.domain.XpReward;
 import dev.ftbq.editor.services.bus.UndoableCommand;
@@ -283,6 +290,13 @@ public final class QuestListChangeCommand implements UndoableCommand {
                     }
                     yield Reward.command(new RewardCommand(commandText, element.path("runAsServer").asBoolean(false)));
                 }
+                case CHOICE -> new ChoiceReward(element.path("table").asText(""));
+                case RANDOM -> new RandomReward(element.path("table").asText(""));
+                case ADVANCEMENT -> new AdvancementReward(element.path("advancement").asText(""));
+                case STAGE -> new StageReward(element.path("stage").asText(""));
+                case TOAST -> new ToastReward(element.path("description").asText(""));
+                case CUSTOM -> new CustomReward();
+                case ALL_TABLE -> new AllTableReward(element.path("table").asText(""));
             };
             if (reward != null) {
                 rewards.add(reward);

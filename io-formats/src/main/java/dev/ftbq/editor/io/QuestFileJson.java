@@ -2,12 +2,16 @@ package dev.ftbq.editor.io;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import dev.ftbq.editor.domain.AdvancementReward;
 import dev.ftbq.editor.domain.AdvancementTask;
+import dev.ftbq.editor.domain.AllTableReward;
 import dev.ftbq.editor.domain.BackgroundAlignment;
 import dev.ftbq.editor.domain.BackgroundRef;
 import dev.ftbq.editor.domain.BackgroundRepeat;
 import dev.ftbq.editor.domain.Chapter;
 import dev.ftbq.editor.domain.ChapterGroup;
+import dev.ftbq.editor.domain.ChoiceReward;
+import dev.ftbq.editor.domain.CustomReward;
 import dev.ftbq.editor.domain.Dependency;
 import dev.ftbq.editor.domain.IconRef;
 import dev.ftbq.editor.domain.ItemTask;
@@ -15,10 +19,13 @@ import dev.ftbq.editor.domain.LocationTask;
 import dev.ftbq.editor.domain.LootTable;
 import dev.ftbq.editor.domain.Quest;
 import dev.ftbq.editor.domain.QuestFile;
+import dev.ftbq.editor.domain.RandomReward;
 import dev.ftbq.editor.domain.Reward;
 import dev.ftbq.editor.domain.RewardCommand;
 import dev.ftbq.editor.domain.RewardType;
+import dev.ftbq.editor.domain.StageReward;
 import dev.ftbq.editor.domain.Task;
+import dev.ftbq.editor.domain.ToastReward;
 import dev.ftbq.editor.domain.Visibility;
 import dev.ftbq.editor.io.model.ItemRefData;
 
@@ -254,6 +261,13 @@ public final class QuestFileJson {
                     }
                     yield Reward.command(command.toDomain());
                 }
+                case CHOICE -> new ChoiceReward(lootTable != null ? lootTable : "");
+                case RANDOM -> new RandomReward(lootTable != null ? lootTable : "");
+                case ADVANCEMENT -> new AdvancementReward(lootTable != null ? lootTable : "");
+                case STAGE -> new StageReward(lootTable != null ? lootTable : "");
+                case TOAST -> new ToastReward(lootTable != null ? lootTable : "");
+                case CUSTOM -> new CustomReward();
+                case ALL_TABLE -> new AllTableReward(lootTable != null ? lootTable : "");
             };
         }
     }

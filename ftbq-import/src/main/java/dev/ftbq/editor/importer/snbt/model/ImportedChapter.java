@@ -15,5 +15,7 @@ public record ImportedChapter(String id,
                               String background,
                               Visibility visibility,
                               List<ImportedQuest> quests,
+                              List<Map<String, Object>> images,
+                              List<Map<String, Object>> questLinks,
                               Map<String, Object> properties) {
 }

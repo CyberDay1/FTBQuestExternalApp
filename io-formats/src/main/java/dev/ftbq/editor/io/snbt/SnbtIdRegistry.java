@@ -2,6 +2,7 @@ package dev.ftbq.editor.io.snbt;
 
 import dev.ftbq.editor.domain.Chapter;
 import dev.ftbq.editor.domain.ChapterGroup;
+import dev.ftbq.editor.domain.HexId;
 import dev.ftbq.editor.domain.LootTable;
 import dev.ftbq.editor.domain.Quest;
 import dev.ftbq.editor.domain.QuestFile;
@@ -11,67 +12,118 @@ import java.util.Map;
 import java.util.Objects;
 
 /**
- * Generates deterministic numeric IDs for SNBT export to match FTB Quests expectations.
+ * Generates deterministic hex IDs for SNBT export to match FTB Quests expectations.
+ * FTB Quests uses 16-character uppercase hexadecimal IDs.
  */
 public final class SnbtIdRegistry {
 
-    private final Map<String, Long> chapterGroupIds = new LinkedHashMap<>();
-    private final Map<String, Long> chapterIds = new LinkedHashMap<>();
-    private final Map<String, Long> questIds = new LinkedHashMap<>();
-    private final Map<String, Long> lootTableIds = new LinkedHashMap<>();
-    private long nextId = 1L;
+    private final Map<String, String> chapterGroupIds = new LinkedHashMap<>();
+    private final Map<String, String> chapterIds = new LinkedHashMap<>();
+    private final Map<String, String> questIds = new LinkedHashMap<>();
+    private final Map<String, String> lootTableIds = new LinkedHashMap<>();
 
     public SnbtIdRegistry(QuestFile questFile) {
         Objects.requireNonNull(questFile, "questFile");
-        questFile.chapterGroups().forEach(group -> register(chapterGroupIds, group.id()));
-        questFile.chapters().forEach(chapter -> register(chapterIds, chapter.id()));
+        questFile.chapterGroups().forEach(group -> register(chapterGroupIds, group.id(), "group"));
+        questFile.chapters().forEach(chapter -> register(chapterIds, chapter.id(), "chapter"));
         questFile.chapters().forEach(chapter ->
-                chapter.quests().forEach(quest -> register(questIds, quest.id())));
-        questFile.lootTables().forEach(table -> register(lootTableIds, table.id()));
+                chapter.quests().forEach(quest -> register(questIds, quest.id(), "quest")));
+        questFile.lootTables().forEach(table -> register(lootTableIds, table.id(), "table"));
     }
 
-    private void register(Map<String, Long> map, String id) {
-        map.computeIfAbsent(id, key -> nextId++);
+    private void register(Map<String, String> map, String id, String prefix) {
+        map.computeIfAbsent(id, key -> toHexId(key, prefix));
     }
 
-    private long lookup(Map<String, Long> map, String id) {
+    private String lookup(Map<String, String> map, String id, String prefix) {
         Objects.requireNonNull(id, "id");
-        return map.computeIfAbsent(id, key -> nextId++);
+        return map.computeIfAbsent(id, key -> toHexId(key, prefix));
     }
 
-    public long longIdForChapterGroup(ChapterGroup group) {
+    private String toHexId(String id, String prefix) {
+        if (HexId.isValidHexId(id)) {
+            return id;
+        }
+        return HexId.fromSeed(prefix + ":" + id);
+    }
+
+    public String hexIdForChapterGroup(ChapterGroup group) {
         Objects.requireNonNull(group, "group");
-        return longIdForChapterGroupId(group.id());
+        return hexIdForChapterGroupId(group.id());
     }
 
-    public long longIdForChapterGroupId(String id) {
-        return lookup(chapterGroupIds, id);
+    public String hexIdForChapterGroupId(String id) {
+        return lookup(chapterGroupIds, id, "group");
     }
 
-    public long longIdForChapter(Chapter chapter) {
+    public String hexIdForChapter(Chapter chapter) {
         Objects.requireNonNull(chapter, "chapter");
-        return longIdForChapterId(chapter.id());
+        return hexIdForChapterId(chapter.id());
     }
 
-    public long longIdForChapterId(String id) {
-        return lookup(chapterIds, id);
+    public String hexIdForChapterId(String id) {
+        return lookup(chapterIds, id, "chapter");
     }
 
-    public long longIdForQuest(Quest quest) {
+    public String hexIdForQuest(Quest quest) {
         Objects.requireNonNull(quest, "quest");
-        return longIdForQuestId(quest.id());
+        return hexIdForQuestId(quest.id());
     }
 
-    public long longIdForQuestId(String id) {
-        return lookup(questIds, id);
+    public String hexIdForQuestId(String id) {
+        return lookup(questIds, id, "quest");
     }
 
-    public long longIdForLootTable(LootTable lootTable) {
+    public String hexIdForLootTable(LootTable lootTable) {
         Objects.requireNonNull(lootTable, "lootTable");
-        return longIdForLootTableId(lootTable.id());
+        return hexIdForLootTableId(lootTable.id());
     }
 
+    public String hexIdForLootTableId(String id) {
+        return lookup(lootTableIds, id, "table");
+    }
+
+    @Deprecated
+    public long longIdForChapterGroup(ChapterGroup group) {
+        return parseHexAsLong(hexIdForChapterGroup(group));
+    }
+
+    @Deprecated
+    public long longIdForChapterGroupId(String id) {
+        return parseHexAsLong(hexIdForChapterGroupId(id));
+    }
+
+    @Deprecated
+    public long longIdForChapter(Chapter chapter) {
+        return parseHexAsLong(hexIdForChapter(chapter));
+    }
+
+    @Deprecated
+    public long longIdForChapterId(String id) {
+        return parseHexAsLong(hexIdForChapterId(id));
+    }
+
+    @Deprecated
+    public long longIdForQuest(Quest quest) {
+        return parseHexAsLong(hexIdForQuest(quest));
+    }
+
+    @Deprecated
+    public long longIdForQuestId(String id) {
+        return parseHexAsLong(hexIdForQuestId(id));
+    }
+
+    @Deprecated
+    public long longIdForLootTable(LootTable lootTable) {
+        return parseHexAsLong(hexIdForLootTable(lootTable));
+    }
+
+    @Deprecated
     public long longIdForLootTableId(String id) {
-        return lookup(lootTableIds, id);
+        return parseHexAsLong(hexIdForLootTableId(id));
+    }
+
+    private long parseHexAsLong(String hexId) {
+        return Long.parseUnsignedLong(hexId, 16);
     }
 }

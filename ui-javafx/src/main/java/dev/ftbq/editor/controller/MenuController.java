@@ -53,7 +53,7 @@ public final class MenuController implements AppAware {
         if (mainApp != null) {
             return true;
         }
-        System.err.println("[VERIFY FAIL] MainApp not injected in MenuController for " + actionName + ".");
+        logger.warn("MainApp not injected in MenuController for " + actionName);
         return false;
     }
 

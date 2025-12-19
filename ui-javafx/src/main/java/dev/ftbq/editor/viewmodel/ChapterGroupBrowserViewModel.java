@@ -13,7 +13,7 @@ import java.util.LinkedHashSet;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
-import java.util.UUID;
+import dev.ftbq.editor.domain.HexId;
 import java.util.stream.Collectors;
 
 public class ChapterGroupBrowserViewModel {
@@ -34,7 +34,7 @@ public class ChapterGroupBrowserViewModel {
     }
 
     public ChapterGroup addGroup(String name) {
-        return addGroup(UUID.randomUUID().toString(), name);
+        return addGroup(HexId.generate(), name);
     }
 
     public ChapterGroup addGroup(String id, String name) {
@@ -74,7 +74,7 @@ public class ChapterGroupBrowserViewModel {
     }
 
     public Chapter addChapter(ChapterGroup group, String name) {
-        return addChapter(group, UUID.randomUUID().toString(), name);
+        return addChapter(group, HexId.generate(), name);
     }
 
     public Chapter addChapter(ChapterGroup group, String id, String name) {

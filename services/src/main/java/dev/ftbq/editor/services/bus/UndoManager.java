@@ -6,6 +6,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -30,6 +33,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * Manages undo/redo history for {@link UndoableCommand} instances dispatched through the {@link CommandBus}.
  */
 public final class UndoManager implements AutoCloseable {
+    private static final Logger LOGGER = LoggerFactory.getLogger(UndoManager.class);
 
     private final CommandBus commandBus;
     private final Path historyFile;
@@ -191,7 +195,7 @@ public final class UndoManager implements AutoCloseable {
                 objectMapper.writerWithDefaultPrettyPrinter().writeValue(out, history);
             }
         } catch (IOException e) {
-            System.err.println("Failed to persist undo history: " + e.getMessage());
+            LOGGER.warn("Failed to persist undo history: {}", e.getMessage());
         }
     }
 
@@ -212,17 +216,13 @@ public final class UndoManager implements AutoCloseable {
                 }
             }
         } catch (IOException e) {
-            System.err.println("Failed to load undo history: " + e.getMessage());
+            LOGGER.warn("Failed to load undo history: {}", e.getMessage());
         }
     }
 
     @Override
     public void close() {
         scheduler.shutdownNow();
-    }
-
-    private HistoryEntry toEntry(StoredCommand command, StoredCommand inverse) {
-        return new HistoryEntry(command, inverse);
     }
 
     private record StoredCommand(String type, ObjectNode payload) {

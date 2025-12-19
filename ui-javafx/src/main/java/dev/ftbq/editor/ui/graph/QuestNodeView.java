@@ -22,6 +22,9 @@ import javafx.scene.shape.Rectangle;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.ByteArrayInputStream;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -32,6 +35,7 @@ import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 public class QuestNodeView extends Pane {
+    private static final Logger LOGGER = LoggerFactory.getLogger(QuestNodeView.class);
     private static final Color DEFAULT_FILL_COLOR = Color.web("#2f4f4f");
     private static final Color DEFAULT_STROKE_COLOR = Color.web("#b0b0b0");
     private static final Color DEFAULT_LABEL_COLOR = Color.web("#e6e6e6");
@@ -211,7 +215,7 @@ public class QuestNodeView extends Pane {
 
                 if ((timeSinceLastClick < DOUBLE_CLICK_DELAY || event.getClickCount() > 1) && !dragging) {
                     // Double-click detected
-                    System.out.println("Double-click detected on quest: " + questId);
+                    LOGGER.debug("Double-click detected on quest: {}", questId);
                     if (onEdit != null) {
                         onEdit.accept(questId);
                     }

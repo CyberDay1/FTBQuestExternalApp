@@ -19,7 +19,11 @@ public record Quest(String id,
                     String lootTableId,
                     RewardCommand commandReward,
                     List<Dependency> dependencies,
-                    Visibility visibility) {
+                    Visibility visibility,
+                    QuestShape shape,
+                    Double size,
+                    Double x,
+                    Double y) {
 
     public Quest {
         Objects.requireNonNull(id, "id");
@@ -38,6 +42,9 @@ public record Quest(String id,
         }
         if (experienceAmount != null && experienceLevels != null) {
             throw new IllegalArgumentException("Quest cannot grant both XP amount and XP levels");
+        }
+        if (shape == null) {
+            shape = QuestShape.DEFAULT;
         }
     }
 
@@ -94,6 +101,10 @@ public record Quest(String id,
         private RewardCommand commandReward;
         private final List<Dependency> dependencies = new ArrayList<>();
         private Visibility visibility = Visibility.VISIBLE;
+        private QuestShape shape = QuestShape.DEFAULT;
+        private Double size;
+        private Double x;
+        private Double y;
 
         public Builder id(String id) {
             this.id = id;
@@ -228,9 +239,36 @@ public record Quest(String id,
             return this;
         }
 
+        public Builder shape(QuestShape shape) {
+            this.shape = shape != null ? shape : QuestShape.DEFAULT;
+            return this;
+        }
+
+        public Builder size(Double size) {
+            this.size = size;
+            return this;
+        }
+
+        public Builder x(Double x) {
+            this.x = x;
+            return this;
+        }
+
+        public Builder y(Double y) {
+            this.y = y;
+            return this;
+        }
+
+        public Builder position(Double x, Double y) {
+            this.x = x;
+            this.y = y;
+            return this;
+        }
+
         public Quest build() {
             return new Quest(id, title, description, icon, tasks, itemRewards, experienceAmount,
-                    experienceLevels, lootTableId, commandReward, dependencies, visibility);
+                    experienceLevels, lootTableId, commandReward, dependencies, visibility,
+                    shape, size, x, y);
         }
     }
 }

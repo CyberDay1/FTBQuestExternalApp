@@ -116,7 +116,7 @@ public class ChapterGroupBrowserController implements AppAware {
         chapterTree.getSelectionModel().selectedItemProperty().addListener(
                 (obs, oldVal, newVal) -> onTreeSelectionChanged(newVal)
         );
-        System.out.println("[VERIFY] ChapterGroupBrowserController initialized.");
+        LOGGER.fine("ChapterGroupBrowserController initialized");
     }
 
     public void reloadGroups() {
@@ -126,7 +126,7 @@ public class ChapterGroupBrowserController implements AppAware {
         }
         if (UiServiceLocator.storeDao == null) {
             LOGGER.warning("StoreDao not initialized; cannot reload chapter groups.");
-            System.err.println("[VERIFY FAIL] StoreDao not initialized; skipping reloadGroups().");
+
             return;
         }
         if (viewModel == null) {
@@ -141,7 +141,7 @@ public class ChapterGroupBrowserController implements AppAware {
         rootItem = buildTree(viewModel.getChapterGroups());
         chapterTree.setRoot(rootItem);
         chapterTree.setShowRoot(false);
-        System.out.println("[VERIFY] Chapter groups reloaded: " + viewModel.getChapterGroups().size());
+        LOGGER.fine("Chapter groups reloaded: " + viewModel.getChapterGroups().size());
     }
 
     private void clearTree() {

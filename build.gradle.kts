@@ -23,10 +23,13 @@ tasks.named<JavaExec>("run") {
     systemProperty("ftbq.editor.forceLaunch", "true")
 }
 
+val javafxVersion: String by project
+val junitVersion: String by project
+
 dependencies {
-    implementation("org.openjfx:javafx-controls:21.0.2")
-    implementation("org.openjfx:javafx-fxml:21.0.2")
-    testImplementation("org.junit.jupiter:junit-jupiter:5.10.0")
+    implementation("org.openjfx:javafx-controls:$javafxVersion")
+    implementation("org.openjfx:javafx-fxml:$javafxVersion")
+    testImplementation("org.junit.jupiter:junit-jupiter:$junitVersion")
 }
 
 tasks.test {

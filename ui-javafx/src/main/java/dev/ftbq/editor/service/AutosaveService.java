@@ -10,8 +10,8 @@ import java.nio.file.Path;
 import java.time.Instant;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.UUID;
 import java.util.concurrent.Executors;
+import dev.ftbq.editor.domain.HexId;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
@@ -161,7 +161,7 @@ public final class AutosaveService {
         }
         String safeName = sanitize(projectName);
         if (safeName.isBlank()) {
-            safeName = UUID.randomUUID().toString();
+            safeName = HexId.generate();
         }
         return autosaveDir.resolve(safeName + ".autosave.json");
     }

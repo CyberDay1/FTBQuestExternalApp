@@ -2,7 +2,7 @@ package dev.ftbq.editor.controller;
 
 import dev.ftbq.editor.assets.CacheManager;
 import dev.ftbq.editor.store.StoreDao;
-import dev.ftbq.editor.support.UiServiceLocator;
+import dev.ftbq.editor.services.UiServiceLocator;
 import dev.ftbq.editor.viewmodel.ItemBrowserViewModel;
 import javafx.application.Platform;
 import javafx.beans.property.ReadOnlyObjectWrapper;

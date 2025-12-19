@@ -168,7 +168,11 @@ class ProjectFileHandlerTest {
                 null,
                 null,
                 List.of(),
-                Visibility.VISIBLE
+                Visibility.VISIBLE,
+                null,
+                null,
+                null,
+                null
         );
 
         Chapter chapter = new Chapter(

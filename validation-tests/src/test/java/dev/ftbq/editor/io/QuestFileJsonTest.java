@@ -54,7 +54,11 @@ class QuestFileJsonTest {
                 "mod:loot/bonus",
                 new RewardCommand("/say hello", true),
                 List.of(new Dependency("quest-0", true)),
-                Visibility.SECRET
+                Visibility.SECRET,
+                null,
+                null,
+                null,
+                null
         );
 
         Chapter chapter = new Chapter(

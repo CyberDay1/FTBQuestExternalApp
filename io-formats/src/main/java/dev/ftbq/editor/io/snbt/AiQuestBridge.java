@@ -7,7 +7,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.UUID;
+import dev.ftbq.editor.domain.HexId;
 
 /**
  * Bridges AI generated SNBT responses with the quest import pipeline.
@@ -57,6 +57,6 @@ public final class AiQuestBridge {
     }
 
     private String nextDraftFileName() {
-        return "draft-" + UUID.randomUUID() + ".snbt";
+        return "draft-" + HexId.generate() + ".snbt";
     }
 }

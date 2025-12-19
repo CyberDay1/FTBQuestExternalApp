@@ -13,7 +13,9 @@ public record Chapter(String id,
                       IconRef icon,
                       BackgroundRef background,
                       List<Quest> quests,
-                      Visibility visibility) {
+                      Visibility visibility,
+                      List<ChapterImage> images,
+                      List<QuestLink> questLinks) {
 
     public Chapter {
         Objects.requireNonNull(id, "id");
@@ -22,6 +24,26 @@ public record Chapter(String id,
         Objects.requireNonNull(background, "background");
         Objects.requireNonNull(visibility, "visibility");
         quests = List.copyOf(Objects.requireNonNull(quests, "quests"));
+        if (images == null) {
+            images = List.of();
+        } else {
+            images = List.copyOf(images);
+        }
+        if (questLinks == null) {
+            questLinks = List.of();
+        } else {
+            questLinks = List.copyOf(questLinks);
+        }
+    }
+
+    public Chapter(String id, String title, IconRef icon, BackgroundRef background,
+                   List<Quest> quests, Visibility visibility, List<ChapterImage> images) {
+        this(id, title, icon, background, quests, visibility, images, List.of());
+    }
+
+    public Chapter(String id, String title, IconRef icon, BackgroundRef background,
+                   List<Quest> quests, Visibility visibility) {
+        this(id, title, icon, background, quests, visibility, List.of(), List.of());
     }
 
     public static Builder builder() {
@@ -35,6 +57,8 @@ public record Chapter(String id,
         private BackgroundRef background = new BackgroundRef("minecraft:textures/gui/default.png");
         private final List<Quest> quests = new ArrayList<>();
         private Visibility visibility = Visibility.VISIBLE;
+        private final List<ChapterImage> images = new ArrayList<>();
+        private final List<QuestLink> questLinks = new ArrayList<>();
 
         public Builder id(String id) {
             this.id = id;
@@ -72,8 +96,34 @@ public record Chapter(String id,
             return this;
         }
 
+        public Builder addImage(ChapterImage image) {
+            this.images.add(Objects.requireNonNull(image, "image"));
+            return this;
+        }
+
+        public Builder images(List<ChapterImage> images) {
+            this.images.clear();
+            if (images != null) {
+                this.images.addAll(images);
+            }
+            return this;
+        }
+
+        public Builder addQuestLink(QuestLink link) {
+            this.questLinks.add(Objects.requireNonNull(link, "link"));
+            return this;
+        }
+
+        public Builder questLinks(List<QuestLink> questLinks) {
+            this.questLinks.clear();
+            if (questLinks != null) {
+                this.questLinks.addAll(questLinks);
+            }
+            return this;
+        }
+
         public Chapter build() {
-            return new Chapter(id, title, icon, background, quests, visibility);
+            return new Chapter(id, title, icon, background, quests, visibility, images, questLinks);
         }
     }
 }

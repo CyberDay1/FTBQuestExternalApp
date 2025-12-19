@@ -14,8 +14,8 @@ import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.util.Map;
 import java.util.Objects;
-import java.util.UUID;
 import java.util.zip.ZipEntry;
+import dev.ftbq.editor.domain.HexId;
 import java.util.zip.ZipOutputStream;
 
 /**
@@ -42,7 +42,7 @@ public final class QuestZipGenerator {
         Objects.requireNonNull(settings, "settings");
 
         Path tempRoot = Files.createTempDirectory("ftbq-quests-");
-        Path baseDir = tempRoot.resolve(UUID.randomUUID().toString());
+        Path baseDir = tempRoot.resolve(HexId.generate());
         Path questsRoot = baseDir.resolve("quests");
         Files.createDirectories(questsRoot);
 

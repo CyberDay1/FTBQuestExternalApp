@@ -7,10 +7,17 @@ import java.util.Locale;
  */
 public enum RewardType {
     ITEM("item", "Item"),
-    LOOT_TABLE("loot_table", "Loot Table"),
+    LOOT_TABLE("loot", "Loot Table"),
     XP_LEVELS("xp_levels", "XP Levels"),
-    XP_AMOUNT("xp_amount", "XP Amount"),
-    COMMAND("command", "Command");
+    XP_AMOUNT("xp", "XP Amount"),
+    COMMAND("command", "Command"),
+    CHOICE("choice", "Choice"),
+    RANDOM("random", "Random"),
+    ADVANCEMENT("advancement", "Advancement"),
+    STAGE("gamestage", "GameStage"),
+    TOAST("toast", "Toast"),
+    CUSTOM("custom", "Custom"),
+    ALL_TABLE("all_table", "All Table");
 
     private final String id;
     private final String displayName;

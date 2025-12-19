@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.ComboBox?>
 <?import javafx.scene.control.Label?>
 <?import javafx.scene.control.ListView?>
 <?import javafx.scene.control.TextArea?>
@@ -8,6 +10,7 @@
 <?import javafx.scene.layout.ColumnConstraints?>
 <?import javafx.scene.layout.GridPane?>
 <?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Region?>
 <?import javafx.scene.layout.RowConstraints?>
 <?import javafx.scene.layout.VBox?>
 
@@ -20,7 +23,10 @@
                BorderPane.alignment="CENTER"/>
     </top>
     <center>
-        <VBox spacing="16" padding="20">
+        <VBox spacing="16">
+            <padding>
+                <Insets topRightBottomLeft="20"/>
+            </padding>
             <GridPane hgap="10" vgap="8">
                 <columnConstraints>
                     <ColumnConstraints percentWidth="25"/>
@@ -44,53 +50,75 @@
                     <Label fx:id="questIdLabel" GridPane.rowIndex="0" GridPane.columnIndex="1"/>
 
                     <Label text="Title:" GridPane.rowIndex="1" GridPane.columnIndex="0"/>
-                    <TextField fx:id="questNameField" GridPane.rowIndex="1" GridPane.columnIndex="1" editable="false"/>
+                    <TextField fx:id="questNameField" GridPane.rowIndex="1" GridPane.columnIndex="1"/>
 
                     <Label text="Description:" GridPane.rowIndex="2" GridPane.columnIndex="0"/>
                     <TextArea fx:id="descriptionArea"
                               GridPane.rowIndex="2" GridPane.columnIndex="1"
-                              prefRowCount="5" wrapText="true" editable="false"/>
+                              prefRowCount="5" wrapText="true"/>
 
                     <Label text="Icon ID:" GridPane.rowIndex="3" GridPane.columnIndex="0"/>
-                    <TextField fx:id="iconIdField" GridPane.rowIndex="3" GridPane.columnIndex="1" editable="false"/>
+                    <TextField fx:id="iconIdField" GridPane.rowIndex="3" GridPane.columnIndex="1"/>
 
                     <Label text="Icon Path:" GridPane.rowIndex="4" GridPane.columnIndex="0"/>
-                    <TextField fx:id="iconPathField" GridPane.rowIndex="4" GridPane.columnIndex="1" editable="false"/>
+                    <TextField fx:id="iconPathField" GridPane.rowIndex="4" GridPane.columnIndex="1"/>
 
                     <Label text="Visibility:" GridPane.rowIndex="5" GridPane.columnIndex="0"/>
-                    <TextField fx:id="visibilityField" GridPane.rowIndex="5" GridPane.columnIndex="1" editable="false"/>
+                    <ComboBox fx:id="visibilityCombo" GridPane.rowIndex="5" GridPane.columnIndex="1" maxWidth="Infinity"/>
 
                     <Label text="XP Amount:" GridPane.rowIndex="6" GridPane.columnIndex="0"/>
-                    <TextField fx:id="xpAmountField" GridPane.rowIndex="6" GridPane.columnIndex="1" editable="false"/>
+                    <TextField fx:id="xpAmountField" GridPane.rowIndex="6" GridPane.columnIndex="1" promptText="e.g. 100"/>
 
                     <Label text="XP Levels:" GridPane.rowIndex="7" GridPane.columnIndex="0"/>
-                    <TextField fx:id="xpLevelsField" GridPane.rowIndex="7" GridPane.columnIndex="1" editable="false"/>
+                    <TextField fx:id="xpLevelsField" GridPane.rowIndex="7" GridPane.columnIndex="1" promptText="e.g. 5"/>
 
                     <Label text="Loot Table:" GridPane.rowIndex="8" GridPane.columnIndex="0"/>
-                    <TextField fx:id="lootTableField" GridPane.rowIndex="8" GridPane.columnIndex="1" editable="false"/>
+                    <TextField fx:id="lootTableField" GridPane.rowIndex="8" GridPane.columnIndex="1" promptText="e.g. minecraft:chests/simple_dungeon"/>
 
                     <Label text="Command:" GridPane.rowIndex="9" GridPane.columnIndex="0"/>
-                    <TextField fx:id="commandField" GridPane.rowIndex="9" GridPane.columnIndex="1" editable="false"/>
+                    <TextField fx:id="commandField" GridPane.rowIndex="9" GridPane.columnIndex="1" promptText="e.g. /give @p diamond 1"/>
 
-                    <Label text="Command Mode:" GridPane.rowIndex="10" GridPane.columnIndex="0"/>
-                    <TextField fx:id="commandRunAsField" GridPane.rowIndex="10" GridPane.columnIndex="1" editable="false"/>
+                    <Label text="Run as Server:" GridPane.rowIndex="10" GridPane.columnIndex="0"/>
+                    <ComboBox fx:id="commandRunAsCombo" GridPane.rowIndex="10" GridPane.columnIndex="1" maxWidth="Infinity"/>
                 </children>
             </GridPane>
 
             <HBox spacing="16">
                 <VBox spacing="8" HBox.hgrow="ALWAYS">
                     <Label text="Tasks"/>
-                    <ListView fx:id="taskList" prefHeight="180"/>
+                    <ListView fx:id="taskList" prefHeight="150"/>
+                    <HBox spacing="4">
+                        <Button text="Add" onAction="#onAddTask"/>
+                        <Button text="Remove" onAction="#onRemoveTask"/>
+                    </HBox>
                 </VBox>
                 <VBox spacing="8" HBox.hgrow="ALWAYS">
                     <Label text="Item Rewards"/>
-                    <ListView fx:id="rewardList" prefHeight="180"/>
+                    <ListView fx:id="rewardList" prefHeight="150"/>
+                    <HBox spacing="4">
+                        <Button text="Add" onAction="#onAddReward"/>
+                        <Button text="Remove" onAction="#onRemoveReward"/>
+                    </HBox>
                 </VBox>
                 <VBox spacing="8" HBox.hgrow="ALWAYS">
                     <Label text="Dependencies"/>
-                    <ListView fx:id="dependencyList" prefHeight="180"/>
+                    <ListView fx:id="dependencyList" prefHeight="150"/>
+                    <HBox spacing="4">
+                        <Button text="Add" onAction="#onAddDependency"/>
+                        <Button text="Remove" onAction="#onRemoveDependency"/>
+                    </HBox>
                 </VBox>
             </HBox>
         </VBox>
     </center>
+    <bottom>
+        <HBox spacing="10" alignment="CENTER_RIGHT" BorderPane.alignment="CENTER">
+            <padding>
+                <Insets top="10" right="20" bottom="20" left="20"/>
+            </padding>
+            <Region HBox.hgrow="ALWAYS"/>
+            <Button text="Cancel" onAction="#onCancel" cancelButton="true"/>
+            <Button fx:id="saveButton" text="Save" onAction="#onSave" defaultButton="true"/>
+        </HBox>
+    </bottom>
 </BorderPane>

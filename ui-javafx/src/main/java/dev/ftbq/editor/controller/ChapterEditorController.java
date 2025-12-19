@@ -2,12 +2,28 @@ package dev.ftbq.editor.controller;
 
 import dev.ftbq.editor.AppAware;
 import dev.ftbq.editor.MainApp;
+import dev.ftbq.editor.domain.AdvancementTask;
+import dev.ftbq.editor.domain.BackgroundRef;
+import dev.ftbq.editor.domain.BiomeTask;
 import dev.ftbq.editor.domain.Chapter;
+import dev.ftbq.editor.domain.CheckmarkTask;
 import dev.ftbq.editor.domain.Dependency;
+import dev.ftbq.editor.domain.DimensionTask;
+import dev.ftbq.editor.domain.IconRef;
+import dev.ftbq.editor.domain.ItemRef;
 import dev.ftbq.editor.domain.ItemReward;
+import dev.ftbq.editor.domain.ItemTask;
+import dev.ftbq.editor.domain.KillTask;
+import dev.ftbq.editor.domain.LocationTask;
+import dev.ftbq.editor.domain.ObservationTask;
 import dev.ftbq.editor.domain.Quest;
+import dev.ftbq.editor.domain.RewardCommand;
+import dev.ftbq.editor.domain.StageTask;
+import dev.ftbq.editor.domain.StructureTask;
 import dev.ftbq.editor.domain.Task;
-import dev.ftbq.editor.service.ThemeService;
+import dev.ftbq.editor.domain.Visibility;
+import dev.ftbq.editor.domain.HexId;
+import dev.ftbq.editor.ThemeService;
 import dev.ftbq.editor.service.UserSettings;
 import dev.ftbq.editor.store.Project;
 import dev.ftbq.editor.ui.QuestNodeFactory;
@@ -31,12 +47,14 @@ import javafx.scene.control.MenuButton;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.TextField;
+import javafx.scene.control.TextInputDialog;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.input.ContextMenuEvent;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
+import javafx.scene.shape.Line;
 import javafx.scene.shape.Rectangle;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
@@ -82,9 +100,15 @@ public class ChapterEditorController implements AppAware {
     private Chapter currentChapter;
     private Quest selectedQuest;
     private final Map<String, Node> questNodes = new HashMap<>();
+    private final Map<String, Quest> nodeToQuest = new HashMap<>();
     private MainApp mainApp;
     private ContextMenu questContextMenu;
     private Point2D lastClickPosition = new Point2D(0, 0);
+    private double dragStartX;
+    private double dragStartY;
+    private double dragOffsetX;
+    private double dragOffsetY;
+    private Node draggedNode;
 
     @Override
     public void setMainApp(MainApp app) {
@@ -133,8 +157,10 @@ public class ChapterEditorController implements AppAware {
             dependencyList.setItems(FXCollections.observableArrayList());
         }
 
+        setupTaskMenu();
+        setupRewardMenu();
         clearQuestDetails();
-        System.out.println("[VERIFY] ChapterEditorController initialized.");
+        LOGGER.fine("ChapterEditorController initialized");
     }
 
     /**
@@ -209,6 +235,375 @@ public class ChapterEditorController implements AppAware {
         }
 
         questPane.setOnContextMenuRequested(this::showContextMenu);
+    }
+
+    private void setupTaskMenu() {
+        if (addTaskMenu == null) {
+            return;
+        }
+
+        MenuItem checkmarkItem = new MenuItem("Checkmark");
+        checkmarkItem.setOnAction(e -> addTaskToSelectedQuest(new CheckmarkTask()));
+
+        MenuItem itemItem = new MenuItem("Item");
+        itemItem.setOnAction(e -> showAddItemTaskDialog());
+
+        MenuItem advancementItem = new MenuItem("Advancement");
+        advancementItem.setOnAction(e -> showAddAdvancementTaskDialog());
+
+        MenuItem locationItem = new MenuItem("Location");
+        locationItem.setOnAction(e -> showAddLocationTaskDialog());
+
+        MenuItem dimensionItem = new MenuItem("Dimension");
+        dimensionItem.setOnAction(e -> showAddDimensionTaskDialog());
+
+        MenuItem biomeItem = new MenuItem("Biome");
+        biomeItem.setOnAction(e -> showAddBiomeTaskDialog());
+
+        MenuItem structureItem = new MenuItem("Structure");
+        structureItem.setOnAction(e -> showAddStructureTaskDialog());
+
+        MenuItem killItem = new MenuItem("Kill");
+        killItem.setOnAction(e -> showAddKillTaskDialog());
+
+        MenuItem observationItem = new MenuItem("Observation");
+        observationItem.setOnAction(e -> showAddObservationTaskDialog());
+
+        MenuItem stageItem = new MenuItem("GameStage");
+        stageItem.setOnAction(e -> showAddStageTaskDialog());
+
+        addTaskMenu.getItems().addAll(checkmarkItem, itemItem, advancementItem, locationItem,
+                dimensionItem, biomeItem, structureItem, killItem, observationItem, stageItem);
+    }
+
+    private void setupRewardMenu() {
+        if (addRewardMenu == null) {
+            return;
+        }
+
+        MenuItem itemRewardItem = new MenuItem("Item");
+        itemRewardItem.setOnAction(e -> showAddItemRewardDialog());
+
+        MenuItem xpRewardItem = new MenuItem("XP Amount");
+        xpRewardItem.setOnAction(e -> showAddXpRewardDialog());
+
+        MenuItem xpLevelsRewardItem = new MenuItem("XP Levels");
+        xpLevelsRewardItem.setOnAction(e -> showAddXpLevelsRewardDialog());
+
+        MenuItem commandRewardItem = new MenuItem("Command");
+        commandRewardItem.setOnAction(e -> showAddCommandRewardDialog());
+
+        MenuItem stageRewardItem = new MenuItem("GameStage");
+        stageRewardItem.setOnAction(e -> showAddStageRewardDialog());
+
+        addRewardMenu.getItems().addAll(itemRewardItem, xpRewardItem, xpLevelsRewardItem,
+                commandRewardItem, stageRewardItem);
+    }
+
+    private void showAddItemTaskDialog() {
+        TextInputDialog dialog = new TextInputDialog("minecraft:diamond");
+        dialog.setTitle("Add Item Task");
+        dialog.setHeaderText("Add an item task");
+        dialog.setContentText("Item ID (e.g. minecraft:diamond):");
+        initDialogOwner(dialog);
+
+        dialog.showAndWait().ifPresent(itemId -> {
+            if (!itemId.isBlank()) {
+                addTaskToSelectedQuest(new ItemTask(itemId.trim(), 1));
+            }
+        });
+    }
+
+    private void showAddAdvancementTaskDialog() {
+        TextInputDialog dialog = new TextInputDialog("minecraft:story/mine_stone");
+        dialog.setTitle("Add Advancement Task");
+        dialog.setHeaderText("Add an advancement task");
+        dialog.setContentText("Advancement ID:");
+        initDialogOwner(dialog);
+
+        dialog.showAndWait().ifPresent(advancementId -> {
+            if (!advancementId.isBlank()) {
+                addTaskToSelectedQuest(new AdvancementTask(advancementId.trim()));
+            }
+        });
+    }
+
+    private void showAddLocationTaskDialog() {
+        TextInputDialog dialog = new TextInputDialog("minecraft:overworld");
+        dialog.setTitle("Add Location Task");
+        dialog.setHeaderText("Add a location task");
+        dialog.setContentText("Dimension (e.g. minecraft:overworld):");
+        initDialogOwner(dialog);
+
+        dialog.showAndWait().ifPresent(dimension -> {
+            if (!dimension.isBlank()) {
+                addTaskToSelectedQuest(new LocationTask(dimension.trim(), 0, 64, 0, 100));
+            }
+        });
+    }
+
+    private void showAddItemRewardDialog() {
+        TextInputDialog dialog = new TextInputDialog("minecraft:diamond");
+        dialog.setTitle("Add Item Reward");
+        dialog.setHeaderText("Add an item reward");
+        dialog.setContentText("Item ID (e.g. minecraft:diamond):");
+        initDialogOwner(dialog);
+
+        dialog.showAndWait().ifPresent(itemId -> {
+            if (!itemId.isBlank()) {
+                addItemRewardToSelectedQuest(new ItemReward(new ItemRef(itemId.trim(), 1)));
+            }
+        });
+    }
+
+    private void showAddDimensionTaskDialog() {
+        TextInputDialog dialog = new TextInputDialog("minecraft:the_nether");
+        dialog.setTitle("Add Dimension Task");
+        dialog.setHeaderText("Add a dimension visit task");
+        dialog.setContentText("Dimension ID:");
+        initDialogOwner(dialog);
+
+        dialog.showAndWait().ifPresent(dimension -> {
+            if (!dimension.isBlank()) {
+                addTaskToSelectedQuest(new DimensionTask(dimension.trim()));
+            }
+        });
+    }
+
+    private void showAddBiomeTaskDialog() {
+        TextInputDialog dialog = new TextInputDialog("minecraft:plains");
+        dialog.setTitle("Add Biome Task");
+        dialog.setHeaderText("Add a biome visit task");
+        dialog.setContentText("Biome ID (or #tag):");
+        initDialogOwner(dialog);
+
+        dialog.showAndWait().ifPresent(biome -> {
+            if (!biome.isBlank()) {
+                addTaskToSelectedQuest(new BiomeTask(biome.trim()));
+            }
+        });
+    }
+
+    private void showAddStructureTaskDialog() {
+        TextInputDialog dialog = new TextInputDialog("minecraft:mineshaft");
+        dialog.setTitle("Add Structure Task");
+        dialog.setHeaderText("Add a structure discovery task");
+        dialog.setContentText("Structure ID (or #tag):");
+        initDialogOwner(dialog);
+
+        dialog.showAndWait().ifPresent(structure -> {
+            if (!structure.isBlank()) {
+                addTaskToSelectedQuest(new StructureTask(structure.trim()));
+            }
+        });
+    }
+
+    private void showAddKillTaskDialog() {
+        TextInputDialog dialog = new TextInputDialog("minecraft:zombie");
+        dialog.setTitle("Add Kill Task");
+        dialog.setHeaderText("Add a kill task");
+        dialog.setContentText("Entity type ID:");
+        initDialogOwner(dialog);
+
+        dialog.showAndWait().ifPresent(entityType -> {
+            if (!entityType.isBlank()) {
+                addTaskToSelectedQuest(new KillTask(entityType.trim(), 1));
+            }
+        });
+    }
+
+    private void showAddObservationTaskDialog() {
+        TextInputDialog dialog = new TextInputDialog("minecraft:dirt");
+        dialog.setTitle("Add Observation Task");
+        dialog.setHeaderText("Add an observation task");
+        dialog.setContentText("Block/Entity ID to observe:");
+        initDialogOwner(dialog);
+
+        dialog.showAndWait().ifPresent(target -> {
+            if (!target.isBlank()) {
+                addTaskToSelectedQuest(new ObservationTask(ObservationTask.ObserveType.BLOCK, target.trim()));
+            }
+        });
+    }
+
+    private void showAddStageTaskDialog() {
+        TextInputDialog dialog = new TextInputDialog("my_stage");
+        dialog.setTitle("Add GameStage Task");
+        dialog.setHeaderText("Add a GameStage requirement task");
+        dialog.setContentText("Stage name:");
+        initDialogOwner(dialog);
+
+        dialog.showAndWait().ifPresent(stage -> {
+            if (!stage.isBlank()) {
+                addTaskToSelectedQuest(new StageTask(stage.trim()));
+            }
+        });
+    }
+
+    private void showAddXpRewardDialog() {
+        TextInputDialog dialog = new TextInputDialog("100");
+        dialog.setTitle("Add XP Reward");
+        dialog.setHeaderText("Add an XP amount reward");
+        dialog.setContentText("XP amount:");
+        initDialogOwner(dialog);
+
+        dialog.showAndWait().ifPresent(xp -> {
+            try {
+                int amount = Integer.parseInt(xp.trim());
+                if (amount > 0) {
+                    updateQuestXpReward(amount, null);
+                }
+            } catch (NumberFormatException ignored) {
+            }
+        });
+    }
+
+    private void showAddXpLevelsRewardDialog() {
+        TextInputDialog dialog = new TextInputDialog("5");
+        dialog.setTitle("Add XP Levels Reward");
+        dialog.setHeaderText("Add an XP levels reward");
+        dialog.setContentText("XP levels:");
+        initDialogOwner(dialog);
+
+        dialog.showAndWait().ifPresent(xp -> {
+            try {
+                int levels = Integer.parseInt(xp.trim());
+                if (levels > 0) {
+                    updateQuestXpReward(null, levels);
+                }
+            } catch (NumberFormatException ignored) {
+            }
+        });
+    }
+
+    private void showAddCommandRewardDialog() {
+        TextInputDialog dialog = new TextInputDialog("/give @p diamond 1");
+        dialog.setTitle("Add Command Reward");
+        dialog.setHeaderText("Add a command reward");
+        dialog.setContentText("Command:");
+        initDialogOwner(dialog);
+
+        dialog.showAndWait().ifPresent(command -> {
+            if (!command.isBlank()) {
+                updateQuestCommandReward(command.trim());
+            }
+        });
+    }
+
+    private void showAddStageRewardDialog() {
+        TextInputDialog dialog = new TextInputDialog("my_stage");
+        dialog.setTitle("Add GameStage Reward");
+        dialog.setHeaderText("Add a GameStage reward");
+        dialog.setContentText("Stage name:");
+        initDialogOwner(dialog);
+
+        dialog.showAndWait().ifPresent(stage -> {
+            if (!stage.isBlank()) {
+                LOGGER.info("GameStage reward added: " + stage.trim());
+            }
+        });
+    }
+
+    private void updateQuestXpReward(Integer xpAmount, Integer xpLevels) {
+        if (selectedQuest == null || currentChapter == null) {
+            return;
+        }
+        Quest updatedQuest = Quest.builder()
+                .id(selectedQuest.id())
+                .title(selectedQuest.title())
+                .description(selectedQuest.description())
+                .icon(selectedQuest.icon())
+                .visibility(selectedQuest.visibility())
+                .tasks(selectedQuest.tasks())
+                .itemRewards(selectedQuest.itemRewards())
+                .experienceAmount(xpAmount)
+                .experienceLevels(xpLevels)
+                .lootTableId(selectedQuest.lootTableId())
+                .commandReward(selectedQuest.commandReward())
+                .dependencies(selectedQuest.dependencies())
+                .build();
+
+        updateQuestInChapter(selectedQuest, updatedQuest);
+    }
+
+    private void updateQuestCommandReward(String command) {
+        if (selectedQuest == null || currentChapter == null) {
+            return;
+        }
+        Quest updatedQuest = Quest.builder()
+                .id(selectedQuest.id())
+                .title(selectedQuest.title())
+                .description(selectedQuest.description())
+                .icon(selectedQuest.icon())
+                .visibility(selectedQuest.visibility())
+                .tasks(selectedQuest.tasks())
+                .itemRewards(selectedQuest.itemRewards())
+                .experienceAmount(selectedQuest.experienceAmount())
+                .experienceLevels(selectedQuest.experienceLevels())
+                .lootTableId(selectedQuest.lootTableId())
+                .commandReward(new RewardCommand(command, true))
+                .dependencies(selectedQuest.dependencies())
+                .build();
+
+        updateQuestInChapter(selectedQuest, updatedQuest);
+    }
+
+    private void initDialogOwner(TextInputDialog dialog) {
+        Window owner = questPane != null && questPane.getScene() != null
+                ? questPane.getScene().getWindow() : null;
+        if (owner != null) {
+            dialog.initOwner(owner);
+        }
+    }
+
+    private void addTaskToSelectedQuest(Task task) {
+        if (selectedQuest == null || currentChapter == null) {
+            return;
+        }
+        List<Task> updatedTasks = new ArrayList<>(selectedQuest.tasks());
+        updatedTasks.add(task);
+
+        Quest updatedQuest = Quest.builder()
+                .id(selectedQuest.id())
+                .title(selectedQuest.title())
+                .description(selectedQuest.description())
+                .icon(selectedQuest.icon())
+                .visibility(selectedQuest.visibility())
+                .tasks(updatedTasks)
+                .itemRewards(selectedQuest.itemRewards())
+                .experienceAmount(selectedQuest.experienceAmount())
+                .experienceLevels(selectedQuest.experienceLevels())
+                .lootTableId(selectedQuest.lootTableId())
+                .commandReward(selectedQuest.commandReward())
+                .dependencies(selectedQuest.dependencies())
+                .build();
+
+        updateQuestInChapter(selectedQuest, updatedQuest);
+    }
+
+    private void addItemRewardToSelectedQuest(ItemReward reward) {
+        if (selectedQuest == null || currentChapter == null) {
+            return;
+        }
+        List<ItemReward> updatedRewards = new ArrayList<>(selectedQuest.itemRewards());
+        updatedRewards.add(reward);
+
+        Quest updatedQuest = Quest.builder()
+                .id(selectedQuest.id())
+                .title(selectedQuest.title())
+                .description(selectedQuest.description())
+                .icon(selectedQuest.icon())
+                .visibility(selectedQuest.visibility())
+                .tasks(selectedQuest.tasks())
+                .itemRewards(updatedRewards)
+                .experienceAmount(selectedQuest.experienceAmount())
+                .experienceLevels(selectedQuest.experienceLevels())
+                .lootTableId(selectedQuest.lootTableId())
+                .commandReward(selectedQuest.commandReward())
+                .dependencies(selectedQuest.dependencies())
+                .build();
+
+        updateQuestInChapter(selectedQuest, updatedQuest);
     }
 
     /**
@@ -461,6 +856,7 @@ public class ChapterEditorController implements AppAware {
         }
 
         questNodes.clear();
+        nodeToQuest.clear();
         if (questPane != null) {
             questPane.getChildren().clear();
         }
@@ -479,16 +875,127 @@ public class ChapterEditorController implements AppAware {
             node.setManaged(false);
             questPane.getChildren().add(node);
             questNodes.put(quest.id(), node);
+            nodeToQuest.put(quest.id(), quest);
             node.addEventHandler(MouseEvent.MOUSE_CLICKED, event -> {
                 if (event.getButton() == MouseButton.PRIMARY) {
                     selectQuest(quest);
                     event.consume();
                 }
             });
+            setupDragHandlers(node, quest);
         }
+
+        drawDependencyLines(quests);
 
         if (!quests.isEmpty()) {
             selectQuest(quests.get(0));
+        }
+    }
+
+    private void drawDependencyLines(List<Quest> quests) {
+        if (questPane == null) {
+            return;
+        }
+
+        for (Quest quest : quests) {
+            Node questNode = questNodes.get(quest.id());
+            if (questNode == null) {
+                continue;
+            }
+
+            for (Dependency dependency : quest.dependencies()) {
+                Node depNode = questNodes.get(dependency.questId());
+                if (depNode == null) {
+                    continue;
+                }
+
+                double startX = depNode.getLayoutX() + depNode.getBoundsInLocal().getWidth() / 2;
+                double startY = depNode.getLayoutY() + depNode.getBoundsInLocal().getHeight() / 2;
+                double endX = questNode.getLayoutX() + questNode.getBoundsInLocal().getWidth() / 2;
+                double endY = questNode.getLayoutY() + questNode.getBoundsInLocal().getHeight() / 2;
+
+                Line line = new Line(startX, startY, endX, endY);
+                line.setStroke(dependency.required() ? Color.DARKGRAY : Color.LIGHTGRAY);
+                line.setStrokeWidth(dependency.required() ? 2.0 : 1.5);
+                line.getStrokeDashArray().addAll(dependency.required() ? List.of() : List.of(5.0, 5.0));
+                line.setMouseTransparent(true);
+
+                questPane.getChildren().add(0, line);
+            }
+        }
+    }
+
+    private void setupDragHandlers(Node node, Quest quest) {
+        node.setOnMousePressed(event -> {
+            if (event.getButton() == MouseButton.PRIMARY) {
+                draggedNode = node;
+                dragStartX = node.getLayoutX();
+                dragStartY = node.getLayoutY();
+                dragOffsetX = event.getSceneX() - node.getLayoutX();
+                dragOffsetY = event.getSceneY() - node.getLayoutY();
+                node.toFront();
+                node.setCursor(javafx.scene.Cursor.CLOSED_HAND);
+            }
+        });
+
+        node.setOnMouseDragged(event -> {
+            if (draggedNode == node && event.getButton() == MouseButton.PRIMARY) {
+                double newX = event.getSceneX() - dragOffsetX;
+                double newY = event.getSceneY() - dragOffsetY;
+                newX = Math.round(newX / GRID_SIZE) * GRID_SIZE;
+                newY = Math.round(newY / GRID_SIZE) * GRID_SIZE;
+                newX = Math.max(0, newX);
+                newY = Math.max(0, newY);
+                node.relocate(newX, newY);
+                redrawDependencyLines();
+            }
+        });
+
+        node.setOnMouseReleased(event -> {
+            if (draggedNode == node) {
+                node.setCursor(javafx.scene.Cursor.HAND);
+                double finalX = node.getLayoutX();
+                double finalY = node.getLayoutY();
+                if (finalX != dragStartX || finalY != dragStartY) {
+                    saveQuestPosition(quest, finalX, finalY);
+                }
+                draggedNode = null;
+            }
+        });
+
+        node.setOnMouseEntered(event -> {
+            if (draggedNode == null) {
+                node.setCursor(javafx.scene.Cursor.HAND);
+            }
+        });
+
+        node.setOnMouseExited(event -> {
+            if (draggedNode == null) {
+                node.setCursor(javafx.scene.Cursor.DEFAULT);
+            }
+        });
+    }
+
+    private void redrawDependencyLines() {
+        if (questPane == null || currentChapter == null) {
+            return;
+        }
+        questPane.getChildren().removeIf(node -> node instanceof Line);
+        drawDependencyLines(currentChapter.quests());
+    }
+
+    private void saveQuestPosition(Quest quest, double x, double y) {
+        if (currentChapter == null) {
+            return;
+        }
+        QuestLayoutStore layoutStore = UiServiceLocator.questLayoutStore;
+        if (layoutStore != null) {
+            try {
+                layoutStore.putNodePos(currentChapter.id(), quest.id(), x, y);
+                LOGGER.fine("Saved position for quest " + quest.id() + ": (" + x + ", " + y + ")");
+            } catch (RuntimeException e) {
+                LOGGER.log(Level.WARNING, "Failed to save quest position", e);
+            }
         }
     }
 
@@ -605,10 +1112,45 @@ public class ChapterEditorController implements AppAware {
             if (owner != null) {
                 stage.initOwner(owner);
             }
-            stage.show();
+            stage.showAndWait();
+
+            if (controller.isSaved()) {
+                Quest updatedQuest = controller.getUpdatedQuest();
+                if (updatedQuest != null) {
+                    updateQuestInChapter(quest, updatedQuest);
+                }
+            }
         } catch (IOException e) {
             LOGGER.log(Level.WARNING, "Failed to open quest editor for quest " + quest.id(), e);
         }
+    }
+
+    private void updateQuestInChapter(Quest oldQuest, Quest newQuest) {
+        if (currentChapter == null) {
+            return;
+        }
+        List<Quest> updatedQuests = new ArrayList<>();
+        for (Quest q : currentChapter.quests()) {
+            if (q.id().equals(oldQuest.id())) {
+                updatedQuests.add(newQuest);
+            } else {
+                updatedQuests.add(q);
+            }
+        }
+        Chapter previousChapter = currentChapter;
+        Chapter updatedChapter = new Chapter(
+                previousChapter.id(),
+                previousChapter.title(),
+                previousChapter.icon(),
+                previousChapter.background(),
+                updatedQuests,
+                previousChapter.visibility()
+        );
+        currentChapter = updatedChapter;
+        updateChapterList(previousChapter, updatedChapter);
+        replaceWorkingChapter(previousChapter, updatedChapter);
+        displayChapter(updatedChapter);
+        selectQuest(newQuest);
     }
 
     private Quest createNewQuest() {
@@ -621,7 +1163,7 @@ public class ChapterEditorController implements AppAware {
         }
 
         Quest newQuest = Quest.builder()
-                .id(UUID.randomUUID().toString())
+                .id(generateHexId())
                 .title("New Quest")
                 .description("")
                 .build();
@@ -688,6 +1230,65 @@ public class ChapterEditorController implements AppAware {
     @FXML
     private void onRemoveQuest() {
         LOGGER.log(Level.FINE, "onRemoveQuest invoked");
+    }
+
+    @FXML
+    private void onCreateQuest() {
+        if (currentChapter == null) {
+            LOGGER.warning("Cannot create quest: no chapter selected");
+            return;
+        }
+        Quest newQuest = createNewQuest();
+        if (newQuest != null) {
+            openQuestEditor(newQuest);
+        }
+    }
+
+    @FXML
+    private void onCreateChapter() {
+        showCreateChapterDialog();
+    }
+
+    private void showCreateChapterDialog() {
+        TextInputDialog dialog = new TextInputDialog("New Chapter");
+        dialog.setTitle("Create Chapter");
+        dialog.setHeaderText("Create a new chapter");
+        dialog.setContentText("Chapter title:");
+
+        Window owner = questPane != null && questPane.getScene() != null
+                ? questPane.getScene().getWindow()
+                : null;
+        if (owner != null) {
+            dialog.initOwner(owner);
+        }
+
+        Optional<String> result = dialog.showAndWait();
+        result.ifPresent(title -> {
+            if (title.isBlank()) {
+                return;
+            }
+            String chapterId = generateHexId();
+            Chapter newChapter = Chapter.builder()
+                    .id(chapterId)
+                    .title(title)
+                    .icon(new IconRef("minecraft:book"))
+                    .background(new BackgroundRef("minecraft:textures/gui/advancements/backgrounds/stone.png"))
+                    .visibility(Visibility.VISIBLE)
+                    .quests(List.of())
+                    .build();
+
+            workingChapters.add(newChapter);
+            if (chapterListView != null) {
+                chapterListView.getItems().add(newChapter);
+                chapterListView.getSelectionModel().select(newChapter);
+            }
+            displayChapter(newChapter);
+            LOGGER.info("Created new chapter: " + title + " with ID " + chapterId);
+        });
+    }
+
+    private String generateHexId() {
+        return HexId.generate();
     }
 
     @FXML

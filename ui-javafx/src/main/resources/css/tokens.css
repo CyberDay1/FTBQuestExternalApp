@@ -19,3 +19,24 @@
     -node: #e0f2ff;
     -node-stroke: #1967d2;
 }
+
+.muted-text {
+    -fx-font-size: 11px;
+    -fx-text-fill: -fg-muted;
+}
+
+.accent-text {
+    -fx-text-fill: -accent;
+}
+
+.prompt-area {
+    -fx-control-inner-background: -bg-elev;
+    -fx-font-family: 'Segoe UI', 'Sans-Serif';
+}
+
+.code-preview {
+    -fx-font-family: 'JetBrains Mono', 'Consolas', 'Courier New', monospace;
+    -fx-font-size: 12px;
+    -fx-control-inner-background: -bg-elev;
+    -fx-text-fill: -fg;
+}

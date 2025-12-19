@@ -6,7 +6,7 @@ import dev.ftbq.editor.controller.MainController;
 import dev.ftbq.editor.controller.MenuController;
 import dev.ftbq.editor.domain.QuestFile;
 import dev.ftbq.editor.domain.Quest;
-import dev.ftbq.editor.service.ThemeService;
+import dev.ftbq.editor.ThemeService;
 import dev.ftbq.editor.service.UserSettings;
 import dev.ftbq.editor.ui.AiQuestCreationTab;
 import dev.ftbq.editor.controller.QuestEditorController;
@@ -32,8 +32,11 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Optional;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class MainApp extends Application {
+    private static final Logger LOGGER = Logger.getLogger(MainApp.class.getName());
 
     private Stage primaryStage;
     private Path workspace = Path.of(System.getProperty("user.dir"));
@@ -61,7 +64,7 @@ public class MainApp extends Application {
         Parent root = loader.load();
         MainController mainController = loader.getController();
         if (mainController == null) {
-            System.err.println("[VERIFY FAIL] MainController not loaded.");
+            LOGGER.severe("MainController not loaded");
             throw new IllegalStateException("Main controller failed to load");
         }
 
@@ -70,15 +73,15 @@ public class MainApp extends Application {
         ChapterEditorController chapterEditor = mainController.getChapterEditorController();
 
         if (menu == null) {
-            System.err.println("[VERIFY FAIL] MenuController not injected into MainController.");
+            LOGGER.warning("MenuController not injected into MainController");
         }
 
         if (chapters == null) {
-            System.err.println("[VERIFY FAIL] ChapterGroupBrowserController not injected into MainController.");
+            LOGGER.warning("ChapterGroupBrowserController not injected into MainController");
         }
 
         if (chapterEditor == null) {
-            System.err.println("[VERIFY FAIL] ChapterEditorController not injected into MainController.");
+            LOGGER.warning("ChapterEditorController not injected into MainController");
         }
 
         chapterGroupBrowserController = chapters;
@@ -119,7 +122,7 @@ public class MainApp extends Application {
         stage.setScene(scene);
         stage.show();
 
-        System.out.println("[VERIFY] UI loaded: " + mainController.getClass().getSimpleName());
+        LOGGER.info("UI loaded: " + mainController.getClass().getSimpleName());
     }
 
     private Project initStore() {
@@ -175,9 +178,9 @@ public class MainApp extends Application {
         );
         File selectedFile = chooser.showOpenDialog(getPrimaryStage());
         if (selectedFile != null) {
-            System.out.println("Selected import file: " + selectedFile.getAbsolutePath());
+            LOGGER.fine("Selected import file: " + selectedFile.getAbsolutePath());
         } else {
-            System.out.println("Import dialog canceled.");
+            LOGGER.fine("Import dialog canceled");
         }
     }
 
@@ -187,7 +190,7 @@ public class MainApp extends Application {
         File directory = chooser.showDialog(getPrimaryStage());
         if (directory != null) {
             workspace = directory.toPath();
-            System.out.println("Loading project from: " + workspace);
+            LOGGER.info("Loading project from: " + workspace);
             currentQuestFile = QuestFile.builder()
                     .id(Optional.ofNullable(directory.getName()).filter(name -> !name.isBlank()).orElse("placeholder"))
                     .title("Project loaded from " + directory.getName())
@@ -198,7 +201,7 @@ public class MainApp extends Application {
                 chapterGroupBrowserController.reloadGroups();
             }
         } else {
-            System.out.println("Load project canceled.");
+            LOGGER.fine("Load project canceled");
         }
     }
 
@@ -207,7 +210,7 @@ public class MainApp extends Application {
         chooser.setTitle("Save Quest Project As");
         File targetFile = chooser.showSaveDialog(getPrimaryStage());
         if (targetFile == null) {
-            System.out.println("Save project canceled.");
+            LOGGER.fine("Save project canceled");
             return;
         }
 
@@ -216,7 +219,7 @@ public class MainApp extends Application {
             try {
                 Files.createDirectories(targetPath.getParent());
             } catch (IOException e) {
-                System.out.println("Failed to create directories for save location: " + e.getMessage());
+                LOGGER.log(Level.WARNING, "Failed to create directories for save location", e);
                 showError("Save Failed", "Unable to prepare save location: " + e.getMessage());
                 return;
             }
@@ -224,20 +227,20 @@ public class MainApp extends Application {
 
         try {
             Files.writeString(targetPath, "Placeholder quest save", StandardCharsets.UTF_8);
-            System.out.println("Saved project placeholder to: " + targetPath);
+            LOGGER.info("Saved project placeholder to: " + targetPath);
         } catch (IOException e) {
-            System.out.println("Failed to save project: " + e.getMessage());
+            LOGGER.log(Level.WARNING, "Failed to save project", e);
             showError("Save Failed", e.getMessage());
         }
     }
 
     public void validateCurrentPack() {
-        System.out.println("Validating quest pack...");
-        System.out.println("Quest pack validation complete.");
+        LOGGER.fine("Validating quest pack...");
+        LOGGER.fine("Quest pack validation complete");
     }
 
     public void saveImportedItems() {
-        System.out.println("Saving imported item database...");
+        LOGGER.fine("Saving imported item database...");
     }
 
     public void openQuestEditor(Quest quest) {

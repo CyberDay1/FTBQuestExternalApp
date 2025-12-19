@@ -21,8 +21,8 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-import java.util.UUID;
 import java.util.regex.Pattern;
+import dev.ftbq.editor.domain.HexId;
 import java.util.stream.Collectors;
 
 /**
@@ -296,14 +296,14 @@ public final class QuestChapterGenerator {
             base = title;
         }
         if (base == null || base.isBlank()) {
-            base = prefix + "-" + UUID.randomUUID();
+            base = prefix + "-" + HexId.generate();
         }
         String normalized = base.toLowerCase(Locale.ROOT)
                 .replaceAll("[^a-z0-9_]+", "-")
                 .replaceAll("^-+", "")
                 .replaceAll("-+$", "");
         if (normalized.isBlank()) {
-            normalized = prefix + "-" + UUID.randomUUID().toString().substring(0, 8);
+            normalized = prefix + "-" + HexId.generate().substring(0, 8);
         }
         String result = normalized;
         int counter = 2;

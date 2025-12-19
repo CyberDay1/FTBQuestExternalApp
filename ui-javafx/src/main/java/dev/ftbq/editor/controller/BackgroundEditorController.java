@@ -4,7 +4,7 @@ import dev.ftbq.editor.assets.CacheManager;
 import dev.ftbq.editor.domain.BackgroundAlignment;
 import dev.ftbq.editor.domain.BackgroundRef;
 import dev.ftbq.editor.domain.BackgroundRepeat;
-import dev.ftbq.editor.support.UiServiceLocator;
+import dev.ftbq.editor.services.UiServiceLocator;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.collections.FXCollections;

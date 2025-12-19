@@ -215,7 +215,7 @@ public class GraphCanvas extends Canvas {
             }
             onRedraw = null;
         } catch (Exception e) {
-            System.err.println("Error during canvas cleanup: " + e.getMessage());
+            LOGGER.warn("Error during canvas cleanup: {}", e.getMessage());
         }
     }
 
@@ -430,7 +430,7 @@ public class GraphCanvas extends Canvas {
             g.restore();
 
         } catch (Exception e) {
-            System.err.println("Error drawing grid: " + e.getMessage());
+            LOGGER.warn("Error drawing grid: {}", e.getMessage());
         }
     }
 

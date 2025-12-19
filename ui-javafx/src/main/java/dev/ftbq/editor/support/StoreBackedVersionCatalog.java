@@ -14,14 +14,14 @@ import java.util.concurrent.atomic.AtomicReference;
 /**
  * Minimal {@link VersionCatalog} that sources item references from the local {@link StoreDao}.
  */
-final class StoreBackedVersionCatalog implements VersionCatalog {
+public final class StoreBackedVersionCatalog implements VersionCatalog {
     private static final int MAX_ITEMS = 8192;
 
     private final StoreDao storeDao;
     private final AtomicReference<ItemCatalog> cachedCatalog = new AtomicReference<>();
     private MinecraftVersion activeVersion = MinecraftVersion.V1_20_1;
 
-    StoreBackedVersionCatalog(StoreDao storeDao) {
+    public StoreBackedVersionCatalog(StoreDao storeDao) {
         this.storeDao = Objects.requireNonNull(storeDao, "storeDao");
     }
 

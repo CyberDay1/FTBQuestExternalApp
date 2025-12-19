@@ -2,19 +2,33 @@ package dev.ftbq.editor.importer.snbt.service;
 
 import dev.ftbq.editor.domain.AdvancementTask;
 import dev.ftbq.editor.domain.BackgroundRef;
+import dev.ftbq.editor.domain.BiomeTask;
 import dev.ftbq.editor.domain.Chapter;
 import dev.ftbq.editor.domain.ChapterGroup;
+import dev.ftbq.editor.domain.ChapterImage;
+import dev.ftbq.editor.domain.CheckmarkTask;
+import dev.ftbq.editor.domain.CustomTask;
 import dev.ftbq.editor.domain.Dependency;
+import dev.ftbq.editor.domain.DimensionTask;
+import dev.ftbq.editor.domain.FluidTask;
 import dev.ftbq.editor.domain.IconRef;
 import dev.ftbq.editor.domain.ItemRef;
 import dev.ftbq.editor.domain.ItemTask;
+import dev.ftbq.editor.domain.KillTask;
 import dev.ftbq.editor.domain.LocationTask;
+import dev.ftbq.editor.domain.ObservationTask;
 import dev.ftbq.editor.domain.Quest;
 import dev.ftbq.editor.domain.QuestFile;
+import dev.ftbq.editor.domain.QuestLink;
+import dev.ftbq.editor.domain.QuestShape;
 import dev.ftbq.editor.domain.Reward;
 import dev.ftbq.editor.domain.RewardCommand;
+import dev.ftbq.editor.domain.StageTask;
+import dev.ftbq.editor.domain.StatTask;
+import dev.ftbq.editor.domain.StructureTask;
 import dev.ftbq.editor.domain.Task;
 import dev.ftbq.editor.domain.Visibility;
+import dev.ftbq.editor.domain.XpTask;
 import dev.ftbq.editor.importer.snbt.model.ImportOptions;
 import dev.ftbq.editor.importer.snbt.model.ImportConflictPolicy;
 import dev.ftbq.editor.importer.snbt.model.ImportedChapter;
@@ -40,7 +54,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
-import java.util.UUID;
+import dev.ftbq.editor.domain.HexId;
 
 /**
  * Coordinates parsing SNBT quest data and merging it into an existing quest file.
@@ -292,7 +306,70 @@ public final class SnbtQuestImporter {
         for (Quest quest : quests) {
             builder.addQuest(quest);
         }
+        for (ChapterImage image : convertImages(importedChapter.images())) {
+            builder.addImage(image);
+        }
+        for (QuestLink link : convertQuestLinks(importedChapter.questLinks(), questRemap)) {
+            builder.addQuestLink(link);
+        }
         return builder.build();
+    }
+
+    private List<QuestLink> convertQuestLinks(List<Map<String, Object>> rawLinks, Map<String, String> questRemap) {
+        if (rawLinks == null || rawLinks.isEmpty()) {
+            return List.of();
+        }
+        List<QuestLink> result = new ArrayList<>();
+        for (Map<String, Object> props : rawLinks) {
+            String id = Optional.ofNullable(props.get("id")).map(Object::toString).orElseGet(HexId::generate);
+            String linkedQuestId = Optional.ofNullable(props.get("linked_quest")).map(Object::toString).orElse(null);
+            if (linkedQuestId == null) {
+                continue;
+            }
+            linkedQuestId = questRemap.getOrDefault(linkedQuestId, linkedQuestId);
+            double x = Optional.ofNullable(props.get("x")).map(this::toDouble).orElse(0.0);
+            double y = Optional.ofNullable(props.get("y")).map(this::toDouble).orElse(0.0);
+            result.add(new QuestLink(id, linkedQuestId, x, y));
+        }
+        return result;
+    }
+
+    private List<ChapterImage> convertImages(List<Map<String, Object>> rawImages) {
+        if (rawImages == null || rawImages.isEmpty()) {
+            return List.of();
+        }
+        List<ChapterImage> result = new ArrayList<>();
+        for (Map<String, Object> props : rawImages) {
+            String image = Optional.ofNullable(props.get("image")).map(Object::toString).orElse("minecraft:textures/misc/unknown_pack.png");
+            double x = Optional.ofNullable(props.get("x")).map(this::toDouble).orElse(0.0);
+            double y = Optional.ofNullable(props.get("y")).map(this::toDouble).orElse(0.0);
+            double width = Optional.ofNullable(props.get("width")).map(this::toDouble).orElse(1.0);
+            double height = Optional.ofNullable(props.get("height")).map(this::toDouble).orElse(1.0);
+            double rotation = Optional.ofNullable(props.get("rotation")).map(this::toDouble).orElse(0.0);
+            Integer color = Optional.ofNullable(props.get("color")).map(this::toInt).orElse(null);
+            Integer alpha = Optional.ofNullable(props.get("alpha")).map(this::toInt).orElse(null);
+            List<String> hover = extractHoverText(props.get("hover"));
+            result.add(new ChapterImage(image, x, y, width, height, rotation, color, alpha, hover));
+        }
+        return result;
+    }
+
+    @SuppressWarnings("unchecked")
+    private List<String> extractHoverText(Object raw) {
+        if (raw == null) {
+            return List.of();
+        }
+        if (raw instanceof List<?> list) {
+            List<String> result = new ArrayList<>();
+            for (Object item : list) {
+                result.add(item.toString());
+            }
+            return result;
+        }
+        if (raw instanceof String string) {
+            return List.of(string);
+        }
+        return List.of();
     }
 
     private void replaceQuest(List<Quest> quests, Quest replacement) {
@@ -315,6 +392,21 @@ public final class SnbtQuestImporter {
                 .description(Optional.ofNullable(importedQuest.description()).orElse(""))
                 .icon(new IconRef(importedQuest.icon()))
                 .visibility(importedQuest.visibility());
+
+        Map<String, Object> props = importedQuest.properties();
+        Optional.ofNullable(props.get("shape"))
+                .map(Object::toString)
+                .map(QuestShape::fromString)
+                .ifPresent(builder::shape);
+        Optional.ofNullable(props.get("size"))
+                .map(this::toDouble)
+                .ifPresent(builder::size);
+        Optional.ofNullable(props.get("x"))
+                .map(this::toDouble)
+                .ifPresent(builder::x);
+        Optional.ofNullable(props.get("y"))
+                .map(this::toDouble)
+                .ifPresent(builder::y);
 
         for (ImportedTask task : importedQuest.tasks()) {
             convertTask(task).ifPresent(builder::addTask);
@@ -342,6 +434,17 @@ public final class SnbtQuestImporter {
             case "item" -> convertItemTask(props);
             case "advancement" -> convertAdvancementTask(props);
             case "location" -> convertLocationTask(props);
+            case "checkmark" -> Optional.of(new CheckmarkTask());
+            case "kill" -> convertKillTask(props);
+            case "observation" -> convertObservationTask(props);
+            case "gamestage", "stage" -> convertStageTask(props);
+            case "dimension" -> convertDimensionTask(props);
+            case "biome" -> convertBiomeTask(props);
+            case "structure" -> convertStructureTask(props);
+            case "xp" -> convertXpTask(props);
+            case "stat" -> convertStatTask(props);
+            case "fluid" -> convertFluidTask(props);
+            case "custom" -> convertCustomTask(props);
             default -> Optional.empty();
         };
     }
@@ -381,13 +484,99 @@ public final class SnbtQuestImporter {
         return Optional.of(new LocationTask(dimension, x, y, z, radius));
     }
 
+    private Optional<Task> convertKillTask(Map<String, Object> props) {
+        String entity = Optional.ofNullable(props.get("entity"))
+                .or(() -> Optional.ofNullable(props.get("mob")))
+                .map(Object::toString)
+                .orElse("minecraft:zombie");
+        long count = Optional.ofNullable(props.get("value"))
+                .or(() -> Optional.ofNullable(props.get("count")))
+                .map(this::toLong)
+                .orElse(1L);
+        String entityTag = Optional.ofNullable(props.get("entity_tag")).map(Object::toString).orElse(null);
+        String customName = Optional.ofNullable(props.get("custom_name")).map(Object::toString).orElse(null);
+        return Optional.of(new KillTask(entity, count, entityTag, customName));
+    }
+
+    private Optional<Task> convertObservationTask(Map<String, Object> props) {
+        String observeType = Optional.ofNullable(props.get("observe_type"))
+                .or(() -> Optional.ofNullable(props.get("timer_type")))
+                .map(Object::toString)
+                .orElse("BLOCK");
+        String toObserve = Optional.ofNullable(props.get("to_observe"))
+                .or(() -> Optional.ofNullable(props.get("block")))
+                .map(Object::toString)
+                .orElse("minecraft:stone");
+        long timer = Optional.ofNullable(props.get("timer")).map(this::toLong).orElse(0L);
+        try {
+            ObservationTask.ObserveType type = ObservationTask.ObserveType.valueOf(observeType.toUpperCase(Locale.ROOT));
+            return Optional.of(new ObservationTask(type, toObserve, timer));
+        } catch (IllegalArgumentException e) {
+            return Optional.of(new ObservationTask(ObservationTask.ObserveType.BLOCK, toObserve, timer));
+        }
+    }
+
+    private Optional<Task> convertStageTask(Map<String, Object> props) {
+        String stage = Optional.ofNullable(props.get("stage")).map(Object::toString).orElse("default_stage");
+        boolean teamStage = Optional.ofNullable(props.get("team_stage")).map(this::toBoolean).orElse(false);
+        return Optional.of(new StageTask(stage, teamStage));
+    }
+
+    private Optional<Task> convertDimensionTask(Map<String, Object> props) {
+        String dimension = Optional.ofNullable(props.get("dimension")).map(Object::toString).orElse("minecraft:overworld");
+        return Optional.of(new DimensionTask(dimension));
+    }
+
+    private Optional<Task> convertBiomeTask(Map<String, Object> props) {
+        String biome = Optional.ofNullable(props.get("biome")).map(Object::toString).orElse("minecraft:plains");
+        return Optional.of(new BiomeTask(biome));
+    }
+
+    private Optional<Task> convertStructureTask(Map<String, Object> props) {
+        String structure = Optional.ofNullable(props.get("structure")).map(Object::toString).orElse("minecraft:village");
+        return Optional.of(new StructureTask(structure));
+    }
+
+    private Optional<Task> convertXpTask(Map<String, Object> props) {
+        long value = Optional.ofNullable(props.get("value"))
+                .or(() -> Optional.ofNullable(props.get("xp")))
+                .map(this::toLong)
+                .orElse(1L);
+        boolean points = Optional.ofNullable(props.get("points")).map(this::toBoolean).orElse(false);
+        return Optional.of(new XpTask(value, points));
+    }
+
+    private Optional<Task> convertStatTask(Map<String, Object> props) {
+        String stat = Optional.ofNullable(props.get("stat")).map(Object::toString).orElse("minecraft:walk_one_cm");
+        int value = Optional.ofNullable(props.get("value")).map(this::toInt).orElse(1);
+        return Optional.of(new StatTask(stat, value));
+    }
+
+    private Optional<Task> convertFluidTask(Map<String, Object> props) {
+        String fluid = Optional.ofNullable(props.get("fluid")).map(Object::toString).orElse("minecraft:water");
+        long amount = Optional.ofNullable(props.get("amount")).map(this::toLong).orElse(1000L);
+        return Optional.of(new FluidTask(fluid, amount));
+    }
+
+    private Optional<Task> convertCustomTask(Map<String, Object> props) {
+        long maxProgress = Optional.ofNullable(props.get("max_progress"))
+                .or(() -> Optional.ofNullable(props.get("value")))
+                .map(this::toLong)
+                .orElse(1L);
+        return Optional.of(new CustomTask(maxProgress));
+    }
+
     private Optional<Reward> convertReward(ImportedReward reward) {
         Map<String, Object> props = reward.properties();
         return switch (reward.type().toLowerCase(Locale.ROOT)) {
             case "item" -> convertItemReward(props);
             case "loot_table" -> Optional.ofNullable(props.get("table")).map(Object::toString).map(Reward::lootTable);
-            case "xp_levels", "xp_level" -> Optional.ofNullable(props.get("amount")).map(this::toInt).map(Reward::xpLevels);
-            case "xp", "xp_amount" -> Optional.ofNullable(props.get("amount")).map(this::toInt).map(Reward::xpAmount);
+            case "xp_levels", "xp_level" -> Optional.ofNullable(props.get("xp_levels"))
+                    .or(() -> Optional.ofNullable(props.get("amount")))
+                    .map(this::toInt).map(Reward::xpLevels);
+            case "xp", "xp_amount" -> Optional.ofNullable(props.get("xp"))
+                    .or(() -> Optional.ofNullable(props.get("amount")))
+                    .map(this::toInt).map(Reward::xpAmount);
             case "command" -> convertCommandReward(props);
             default -> Optional.empty();
         };
@@ -482,7 +671,7 @@ public final class SnbtQuestImporter {
             case NEW_IDS -> {
                 String candidate = generateDeterministicId(packId + ":" + normalized);
                 while (usedIds.contains(candidate)) {
-                    candidate = generateDeterministicId(candidate + UUID.randomUUID());
+                    candidate = generateDeterministicId(candidate + HexId.generate());
                 }
                 usedIds.add(candidate);
                 renamedIds.add(originalId + " -> " + candidate);
@@ -493,14 +682,13 @@ public final class SnbtQuestImporter {
 
     private String normalizeId(String id) {
         if (id == null) {
-            return UUID.randomUUID().toString();
+            return HexId.generate();
         }
         return id.trim();
     }
 
     private String generateDeterministicId(Object seed) {
-        UUID uuid = UUID.nameUUIDFromBytes(seed.toString().getBytes(StandardCharsets.UTF_8));
-        return uuid.toString();
+        return HexId.fromSeed(seed.toString());
     }
 
     private int toInt(Object value) {
@@ -508,6 +696,13 @@ public final class SnbtQuestImporter {
             return number.intValue();
         }
         return Integer.parseInt(value.toString());
+    }
+
+    private long toLong(Object value) {
+        if (value instanceof Number number) {
+            return number.longValue();
+        }
+        return Long.parseLong(value.toString());
     }
 
     private double toDouble(Object value) {

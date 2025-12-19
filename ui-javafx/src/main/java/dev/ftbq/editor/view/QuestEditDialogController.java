@@ -293,7 +293,7 @@ public final class QuestEditDialogController {
                                          Map<String, EditableLootTable> lootTables) {
         VersionCatalog versionCatalog;
         try {
-            versionCatalog = dev.ftbq.editor.support.UiServiceLocator.getVersionCatalog();
+            versionCatalog = dev.ftbq.editor.services.UiServiceLocator.getVersionCatalog();
         } catch (Exception ex) {
             versionCatalog = null;
         }
