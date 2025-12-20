@@ -42,8 +42,6 @@
                     <RowConstraints prefHeight="30"/>
                     <RowConstraints prefHeight="30"/>
                     <RowConstraints prefHeight="30"/>
-                    <RowConstraints prefHeight="30"/>
-                    <RowConstraints prefHeight="30"/>
                 </rowConstraints>
                 <children>
                     <Label text="Quest ID:" GridPane.rowIndex="0" GridPane.columnIndex="0"/>
@@ -66,20 +64,14 @@
                     <Label text="Visibility:" GridPane.rowIndex="5" GridPane.columnIndex="0"/>
                     <ComboBox fx:id="visibilityCombo" GridPane.rowIndex="5" GridPane.columnIndex="1" maxWidth="Infinity"/>
 
-                    <Label text="XP Amount:" GridPane.rowIndex="6" GridPane.columnIndex="0"/>
-                    <TextField fx:id="xpAmountField" GridPane.rowIndex="6" GridPane.columnIndex="1" promptText="e.g. 100"/>
+                    <Label text="Loot Table:" GridPane.rowIndex="6" GridPane.columnIndex="0"/>
+                    <TextField fx:id="lootTableField" GridPane.rowIndex="6" GridPane.columnIndex="1" promptText="e.g. minecraft:chests/simple_dungeon"/>
 
-                    <Label text="XP Levels:" GridPane.rowIndex="7" GridPane.columnIndex="0"/>
-                    <TextField fx:id="xpLevelsField" GridPane.rowIndex="7" GridPane.columnIndex="1" promptText="e.g. 5"/>
+                    <Label text="Command:" GridPane.rowIndex="7" GridPane.columnIndex="0"/>
+                    <TextField fx:id="commandField" GridPane.rowIndex="7" GridPane.columnIndex="1" promptText="e.g. /give @p diamond 1"/>
 
-                    <Label text="Loot Table:" GridPane.rowIndex="8" GridPane.columnIndex="0"/>
-                    <TextField fx:id="lootTableField" GridPane.rowIndex="8" GridPane.columnIndex="1" promptText="e.g. minecraft:chests/simple_dungeon"/>
-
-                    <Label text="Command:" GridPane.rowIndex="9" GridPane.columnIndex="0"/>
-                    <TextField fx:id="commandField" GridPane.rowIndex="9" GridPane.columnIndex="1" promptText="e.g. /give @p diamond 1"/>
-
-                    <Label text="Run as Server:" GridPane.rowIndex="10" GridPane.columnIndex="0"/>
-                    <ComboBox fx:id="commandRunAsCombo" GridPane.rowIndex="10" GridPane.columnIndex="1" maxWidth="Infinity"/>
+                    <Label text="Run as Server:" GridPane.rowIndex="8" GridPane.columnIndex="0"/>
+                    <ComboBox fx:id="commandRunAsCombo" GridPane.rowIndex="8" GridPane.columnIndex="1" maxWidth="Infinity"/>
                 </children>
             </GridPane>
 

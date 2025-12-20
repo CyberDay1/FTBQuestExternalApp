@@ -2,6 +2,9 @@ package dev.ftbq.editor.services;
 
 import dev.ftbq.editor.assets.CacheManager;
 import dev.ftbq.editor.domain.version.VersionCatalog;
+import dev.ftbq.editor.services.catalog.CatalogImportService;
+import dev.ftbq.editor.services.logging.AppLoggerFactory;
+import dev.ftbq.editor.services.bus.ServiceLocator;
 import dev.ftbq.editor.services.mods.ModRegistryService;
 import dev.ftbq.editor.store.StoreDao;
 import dev.ftbq.editor.support.StoreBackedVersionCatalog;
@@ -18,6 +21,7 @@ public final class UiServiceLocator {
 
     private static VersionCatalog versionCatalog;
     private static ModRegistryService modRegistryService;
+    private static CatalogImportService catalogImportService;
 
     private UiServiceLocator() {
     }
@@ -68,6 +72,13 @@ public final class UiServiceLocator {
             modRegistryService = new ModRegistryService();
         }
         return modRegistryService;
+    }
+
+    public static synchronized CatalogImportService getCatalogImportService() {
+        if (catalogImportService == null && storeDao != null) {
+            catalogImportService = new CatalogImportService(storeDao, ServiceLocator.loggerFactory());
+        }
+        return catalogImportService;
     }
 
     public static synchronized void overrideStoreDao(StoreDao customDao) {

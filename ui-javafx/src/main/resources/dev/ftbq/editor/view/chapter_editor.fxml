@@ -39,10 +39,14 @@
                 <Insets top="12" right="12" bottom="12" left="12" />
             </padding>
             <Label text="Chapter Group" style="-fx-font-weight: bold; -fx-font-size: 12px;" />
-            <ComboBox fx:id="chapterGroupComboBox"
-                      maxWidth="Infinity"
-                      promptText="Select group..."
-                      onAction="#onChapterGroupSelected" />
+            <HBox spacing="5" alignment="CENTER_LEFT">
+                <ComboBox fx:id="chapterGroupComboBox"
+                          HBox.hgrow="ALWAYS"
+                          maxWidth="Infinity"
+                          promptText="Select group..."
+                          onAction="#onChapterGroupSelected" />
+                <Button text="+" onAction="#onCreateChapterGroup" style="-fx-min-width: 28px; -fx-pref-width: 28px;" />
+            </HBox>
 
             <Separator style="-fx-padding: 4 0 4 0;" />
 
@@ -73,27 +77,4 @@
         </StackPane>
     </center>
 
-    <!-- RIGHT: Quest Details Panel (shown when quest selected) -->
-    <right>
-        <VBox fx:id="questDetailsPanel" spacing="8" prefWidth="280"
-              styleClass="quest-details-panel" visible="false" managed="false"
-              BorderPane.alignment="CENTER">
-            <padding>
-                <Insets top="12" right="12" bottom="12" left="12" />
-            </padding>
-            <Label text="Quest Details" style="-fx-font-size: 16px; -fx-font-weight: bold;" />
-
-            <Label text="Tasks" style="-fx-font-weight: bold; -fx-padding: 8 0 4 0;" />
-            <ListView fx:id="taskList" prefHeight="150" VBox.vgrow="SOMETIMES" />
-            <MenuButton fx:id="addTaskMenu" text="Add Task" maxWidth="Infinity" />
-
-            <Label text="Rewards" style="-fx-font-weight: bold; -fx-padding: 8 0 4 0;" />
-            <ListView fx:id="rewardList" prefHeight="150" VBox.vgrow="SOMETIMES" />
-            <MenuButton fx:id="addRewardMenu" text="Add Reward" maxWidth="Infinity" />
-
-            <Label text="Dependencies" style="-fx-font-weight: bold; -fx-padding: 8 0 4 0;" />
-            <ListView fx:id="dependencyList" prefHeight="120" VBox.vgrow="SOMETIMES" />
-            <Button text="Add Dependency" onAction="#onAddDependency" maxWidth="Infinity" />
-        </VBox>
-    </right>
 </BorderPane>

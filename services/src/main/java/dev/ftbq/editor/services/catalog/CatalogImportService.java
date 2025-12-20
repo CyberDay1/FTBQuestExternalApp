@@ -1,5 +1,6 @@
 package dev.ftbq.editor.services.catalog;
 
+import dev.ftbq.editor.ingest.EntityMeta;
 import dev.ftbq.editor.ingest.ItemCatalog;
 import dev.ftbq.editor.ingest.ItemMeta;
 import dev.ftbq.editor.ingest.JarScanner;
@@ -122,6 +123,57 @@ public final class CatalogImportService {
                 StructuredLogger.field("source", catalog.source()),
                 StructuredLogger.field("version", catalog.version()),
                 StructuredLogger.field("upserted", upserted));
+    }
+
+    public void importEntitiesFromJar(Path jarPath, String version) {
+        Objects.requireNonNull(jarPath, "jarPath");
+        if (!Files.exists(jarPath)) {
+            logger.warn("Jar not found for entity scan",
+                    StructuredLogger.field("path", jarPath.toString()));
+            return;
+        }
+
+        try {
+            List<EntityMeta> entities = JarScanner.extractProxyEntities(jarPath, version);
+            if (entities.isEmpty()) {
+                logger.info("No entities discovered in jar",
+                        StructuredLogger.field("path", jarPath.toString()));
+                return;
+            }
+
+            logger.info("Importing entities from jar",
+                    StructuredLogger.field("path", jarPath.toString()),
+                    StructuredLogger.field("count", entities.size()));
+
+            int upserted = 0;
+            for (EntityMeta entity : entities) {
+                if (entity == null) {
+                    continue;
+                }
+
+                StoreDao.EntityEntity entityEntity = new StoreDao.EntityEntity(
+                        entity.id(),
+                        entity.displayName(),
+                        entity.isVanilla(),
+                        normalize(entity.modId()),
+                        normalize(entity.modName()),
+                        normalize(entity.texturePath()),
+                        normalize(jarPath.toString()),
+                        normalize(version)
+                );
+
+                storeDao.upsertEntity(entityEntity);
+                upserted++;
+            }
+
+            logger.info("Entity import completed",
+                    StructuredLogger.field("path", jarPath.toString()),
+                    StructuredLogger.field("upserted", upserted));
+
+        } catch (IOException e) {
+            logger.warn("Entity import failed", e,
+                    StructuredLogger.field("path", jarPath.toString()));
+        }
     }
 
     private Path resolveSourcePath(String source) {

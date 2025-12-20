@@ -8,6 +8,7 @@ import dev.ftbq.editor.domain.QuestFile;
 import dev.ftbq.editor.domain.Quest;
 import dev.ftbq.editor.ThemeService;
 import dev.ftbq.editor.service.UserSettings;
+import dev.ftbq.editor.services.catalog.CatalogImportService;
 import dev.ftbq.editor.ui.AiQuestCreationTab;
 import dev.ftbq.editor.controller.QuestEditorDialogController;
 import dev.ftbq.editor.services.UiServiceLocator;
@@ -184,6 +185,49 @@ public class MainApp extends Application {
         }
     }
 
+    public void showImportModJarDialog() {
+        FileChooser chooser = new FileChooser();
+        chooser.setTitle("Import Mod JAR");
+        chooser.getExtensionFilters().setAll(
+                new FileChooser.ExtensionFilter("Mod JAR Files", "*.jar")
+        );
+        File selectedFile = chooser.showOpenDialog(getPrimaryStage());
+        if (selectedFile == null) {
+            LOGGER.fine("Import mod jar dialog canceled");
+            return;
+        }
+
+        Path jarPath = selectedFile.toPath();
+        LOGGER.info("Importing mod jar: " + jarPath);
+
+        try {
+            CatalogImportService importService = UiServiceLocator.getCatalogImportService();
+            String version = "unknown";
+
+            importService.importEntitiesFromJar(jarPath, version);
+
+            dev.ftbq.editor.ingest.ItemCatalog itemCatalog = new dev.ftbq.editor.ingest.ItemCatalog(
+                    jarPath.toString(),
+                    version,
+                    false,
+                    dev.ftbq.editor.ingest.JarScanner.extractProxyItems(jarPath, version),
+                    java.util.Map.of()
+            );
+            importService.importCatalog(itemCatalog);
+
+            Alert alert = new Alert(Alert.AlertType.INFORMATION);
+            alert.setTitle("Import Complete");
+            alert.setHeaderText("Mod JAR imported successfully");
+            alert.setContentText("Items and entities from " + selectedFile.getName() + " are now available in the browsers.");
+            alert.initOwner(getPrimaryStage());
+            alert.showAndWait();
+
+        } catch (Exception e) {
+            LOGGER.log(Level.WARNING, "Failed to import mod jar", e);
+            showError("Import Failed", "Failed to import mod jar: " + e.getMessage());
+        }
+    }
+
     public void loadProject() {
         DirectoryChooser chooser = new DirectoryChooser();
         chooser.setTitle("Select Quest Project Folder");
@@ -283,6 +327,14 @@ public class MainApp extends Application {
 
     public Stage getPrimaryStage() {
         return primaryStage;
+    }
+
+    public ChapterGroupBrowserController getChapterGroupBrowserController() {
+        return chapterGroupBrowserController;
+    }
+
+    public ChapterEditorController getChapterEditorController() {
+        return chapterEditorController;
     }
 
     public void showError(String title, String message) {

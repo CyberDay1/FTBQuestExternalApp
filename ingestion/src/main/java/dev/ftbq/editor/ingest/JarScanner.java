@@ -31,6 +31,12 @@ public final class JarScanner {
     private static final Pattern MOD_ASSET_PATTERN =
             Pattern.compile("assets/([^/]+)/(?:(?:models|textures)/item)/([^/]+)\\.[a-zA-Z0-9]+");
 
+    private static final Pattern ENTITY_TEXTURE_PATTERN =
+            Pattern.compile("assets/([^/]+)/textures/entity/([^/]+?)(?:/[^/]+)?\\.[a-zA-Z0-9]+");
+
+    private static final Pattern ENTITY_MODEL_PATTERN =
+            Pattern.compile("assets/([^/]+)/(?:geo|models/entity)/([^/]+?)(?:\\.geo)?\\.json");
+
     private JarScanner() {
         throw new AssertionError("JarScanner cannot be instantiated");
     }
@@ -125,6 +131,82 @@ public final class JarScanner {
         return proxyItems;
     }
 
+    public static List<EntityMeta> extractProxyEntities(Path jar, String version) throws IOException {
+        Objects.requireNonNull(jar, "jar");
+
+        Map<String, ProxyEntityDescriptor> descriptors = new LinkedHashMap<>();
+        var resolvedFile = jar.toAbsolutePath().toFile();
+        if (!resolvedFile.exists()) {
+            LOGGER.warn("Jar file not found for entity scan: {}", resolvedFile);
+            return List.of();
+        }
+
+        boolean isVanilla = isVanillaJar(jar);
+
+        try (ZipFile zipFile = new ZipFile(resolvedFile)) {
+            Enumeration<? extends ZipEntry> entries = zipFile.entries();
+            while (entries.hasMoreElements()) {
+                ZipEntry entry = entries.nextElement();
+                if (entry.isDirectory()) {
+                    continue;
+                }
+                String path = entry.getName();
+
+                Matcher textureMatcher = ENTITY_TEXTURE_PATTERN.matcher(path);
+                if (textureMatcher.find()) {
+                    String modId = textureMatcher.group(1);
+                    String entityName = textureMatcher.group(2);
+                    if (entityName != null && !entityName.isBlank()) {
+                        String id = modId + ":" + entityName;
+                        ProxyEntityDescriptor descriptor = descriptors.computeIfAbsent(id, ignored ->
+                                new ProxyEntityDescriptor(id, toDisplayName(entityName), modId, resolveModName(jar, modId)));
+                        if (descriptor.texturePath == null) {
+                            descriptor.texturePath = path;
+                        }
+                    }
+                    continue;
+                }
+
+                Matcher modelMatcher = ENTITY_MODEL_PATTERN.matcher(path);
+                if (modelMatcher.find()) {
+                    String modId = modelMatcher.group(1);
+                    String entityName = FilenameUtils.getBaseName(modelMatcher.group(2));
+                    if (entityName != null && !entityName.isBlank()) {
+                        String id = modId + ":" + entityName;
+                        descriptors.computeIfAbsent(id, ignored ->
+                                new ProxyEntityDescriptor(id, toDisplayName(entityName), modId, resolveModName(jar, modId)));
+                    }
+                }
+            }
+        }
+
+        List<String> ids = new ArrayList<>(descriptors.keySet());
+        Collections.sort(ids);
+
+        List<EntityMeta> proxyEntities = new ArrayList<>(ids.size());
+        for (String id : ids) {
+            ProxyEntityDescriptor descriptor = descriptors.get(id);
+            proxyEntities.add(new EntityMeta(
+                    descriptor.id,
+                    descriptor.displayName,
+                    descriptor.modId,
+                    isVanilla || "minecraft".equalsIgnoreCase(descriptor.modId),
+                    descriptor.texturePath,
+                    descriptor.modId,
+                    descriptor.modName,
+                    version
+            ));
+        }
+
+        LOGGER.info("Proxy entity scan complete | path={} entities={}", jar, proxyEntities.size());
+        return proxyEntities;
+    }
+
+    private static boolean isVanillaJar(Path jar) {
+        String fileName = jar.getFileName() != null ? jar.getFileName().toString().toLowerCase() : "";
+        return fileName.contains("minecraft") && !fileName.contains("forge") && !fileName.contains("fabric");
+    }
+
     private static JarScanResult scanJar(Path jar, String kind, String versionLabel) throws IOException {
         Objects.requireNonNull(jar, "jar");
         Objects.requireNonNull(kind, "kind");
@@ -217,6 +299,21 @@ public final class JarScanner {
         private String texturePath;
 
         private ProxyItemDescriptor(String id, String displayName, String modId, String modName) {
+            this.id = id;
+            this.displayName = displayName;
+            this.modId = modId;
+            this.modName = modName;
+        }
+    }
+
+    private static final class ProxyEntityDescriptor {
+        private final String id;
+        private final String displayName;
+        private final String modId;
+        private final String modName;
+        private String texturePath;
+
+        private ProxyEntityDescriptor(String id, String displayName, String modId, String modName) {
             this.id = id;
             this.displayName = displayName;
             this.modId = modId;

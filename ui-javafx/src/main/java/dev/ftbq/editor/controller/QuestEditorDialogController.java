@@ -696,6 +696,13 @@ public final class QuestEditorDialogController {
             case XP_LEVELS -> reward.experienceLevels().map(levels -> levels + " levels").orElse("XP levels");
             case LOOT_TABLE -> reward.lootTableId().orElse("Loot table");
             case COMMAND -> reward.command().map(RewardCommand::command).orElse("Command reward");
+            case CHOICE -> "Choice reward";
+            case RANDOM -> "Random reward";
+            case ADVANCEMENT -> "Advancement reward";
+            case STAGE -> "GameStage reward";
+            case TOAST -> "Toast reward";
+            case CUSTOM -> "Custom reward";
+            case ALL_TABLE -> "All table reward";
         };
     }
 

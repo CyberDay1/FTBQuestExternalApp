@@ -73,6 +73,10 @@ public class ChapterGroupBrowserController implements AppAware {
         bindViewModel();
     }
 
+    public ChapterGroupBrowserViewModel getViewModel() {
+        return viewModel;
+    }
+
     public void setWorkspaceContext(Path workspace, QuestFile questFile) {
         this.workspace = workspace;
         this.questFile = questFile;
@@ -380,7 +384,7 @@ public class ChapterGroupBrowserController implements AppAware {
         return menu;
     }
 
-    private void updateTree() {
+    public void updateTree() {
         if (chapterTree == null || viewModel == null) {
             return;
         }
@@ -448,12 +452,23 @@ public class ChapterGroupBrowserController implements AppAware {
 
     private LinkedHashMap<String, dev.ftbq.editor.domain.Chapter> buildChapterLookup() {
         LinkedHashMap<String, dev.ftbq.editor.domain.Chapter> lookup = new LinkedHashMap<>();
-        if (questFile == null || questFile.chapters() == null) {
-            return lookup;
+        
+        if (mainApp != null && mainApp.getChapterEditorController() != null) {
+            List<dev.ftbq.editor.domain.Chapter> workingChapters = mainApp.getChapterEditorController().getWorkingChapters();
+            if (workingChapters != null) {
+                for (dev.ftbq.editor.domain.Chapter chapter : workingChapters) {
+                    if (chapter != null && chapter.id() != null && !chapter.id().isBlank()) {
+                        lookup.putIfAbsent(chapter.id(), chapter);
+                    }
+                }
+            }
         }
-        for (dev.ftbq.editor.domain.Chapter chapter : questFile.chapters()) {
-            if (chapter != null && chapter.id() != null && !chapter.id().isBlank()) {
-                lookup.putIfAbsent(chapter.id(), chapter);
+        
+        if (questFile != null && questFile.chapters() != null) {
+            for (dev.ftbq.editor.domain.Chapter chapter : questFile.chapters()) {
+                if (chapter != null && chapter.id() != null && !chapter.id().isBlank()) {
+                    lookup.putIfAbsent(chapter.id(), chapter);
+                }
             }
         }
         return lookup;
@@ -469,7 +484,7 @@ public class ChapterGroupBrowserController implements AppAware {
         return value.toLowerCase(Locale.ENGLISH).contains(query);
     }
 
-    private void promptAddGroup() {
+    public void promptAddGroup() {
         if (!ensureQuestDataReady()) {
             return;
         }

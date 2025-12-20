@@ -66,6 +66,14 @@ public final class MenuController implements AppAware {
     }
 
     @FXML
+    private void onImportModJar() {
+        if (!ensureMainAppInjected("onImportModJar")) {
+            return;
+        }
+        mainApp.showImportModJarDialog();
+    }
+
+    @FXML
     private void onLoadProject() {
         if (!ensureMainAppInjected("onLoadProject")) {
             return;

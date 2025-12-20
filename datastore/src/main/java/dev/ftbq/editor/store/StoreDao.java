@@ -55,6 +55,19 @@ public class StoreDao {
                 kind = excluded.kind
             """;
 
+    private static final String UPSERT_ENTITY_SQL = """
+            INSERT INTO entities (id, display_name, is_vanilla, mod_id, mod_name, texture_path, source_jar, version)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(id) DO UPDATE SET
+                display_name = excluded.display_name,
+                is_vanilla = excluded.is_vanilla,
+                mod_id = excluded.mod_id,
+                mod_name = excluded.mod_name,
+                texture_path = excluded.texture_path,
+                source_jar = excluded.source_jar,
+                version = excluded.version
+            """;
+
     private static final String UPSERT_LOOT_TABLE_SQL = """
             INSERT INTO loot_tables (name, data)
             VALUES (?, ?)
@@ -335,6 +348,110 @@ public class StoreDao {
         } catch (SQLException e) {
             throw new UncheckedSqlException("Failed to load item " + id, e);
         }
+    }
+
+    public void upsertEntity(EntityEntity entity) {
+        try (PreparedStatement statement = connection.prepareStatement(UPSERT_ENTITY_SQL)) {
+            statement.setString(1, entity.id());
+            statement.setString(2, entity.displayName());
+            statement.setInt(3, entity.isVanilla() ? 1 : 0);
+            setStringOrNull(statement, 4, entity.modId());
+            setStringOrNull(statement, 5, entity.modName());
+            setStringOrNull(statement, 6, entity.texturePath());
+            setStringOrNull(statement, 7, entity.sourceJar());
+            setStringOrNull(statement, 8, entity.version());
+            statement.executeUpdate();
+        } catch (SQLException e) {
+            throw new UncheckedSqlException("Failed to upsert entity " + entity.id(), e);
+        }
+    }
+
+    public List<EntityEntity> listEntities(
+            String filterText,
+            String modFilter,
+            String version,
+            SortMode sortMode,
+            int limit,
+            int offset) {
+        StringBuilder sql = new StringBuilder("""
+                SELECT id, display_name, is_vanilla, mod_id, mod_name, texture_path, source_jar, version
+                FROM entities
+                """);
+
+        List<String> conditions = new ArrayList<>();
+        List<Object> parameters = new ArrayList<>();
+
+        if (filterText != null && !filterText.isBlank()) {
+            String normalized = "%" + filterText.toLowerCase(Locale.ROOT) + "%";
+            conditions.add("(LOWER(COALESCE(display_name, '')) LIKE ? OR LOWER(id) LIKE ?)");
+            parameters.add(normalized);
+            parameters.add(normalized);
+        }
+
+        if (modFilter != null && !modFilter.isBlank()) {
+            String normalizedMod = modFilter.toLowerCase(Locale.ROOT);
+            conditions.add("(LOWER(COALESCE(mod_id, '')) = ? OR LOWER(COALESCE(mod_name, '')) = ?)");
+            parameters.add(normalizedMod);
+            parameters.add(normalizedMod);
+        }
+
+        if (version != null && !version.isBlank()) {
+            conditions.add("version = ?");
+            parameters.add(version);
+        }
+
+        if (!conditions.isEmpty()) {
+            sql.append(" WHERE ");
+            sql.append(String.join(" AND ", conditions));
+        }
+
+        sql.append(" ORDER BY ");
+        SortMode effectiveSortMode = sortMode == null ? SortMode.NAME : sortMode;
+        switch (effectiveSortMode) {
+            case MOD -> sql.append("LOWER(COALESCE(mod_name, mod_id, '')) ASC, LOWER(COALESCE(display_name, id)) ASC, id ASC");
+            case VANILLA_FIRST -> sql.append("is_vanilla DESC, LOWER(COALESCE(display_name, id)) ASC, id ASC");
+            case NAME -> sql.append("LOWER(COALESCE(display_name, id)) ASC, id ASC");
+        }
+
+        sql.append(" LIMIT ? OFFSET ?");
+        parameters.add(limit);
+        parameters.add(offset);
+
+        try (PreparedStatement statement = connection.prepareStatement(sql.toString())) {
+            int index = 1;
+            for (Object parameter : parameters) {
+                if (parameter instanceof String value) {
+                    statement.setString(index++, value);
+                } else if (parameter instanceof Integer value) {
+                    statement.setInt(index++, value);
+                } else {
+                    throw new IllegalStateException("Unsupported parameter type: " + parameter.getClass());
+                }
+            }
+
+            try (ResultSet resultSet = statement.executeQuery()) {
+                List<EntityEntity> entities = new ArrayList<>();
+                while (resultSet.next()) {
+                    entities.add(mapEntity(resultSet));
+                }
+                return entities;
+            }
+        } catch (SQLException e) {
+            throw new UncheckedSqlException("Failed to list entities", e);
+        }
+    }
+
+    private EntityEntity mapEntity(ResultSet resultSet) throws SQLException {
+        return new EntityEntity(
+                resultSet.getString("id"),
+                resultSet.getString("display_name"),
+                resultSet.getInt("is_vanilla") != 0,
+                resultSet.getString("mod_id"),
+                resultSet.getString("mod_name"),
+                resultSet.getString("texture_path"),
+                resultSet.getString("source_jar"),
+                resultSet.getString("version")
+        );
     }
 
     /**
@@ -1296,6 +1413,17 @@ public class StoreDao {
             String sourceJar,
             String version,
             String kind) {
+    }
+
+    public record EntityEntity(
+            String id,
+            String displayName,
+            boolean isVanilla,
+            String modId,
+            String modName,
+            String texturePath,
+            String sourceJar,
+            String version) {
     }
 
     public record LootTableEntity(String name, String data) {

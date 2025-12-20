@@ -39,6 +39,7 @@ import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.CheckBox;
+import javafx.scene.control.ComboBox;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
@@ -82,18 +83,13 @@ public class ChapterEditorController implements AppAware {
     private static final Color GRID_MAJOR_COLOR = Color.rgb(150, 150, 150, 0.7);
     private static final int MAJOR_GRID_INTERVAL = 5;
 
+    @FXML private ComboBox<String> chapterGroupComboBox;
     @FXML private ListView<Chapter> chapterListView;
     @FXML private TextField chapterSearchField;
     @FXML private Label chapterTitle;
     @FXML private ScrollPane questScrollPane;
     @FXML private Pane gridCanvas;
     @FXML private Pane questPane;
-    @FXML private VBox questDetailsPanel;
-    @FXML private ListView<String> taskList;
-    @FXML private ListView<String> rewardList;
-    @FXML private ListView<String> dependencyList;
-    @FXML private MenuButton addTaskMenu;
-    @FXML private MenuButton addRewardMenu;
 
     private Project project;
     private final List<Chapter> workingChapters = new ArrayList<>();
@@ -103,6 +99,7 @@ public class ChapterEditorController implements AppAware {
     private final Map<String, Quest> nodeToQuest = new HashMap<>();
     private MainApp mainApp;
     private ContextMenu questContextMenu;
+    private boolean chapterGroupComboBoxBound = false;
     private Point2D lastClickPosition = new Point2D(0, 0);
     private double dragStartX;
     private double dragStartY;
@@ -113,6 +110,45 @@ public class ChapterEditorController implements AppAware {
     @Override
     public void setMainApp(MainApp app) {
         this.mainApp = app;
+        bindChapterGroupComboBox();
+    }
+
+    public List<Chapter> getWorkingChapters() {
+        return workingChapters;
+    }
+
+    private void bindChapterGroupComboBox() {
+        if (chapterGroupComboBox == null || mainApp == null) {
+            return;
+        }
+        ChapterGroupBrowserController groupBrowser = mainApp.getChapterGroupBrowserController();
+        if (groupBrowser == null || groupBrowser.getViewModel() == null) {
+            return;
+        }
+        var viewModel = groupBrowser.getViewModel();
+        refreshChapterGroupComboBox(viewModel);
+        if (!chapterGroupComboBoxBound) {
+            chapterGroupComboBoxBound = true;
+            viewModel.getChapterGroups().addListener((javafx.collections.ListChangeListener<? super dev.ftbq.editor.viewmodel.ChapterGroupBrowserViewModel.ChapterGroup>) change -> {
+                refreshChapterGroupComboBox(viewModel);
+            });
+        }
+    }
+
+    private void refreshChapterGroupComboBox(dev.ftbq.editor.viewmodel.ChapterGroupBrowserViewModel viewModel) {
+        if (chapterGroupComboBox == null || viewModel == null) {
+            return;
+        }
+        String currentSelection = chapterGroupComboBox.getValue();
+        List<String> groupNames = viewModel.getChapterGroups().stream()
+                .map(g -> g.getName())
+                .collect(Collectors.toList());
+        chapterGroupComboBox.getItems().setAll(groupNames);
+        if (currentSelection != null && groupNames.contains(currentSelection)) {
+            chapterGroupComboBox.setValue(currentSelection);
+        } else if (!groupNames.isEmpty()) {
+            chapterGroupComboBox.getSelectionModel().selectFirst();
+        }
     }
 
     @FXML
@@ -763,6 +799,7 @@ public class ChapterEditorController implements AppAware {
     public void setProject(Project project) {
         this.project = project;
         workingChapters.clear();
+        bindChapterGroupComboBox();
         if (project != null) {
             workingChapters.addAll(project.getChapters());
             refreshChapterList();
@@ -835,6 +872,64 @@ public class ChapterEditorController implements AppAware {
             }
         } else {
             displayChapter(null);
+        }
+    }
+
+    @FXML
+    private void onChapterGroupSelected() {
+        if (chapterGroupComboBox == null || project == null || chapterListView == null) {
+            return;
+        }
+        String selectedGroupName = chapterGroupComboBox.getValue();
+        if (selectedGroupName == null || selectedGroupName.isBlank()) {
+            chapterListView.setItems(FXCollections.observableArrayList(workingChapters));
+            return;
+        }
+        
+        ChapterGroupBrowserController groupBrowser = mainApp != null ? mainApp.getChapterGroupBrowserController() : null;
+        if (groupBrowser == null || groupBrowser.getViewModel() == null) {
+            chapterListView.setItems(FXCollections.observableArrayList(workingChapters));
+            return;
+        }
+        
+        var viewModel = groupBrowser.getViewModel();
+        var selectedGroup = viewModel.getChapterGroups().stream()
+                .filter(g -> selectedGroupName.equals(g.getName()))
+                .findFirst()
+                .orElse(null);
+        
+        if (selectedGroup == null) {
+            chapterListView.setItems(FXCollections.observableArrayList(workingChapters));
+            return;
+        }
+        
+        var chapterIdsInGroup = selectedGroup.getChapters().stream()
+                .map(c -> c.getId())
+                .collect(Collectors.toSet());
+        
+        List<Chapter> filteredChapters = workingChapters.stream()
+                .filter(chapter -> chapterIdsInGroup.contains(chapter.id()))
+                .collect(Collectors.toList());
+        
+        chapterListView.setItems(FXCollections.observableArrayList(filteredChapters));
+        if (!filteredChapters.isEmpty()) {
+            chapterListView.getSelectionModel().selectFirst();
+        } else {
+            displayChapter(null);
+        }
+    }
+
+    @FXML
+    private void onCreateChapterGroup() {
+        if (mainApp == null) {
+            LOGGER.warning("MainApp not set; cannot create chapter group");
+            return;
+        }
+        ChapterGroupBrowserController groupBrowser = mainApp.getChapterGroupBrowserController();
+        if (groupBrowser != null) {
+            groupBrowser.promptAddGroup();
+        } else {
+            LOGGER.warning("ChapterGroupBrowserController not available");
         }
     }
 
@@ -1034,53 +1129,9 @@ public class ChapterEditorController implements AppAware {
     }
 
     private void updateQuestDetails(Quest quest) {
-        if (taskList != null) {
-            taskList.getItems().setAll(quest.tasks().stream()
-                    .map(this::describeTask)
-                    .collect(Collectors.toList()));
-        }
-        if (rewardList != null) {
-            rewardList.getItems().setAll(quest.itemRewards().stream()
-                    .map(ItemReward::describe)
-                    .collect(Collectors.toList()));
-        }
-        if (dependencyList != null) {
-            dependencyList.getItems().setAll(quest.dependencies().stream()
-                    .map(this::describeDependency)
-                    .collect(Collectors.toList()));
-        }
-        if (addTaskMenu != null) {
-            addTaskMenu.setDisable(false);
-        }
-        if (addRewardMenu != null) {
-            addRewardMenu.setDisable(false);
-        }
-        if (questDetailsPanel != null) {
-            questDetailsPanel.setVisible(true);
-            questDetailsPanel.setManaged(true);
-        }
     }
 
     private void clearQuestDetails() {
-        if (taskList != null) {
-            taskList.getItems().clear();
-        }
-        if (rewardList != null) {
-            rewardList.getItems().clear();
-        }
-        if (dependencyList != null) {
-            dependencyList.getItems().clear();
-        }
-        if (addTaskMenu != null) {
-            addTaskMenu.setDisable(true);
-        }
-        if (addRewardMenu != null) {
-            addRewardMenu.setDisable(true);
-        }
-        if (questDetailsPanel != null) {
-            questDetailsPanel.setVisible(false);
-            questDetailsPanel.setManaged(false);
-        }
     }
 
     private String describeTask(Task task) {
@@ -1192,7 +1243,18 @@ public class ChapterEditorController implements AppAware {
         }
 
         displayChapter(updatedChapter);
+        notifyChapterGroupBrowserUpdate();
         return newQuest;
+    }
+
+    private void notifyChapterGroupBrowserUpdate() {
+        if (mainApp == null) {
+            return;
+        }
+        ChapterGroupBrowserController groupBrowser = mainApp.getChapterGroupBrowserController();
+        if (groupBrowser != null) {
+            groupBrowser.updateTree();
+        }
     }
 
     private void updateChapterList(Chapter previousChapter, Chapter updatedChapter) {
@@ -1283,12 +1345,51 @@ public class ChapterEditorController implements AppAware {
                 chapterListView.getSelectionModel().select(newChapter);
             }
             displayChapter(newChapter);
+            
+            addChapterToViewModel(chapterId, title);
+            
             LOGGER.info("Created new chapter: " + title + " with ID " + chapterId);
         });
     }
 
     private String generateHexId() {
         return HexId.generate();
+    }
+
+    private void addChapterToViewModel(String chapterId, String chapterName) {
+        if (mainApp == null) {
+            return;
+        }
+        ChapterGroupBrowserController groupBrowser = mainApp.getChapterGroupBrowserController();
+        if (groupBrowser == null || groupBrowser.getViewModel() == null) {
+            return;
+        }
+        var viewModel = groupBrowser.getViewModel();
+        
+        String selectedGroupName = chapterGroupComboBox != null ? chapterGroupComboBox.getValue() : null;
+        dev.ftbq.editor.viewmodel.ChapterGroupBrowserViewModel.ChapterGroup targetGroup = null;
+        
+        if (selectedGroupName != null && !selectedGroupName.isBlank()) {
+            targetGroup = viewModel.getChapterGroups().stream()
+                    .filter(g -> selectedGroupName.equals(g.getName()))
+                    .findFirst()
+                    .orElse(null);
+        }
+        
+        if (targetGroup == null) {
+            targetGroup = viewModel.getChapterGroups().stream()
+                    .filter(g -> "Ungrouped Chapters".equals(g.getName()))
+                    .findFirst()
+                    .orElse(null);
+            if (targetGroup == null && !viewModel.getChapterGroups().isEmpty()) {
+                targetGroup = viewModel.getChapterGroups().get(0);
+            }
+        }
+        
+        if (targetGroup != null) {
+            viewModel.addChapter(targetGroup, chapterId, chapterName);
+        }
+        notifyChapterGroupBrowserUpdate();
     }
 
     @FXML

@@ -16,6 +16,7 @@
                 <Menu text="File">
                     <items>
                         <MenuItem text="Import Quests from SNBT..." onAction="#onImportQuests" />
+                        <MenuItem text="Import Mod JAR..." onAction="#onImportModJar" />
                         <MenuItem text="Load Project..." onAction="#onLoadProject" />
                         <MenuItem text="Save Project As..." onAction="#onSaveProjectAs" />
                         <SeparatorMenuItem />

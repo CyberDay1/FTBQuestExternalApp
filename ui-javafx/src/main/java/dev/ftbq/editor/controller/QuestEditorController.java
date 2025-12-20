@@ -98,12 +98,6 @@ public final class QuestEditorController {
     private ComboBox<Visibility> visibilityCombo;
 
     @FXML
-    private TextField xpAmountField;
-
-    @FXML
-    private TextField xpLevelsField;
-
-    @FXML
     private TextField lootTableField;
 
     @FXML
@@ -188,8 +182,6 @@ public final class QuestEditorController {
                 ? new IconRef(iconId, java.util.Optional.of(iconPath))
                 : new IconRef(iconId);
 
-        Integer xpAmount = parseIntOrNull(xpAmountField);
-        Integer xpLevels = parseIntOrNull(xpLevelsField);
         String lootTable = lootTableField != null && !lootTableField.getText().isBlank()
                 ? lootTableField.getText().trim() : null;
 
@@ -207,8 +199,6 @@ public final class QuestEditorController {
                 .visibility(visibility)
                 .tasks(new ArrayList<>(editableTasks))
                 .itemRewards(new ArrayList<>(editableRewards))
-                .experienceAmount(xpAmount)
-                .experienceLevels(xpLevels)
                 .lootTableId(lootTable)
                 .commandReward(commandReward)
                 .dependencies(new ArrayList<>(editableDependencies))
@@ -250,11 +240,13 @@ public final class QuestEditorController {
         TextField zField = new TextField("0");
         TextField radiusField = new TextField("10");
         TextField entityField = new TextField();
+        Button browseEntityButton = new Button("Browse...");
         TextField killCountField = new TextField("1");
         ComboBox<ObservationTask.ObserveType> observeTypeCombo = new ComboBox<>();
         observeTypeCombo.getItems().addAll(ObservationTask.ObserveType.values());
         observeTypeCombo.setValue(ObservationTask.ObserveType.ENTITY_TYPE);
         TextField toObserveField = new TextField();
+        Button browseObserveButton = new Button("Browse...");
         TextField timerField = new TextField("0");
         TextField stageField = new TextField();
         CheckBox teamStageCheck = new CheckBox("Team Stage");
@@ -305,18 +297,24 @@ public final class QuestEditorController {
                     fieldsPane.add(radiusField, 1, row);
                 }
                 case KILL -> {
+                    HBox entityRow = new HBox(5);
                     entityField.setPromptText("e.g. minecraft:zombie");
+                    HBox.setHgrow(entityField, Priority.ALWAYS);
+                    entityRow.getChildren().addAll(entityField, browseEntityButton);
                     fieldsPane.add(new Label("Entity Type:"), 0, row);
-                    fieldsPane.add(entityField, 1, row++);
+                    fieldsPane.add(entityRow, 1, row++);
                     fieldsPane.add(new Label("Count:"), 0, row);
                     fieldsPane.add(killCountField, 1, row);
                 }
                 case OBSERVATION -> {
                     fieldsPane.add(new Label("Observe Type:"), 0, row);
                     fieldsPane.add(observeTypeCombo, 1, row++);
+                    HBox observeRow = new HBox(5);
                     toObserveField.setPromptText("e.g. minecraft:zombie");
+                    HBox.setHgrow(toObserveField, Priority.ALWAYS);
+                    observeRow.getChildren().addAll(toObserveField, browseObserveButton);
                     fieldsPane.add(new Label("To Observe:"), 0, row);
-                    fieldsPane.add(toObserveField, 1, row++);
+                    fieldsPane.add(observeRow, 1, row++);
                     timerField.setPromptText("Ticks");
                     fieldsPane.add(new Label("Timer (ticks):"), 0, row);
                     fieldsPane.add(timerField, 1, row);
@@ -373,6 +371,8 @@ public final class QuestEditorController {
         updateFields.run();
 
         browseItemButton.setOnAction(e -> openItemBrowser(itemIdField));
+        browseEntityButton.setOnAction(e -> openEntityBrowser(entityField));
+        browseObserveButton.setOnAction(e -> openEntityBrowser(toObserveField));
 
         dialog.getDialogPane().setContent(grid);
 
@@ -471,6 +471,27 @@ public final class QuestEditorController {
             ThemeService.getInstance().registerStage(stage);
             stage.show();
             stage.setOnHidden(event -> controller.dispose());
+        } catch (IOException ex) {
+            ex.printStackTrace();
+        }
+    }
+
+    private void openEntityBrowser(TextField targetField) {
+        try {
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/dev/ftbq/editor/view/entity_browser.fxml"));
+            Parent root = loader.load();
+            EntityBrowserController controller = loader.getController();
+            controller.setOnEntitySelected(entity -> {
+                if (entity != null) {
+                    targetField.setText(entity.id());
+                }
+            });
+            Stage stage = new Stage();
+            stage.setTitle("Select Entity");
+            stage.initModality(Modality.APPLICATION_MODAL);
+            stage.setScene(new Scene(root, 700, 500));
+            ThemeService.getInstance().registerStage(stage);
+            stage.show();
         } catch (IOException ex) {
             ex.printStackTrace();
         }
@@ -643,12 +664,6 @@ public final class QuestEditorController {
 
         if (visibilityCombo != null) {
             visibilityCombo.setValue(quest.visibility());
-        }
-        if (xpAmountField != null) {
-            xpAmountField.setText(quest.experienceAmountOptional().map(String::valueOf).orElse(""));
-        }
-        if (xpLevelsField != null) {
-            xpLevelsField.setText(quest.experienceLevelsOptional().map(String::valueOf).orElse(""));
         }
         if (lootTableField != null) {
             lootTableField.setText(quest.lootTableIdOptional().orElse(""));
